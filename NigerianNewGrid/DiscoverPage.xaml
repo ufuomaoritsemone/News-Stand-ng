@@ -1,0 +1,204 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:models="clr-namespace:NigerianNewsGrid.Client.Models;assembly=NigerianNewsGrid.Client"
+             x:Class="NigerianNewGrid.DiscoverPage"
+             Title="Discover"
+             BackgroundColor="{StaticResource SecondaryLightBrush}"
+             SafeAreaEdges="Container">
+
+    <Grid RowDefinitions="Auto,Auto,*" Padding="20,16,20,0" RowSpacing="0">
+
+        <!-- Header -->
+        <VerticalStackLayout Grid.Row="0" Spacing="2" Margin="0,0,0,16">
+            <Label Text="Discover"
+                   FontFamily="LegacySerifBold"
+                   FontSize="32"
+                   FontAttributes="Bold"
+                   TextColor="{StaticResource Gray900Brush}"
+                   SemanticProperties.HeadingLevel="Level1" />
+            <Label Text="Trending news and stories from all around Nigeria"
+                   FontFamily="LegacySansBook"
+                   FontSize="13"
+                   TextColor="{StaticResource Gray500}" />
+        </VerticalStackLayout>
+
+        <!-- Search Bar (GoRead style) -->
+        <Border Grid.Row="1"
+                Padding="12,10"
+                BackgroundColor="{StaticResource WhiteBrush}"
+                StrokeShape="RoundRectangle 24"
+                StrokeThickness="1"
+                Stroke="{StaticResource Gray100Brush}"
+                Margin="0,0,0,14">
+            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+                <Label Grid.Column="0" Text="🔍" FontSize="16" VerticalOptions="Center"
+                       TextColor="{StaticResource Gray500}" />
+                <Entry Grid.Column="1"
+                       x:Name="DiscoverSearchEntry"
+                       Placeholder="Search topics, sources..."
+                       FontFamily="LegacySansBook"
+                       FontSize="14"
+                       TextChanged="OnSearchChanged"
+                       VerticalOptions="Center"
+                       BackgroundColor="Transparent" />
+                <Button Grid.Column="2"
+                        x:Name="ClearBtn"
+                        Text="✕"
+                        IsVisible="False"
+                        Clicked="OnClearSearch"
+                        Padding="6,2"
+                        FontSize="12"
+                        FontAttributes="Bold"
+                        CornerRadius="12"
+                        BorderWidth="1"
+                        BorderColor="{AppThemeBinding Light={StaticResource ButtonBorderLight}, Dark={StaticResource ButtonBorderDark}}"
+                        BackgroundColor="{AppThemeBinding Light={StaticResource ButtonSecondaryBgLight}, Dark={StaticResource ButtonSecondaryBgDark}}"
+                        TextColor="{AppThemeBinding Light={StaticResource ButtonTextLight}, Dark={StaticResource ButtonTextDark}}" />
+            </Grid>
+        </Border>
+
+        <!-- Main Scrollable Content -->
+        <ScrollView Grid.Row="2" VerticalScrollBarVisibility="Never">
+            <VerticalStackLayout Spacing="16" Padding="0,0,0,24">
+
+                <!-- ══════════════════════════════════════════════
+                     🔥 TRENDING ON YOUTUBE SECTION
+                ══════════════════════════════════════════════ -->
+                <VerticalStackLayout x:Name="TrendingSection" Spacing="8">
+                    <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,4">
+                        <HorizontalStackLayout Grid.Column="0" Spacing="6" VerticalOptions="Center">
+                            <Label Text="🔥" FontSize="16" VerticalOptions="Center" />
+                            <Label Text="Trending on YouTube"
+                                   FontFamily="LegacySerifBold"
+                                   FontSize="17"
+                                   FontAttributes="Bold"
+                                   TextColor="{StaticResource Gray900Brush}" />
+                        </HorizontalStackLayout>
+                        <Label Grid.Column="1"
+                               Text="Nigeria"
+                               FontFamily="LegacySansBook"
+                               FontSize="12"
+                               TextColor="{StaticResource AccentBlueBrush}"
+                               FontAttributes="Bold"
+                               VerticalOptions="Center" />
+                    </Grid>
+
+                    <!-- Horizontal Carousel -->
+                    <ScrollView Orientation="Horizontal"
+                                HorizontalScrollBarVisibility="Never"
+                                Margin="-20,0,-20,0"
+                                Padding="20,0,20,0">
+                        <HorizontalStackLayout x:Name="TrendingVideosLayout" Spacing="12">
+                            <!-- Populated dynamically via C# code-behind -->
+                        </HorizontalStackLayout>
+                    </ScrollView>
+                </VerticalStackLayout>
+
+                <!-- Category Filter Pills -->
+                <VerticalStackLayout Spacing="8">
+                    <Label Text="Explore by Category"
+                           FontFamily="LegacySerifBold"
+                           FontSize="16"
+                           FontAttributes="Bold"
+                           TextColor="{StaticResource Gray900Brush}" />
+
+                    <ScrollView Orientation="Horizontal"
+                                HorizontalScrollBarVisibility="Never"
+                                Margin="-20,0,-20,0"
+                                Padding="20,0,20,0">
+                        <HorizontalStackLayout x:Name="FilterPillsLayout" Spacing="8">
+                            <Border Padding="16,8"
+                                    x:Name="PillAll"
+                                    BackgroundColor="{StaticResource AccentBlueBrush}"
+                                    StrokeThickness="0"
+                                    StrokeShape="RoundRectangle 20">
+                                <Border.GestureRecognizers>
+                                    <TapGestureRecognizer Tapped="OnCategoryPillTapped" CommandParameter="All" />
+                                </Border.GestureRecognizers>
+                                <Label Text="All" FontFamily="LegacySansBook" FontSize="13"
+                                       FontAttributes="Bold" TextColor="White" />
+                            </Border>
+                            <Border Padding="16,8" x:Name="PillPolitics"
+                                    BackgroundColor="{StaticResource SecondaryBrush}"
+                                    StrokeThickness="0" StrokeShape="RoundRectangle 20">
+                                <Border.GestureRecognizers>
+                                    <TapGestureRecognizer Tapped="OnCategoryPillTapped" CommandParameter="Politics" />
+                                </Border.GestureRecognizers>
+                                <Label Text="Politics" FontFamily="LegacySansBook" FontSize="13"
+                                       TextColor="{StaticResource Gray900Brush}" />
+                            </Border>
+                            <Border Padding="16,8" x:Name="PillSports"
+                                    BackgroundColor="{StaticResource SecondaryBrush}"
+                                    StrokeThickness="0" StrokeShape="RoundRectangle 20">
+                                <Border.GestureRecognizers>
+                                    <TapGestureRecognizer Tapped="OnCategoryPillTapped" CommandParameter="Sports" />
+                                </Border.GestureRecognizers>
+                                <Label Text="Sports" FontFamily="LegacySansBook" FontSize="13"
+                                       TextColor="{StaticResource Gray900Brush}" />
+                            </Border>
+                            <Border Padding="16,8" x:Name="PillBusiness"
+                                    BackgroundColor="{StaticResource SecondaryBrush}"
+                                    StrokeThickness="0" StrokeShape="RoundRectangle 20">
+                                <Border.GestureRecognizers>
+                                    <TapGestureRecognizer Tapped="OnCategoryPillTapped" CommandParameter="Business" />
+                                </Border.GestureRecognizers>
+                                <Label Text="Business" FontFamily="LegacySansBook" FontSize="13"
+                                       TextColor="{StaticResource Gray900Brush}" />
+                            </Border>
+                            <Border Padding="16,8" x:Name="PillEntertainment"
+                                    BackgroundColor="{StaticResource SecondaryBrush}"
+                                    StrokeThickness="0" StrokeShape="RoundRectangle 20">
+                                <Border.GestureRecognizers>
+                                    <TapGestureRecognizer Tapped="OnCategoryPillTapped" CommandParameter="Entertainment" />
+                                </Border.GestureRecognizers>
+                                <Label Text="Entertainment" FontFamily="LegacySansBook" FontSize="13"
+                                       TextColor="{StaticResource Gray900Brush}" />
+                            </Border>
+                            <Border Padding="16,8" x:Name="PillTech"
+                                    BackgroundColor="{StaticResource SecondaryBrush}"
+                                    StrokeThickness="0" StrokeShape="RoundRectangle 20">
+                                <Border.GestureRecognizers>
+                                    <TapGestureRecognizer Tapped="OnCategoryPillTapped" CommandParameter="Technology" />
+                                </Border.GestureRecognizers>
+                                <Label Text="Technology" FontFamily="LegacySansBook" FontSize="13"
+                                       TextColor="{StaticResource Gray900Brush}" />
+                            </Border>
+                        </HorizontalStackLayout>
+                    </ScrollView>
+                </VerticalStackLayout>
+
+                <!-- Results List Header -->
+                <Label x:Name="ResultsHeaderLabel"
+                       Text="Recent News Articles"
+                       FontFamily="LegacySerifBold"
+                       FontSize="16"
+                       FontAttributes="Bold"
+                       TextColor="{StaticResource Gray900Brush}" />
+
+                <!-- Results List Container (StackLayout based for seamless parent scroll) -->
+                <VerticalStackLayout x:Name="ResultsContainer" Spacing="12">
+                    <!-- Populated dynamically via C# code-behind -->
+                </VerticalStackLayout>
+
+                <!-- Empty State -->
+                <VerticalStackLayout x:Name="EmptyStateView"
+                                     IsVisible="False"
+                                     HorizontalOptions="Center"
+                                     Spacing="8"
+                                     Padding="24">
+                    <Label Text="📰" FontSize="36" HorizontalOptions="Center" />
+                    <Label Text="No stories found"
+                           FontFamily="LegacySerifBold" FontSize="16"
+                           HorizontalTextAlignment="Center"
+                           TextColor="{StaticResource Gray900Brush}" />
+                    <Label Text="Try a different search or category filter."
+                           FontFamily="LegacySansBook" FontSize="12"
+                           HorizontalTextAlignment="Center"
+                           TextColor="{StaticResource Gray500}" />
+                </VerticalStackLayout>
+
+            </VerticalStackLayout>
+        </ScrollView>
+    </Grid>
+</ContentPage>

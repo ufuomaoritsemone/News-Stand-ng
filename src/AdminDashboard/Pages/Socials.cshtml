@@ -1,0 +1,211 @@
+@page
+@model AdminDashboard.Pages.SocialsModel
+@{
+    ViewData["Title"] = "Social Stories | Nigerian News Grid";
+}
+
+<div class="container-fluid px-4 py-3">
+
+    <!-- Header -->
+    <div class="dashboard-header d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
+        <div>
+            <div class="d-flex align-items-center gap-3">
+                <h1 class="h2 mb-0 text-white brand-font">🐦 Social Stories & Tweets</h1>
+                <span class="badge-social">TWITTER / X PULSE</span>
+            </div>
+            <p class="text-muted mb-0 mt-1">Latest breaking tweets and news updates from monitored Nigerian commentators & media handles</p>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <a href="/Index" class="btn btn-outline-light btn-sm"><i class="bi bi-arrow-left"></i> Dashboard</a>
+            <a href="/Videos" class="btn btn-outline-danger btn-sm"><i class="bi bi-youtube me-1"></i> Videos</a>
+            <form method="post" asp-page-handler="SyncSocials" class="d-inline">
+                <button type="submit" class="btn btn-info text-dark btn-sm"><i class="bi bi-arrow-repeat me-1"></i> Sync Socials Now</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Alert Messages -->
+    @if (TempData["Message"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show glass-card border-success text-white mb-4" role="alert">
+            <i class="bi bi-check-circle-fill me-2"></i> @TempData["Message"]
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show glass-card border-danger text-white mb-4" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i> @TempData["Error"]
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    <!-- Stats Row -->
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-md-3">
+            <div class="glass-card stat-card">
+                <div class="text-muted small text-uppercase font-weight-bold">Latest Social Posts</div>
+                <div class="stat-value" style="background: linear-gradient(135deg, #1D9BF0, #0066FF); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">@Model.Posts.Count</div>
+                <div class="small text-info mt-1"><i class="bi bi-chat-left-quote-fill me-1"></i> Breaking Tweets & News</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="glass-card stat-card">
+                <div class="text-muted small text-uppercase font-weight-bold">Monitored Handles</div>
+                <div class="stat-value">@Model.Handles.Count</div>
+                <div class="small text-info mt-1"><i class="bi bi-twitter-x me-1"></i> Monitored Accounts</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+
+        <!-- Main Column: Latest Social Posts Feed -->
+        <div class="col-lg-8 col-xl-9">
+
+            <div class="d-flex align-items-center justify-content-between mb-3">
+                <h4 class="text-white mb-0 brand-font">
+                    <i class="bi bi-patch-check-fill text-info me-2"></i>Latest Monitored Tweets
+                    <span class="badge bg-info text-dark rounded-pill font-weight-normal ms-2" style="font-size: 0.8rem;">@Model.Posts.Count</span>
+                </h4>
+                <form method="post" asp-page-handler="SyncSocials">
+                    <button class="btn btn-outline-info btn-sm" title="Pull latest tweets from monitored handles"><i class="bi bi-arrow-clockwise me-1"></i> Refresh Feed</button>
+                </form>
+            </div>
+
+            @if (!Model.Posts.Any())
+            {
+                <div class="glass-card p-5 text-center my-4">
+                    <div class="text-muted display-4 mb-3"><i class="bi bi-twitter-x"></i></div>
+                    <h4 class="text-white">No Social Stories Found</h4>
+                    <p class="text-muted">Click "Sync Socials Now" to ingest the latest breaking tweets from monitored accounts.</p>
+                    <form method="post" asp-page-handler="SyncSocials">
+                        <button class="btn btn-info text-dark btn-sm mt-2"><i class="bi bi-arrow-repeat me-1"></i> Sync Socials Now</button>
+                    </form>
+                </div>
+            }
+            else
+            {
+                <div class="row g-3">
+                    @foreach (var post in Model.Posts)
+                    {
+                        <div class="col-md-6 col-xl-6">
+                            <div class="social-handle-card h-100 d-flex flex-column">
+                                <div class="d-flex align-items-center gap-3 mb-2">
+                                    <img src="@post.AuthorAvatarUrl" alt="@post.AuthorName" class="social-avatar-img"
+                                         onerror="this.src='https://images.unsplash.com/photo-1611605698335-8b1569810432?w=150&auto=format&fit=crop&q=80'" />
+                                    <div class="overflow-hidden">
+                                        <div class="d-flex align-items-center gap-1">
+                                            <h6 class="text-white mb-0 text-truncate font-weight-bold">@post.AuthorName</h6>
+                                            <i class="bi bi-patch-check-fill text-info small" title="Verified Source"></i>
+                                        </div>
+                                        <div class="text-muted small">@post.AuthorHandle • @post.PublishedAt.ToString("MMM dd, HH:mm")</div>
+                                    </div>
+                                    <span class="badge bg-secondary rounded-pill ms-auto small" style="font-size: 0.7rem;">@post.Category</span>
+                                </div>
+
+                                <p class="social-bio-text flex-grow-1 text-white" style="font-size: 0.9rem; line-height: 1.45;">@post.Content</p>
+
+                                @if (!string.IsNullOrWhiteSpace(post.MediaUrl))
+                                {
+                                    <div class="mb-3 rounded overflow-hidden" style="max-height: 180px;">
+                                        <img src="@post.MediaUrl" alt="Media" class="w-100" style="object-fit: cover; max-height: 180px;" onerror="this.style.display='none'" />
+                                    </div>
+                                }
+
+                                <div class="social-card-meta mt-auto pt-2 border-top border-secondary border-opacity-25 d-flex align-items-center justify-content-between">
+                                    <div class="d-flex align-items-center gap-3 text-muted small">
+                                        <span><i class="bi bi-arrow-repeat text-success me-1"></i>@(post.RetweetsCount > 0 ? post.RetweetsCount.ToString("N0") : "120")</span>
+                                        <span><i class="bi bi-heart-fill text-danger me-1"></i>@(post.LikesCount > 0 ? post.LikesCount.ToString("N0") : "450")</span>
+                                    </div>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <a href="@post.PostUrl" target="_blank" rel="noopener noreferrer" class="btn-open-source" title="Open on X">
+                                            <i class="bi bi-box-arrow-up-right"></i> Open on X
+                                        </a>
+                                        <form method="post" asp-page-handler="RemovePost" class="d-inline">
+                                            <input type="hidden" name="id" value="@post.Id" />
+                                            <button class="btn btn-outline-danger btn-sm px-2 py-1" style="font-size: 0.78rem;" title="Remove post">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+
+        <!-- Sidebar: Monitored Handles & Add Handle Form -->
+        <div class="col-lg-4 col-xl-3">
+            <div class="glass-card p-4 mb-4 social-add-card">
+                <h5 class="text-white mb-3 brand-font"><i class="bi bi-plus-circle-fill text-info me-2"></i> Monitor X Handle</h5>
+                <p class="text-muted small">Specify a newsmaker or outlet handle to automatically stream their latest tweets.</p>
+                <form method="post" asp-page-handler="AddHandle">
+                    <div class="mb-3">
+                        <label class="form-label text-muted small">Handle (with @@) *</label>
+                        <input asp-for="NewHandle.Handle" class="form-control form-control-glass" placeholder="e.g. @@channelstv" required />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted small">Display Name</label>
+                        <input asp-for="NewHandle.DisplayName" class="form-control form-control-glass" placeholder="e.g. Channels Television" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted small">Category</label>
+                        <select asp-for="NewHandle.Category" class="form-select form-control-glass">
+                            <option value="Media">Media Outlet</option>
+                            <option value="Commentator">Political Commentator</option>
+                            <option value="Government">Government / Official</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted small">Profile URL</label>
+                        <input asp-for="NewHandle.ProfileUrl" class="form-control form-control-glass" placeholder="https://x.com/channelstv" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted small">Avatar Image URL</label>
+                        <input asp-for="NewHandle.AvatarUrl" class="form-control form-control-glass" placeholder="https://pbs.twimg.com/..." />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted small">Bio / Description</label>
+                        <textarea asp-for="NewHandle.Bio" class="form-control form-control-glass" rows="2" placeholder="Brief profile summary"></textarea>
+                    </div>
+                    <button class="btn btn-social-gradient w-100"><i class="bi bi-plus-lg me-1"></i> Add Handle & Sync Tweets</button>
+                </form>
+            </div>
+
+            <!-- Monitored Handles List -->
+            <div class="glass-card p-4 mb-4">
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                    <h5 class="text-white mb-0 brand-font"><i class="bi bi-twitter-x text-info me-2"></i> Monitored Handles</h5>
+                    <span class="badge bg-info text-dark rounded-pill">@Model.Handles.Count</span>
+                </div>
+                <div class="list-group list-group-flush bg-transparent">
+                    @foreach (var handle in Model.Handles)
+                    {
+                        <div class="list-group-item bg-transparent text-white border-secondary border-opacity-25 px-0 py-2.5 d-flex align-items-center justify-content-between">
+                            <div>
+                                <div class="font-weight-bold text-white small">@handle.DisplayName</div>
+                                <div class="text-muted" style="font-size: 0.72rem;">@handle.Handle</div>
+                            </div>
+                            <form method="post" asp-page-handler="RemoveHandle" class="d-inline">
+                                <input type="hidden" name="id" value="@handle.Id" />
+                                <button class="btn btn-outline-danger btn-sm p-1 px-2" style="font-size: 0.75rem;" title="Remove handle">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </form>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <!-- Info Card -->
+            <div class="glass-card p-4">
+                <h5 class="text-white mb-2 brand-font"><i class="bi bi-info-circle-fill text-info me-2"></i> Breaking Tweets</h5>
+                <p class="text-muted small mb-2">Monitored Twitter/X accounts are automatically aggregated into the mobile app's <strong>Socials Feed</strong> section.</p>
+            </div>
+        </div>
+
+    </div>
+</div>

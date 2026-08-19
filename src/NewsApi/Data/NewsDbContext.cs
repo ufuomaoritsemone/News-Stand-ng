@@ -1,0 +1,60 @@
+using Microsoft.EntityFrameworkCore;
+using NewsApi.Models;
+
+namespace NewsApi.Data;
+
+public class NewsDbContext : DbContext
+{
+    public NewsDbContext(DbContextOptions<NewsDbContext> options) : base(options)
+    {
+    }
+
+    public DbSet<Article> Articles { get; set; } = null!;
+    public DbSet<Source> Sources { get; set; } = null!;
+    public DbSet<AudioAsset> AudioAssets { get; set; } = null!;
+    public DbSet<Briefing> Briefings { get; set; } = null!;
+    public DbSet<VideoChannel> VideoChannels { get; set; } = null!;
+    public DbSet<SocialHandle> SocialHandles { get; set; } = null!;
+    public DbSet<VideoStory> VideoStories { get; set; } = null!;
+    public DbSet<SocialPost> SocialPosts { get; set; } = null!;
+    public DbSet<FeedbackItem> Feedbacks { get; set; } = null!;
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        base.OnModelCreating(modelBuilder);
+
+        modelBuilder.Entity<Article>(entity =>
+        {
+            entity.HasIndex(a => a.PublishedAt);
+            entity.HasIndex(a => a.Category);
+            entity.HasIndex(a => a.Source);
+            entity.HasIndex(a => a.Url);
+        });
+
+        modelBuilder.Entity<AudioAsset>(entity =>
+        {
+            entity.HasIndex(a => a.ArticleId);
+        });
+
+        modelBuilder.Entity<VideoStory>(entity =>
+        {
+            entity.HasIndex(v => v.PublishedAt);
+            entity.HasIndex(v => v.ChannelId);
+            entity.HasIndex(v => v.VideoId);
+            entity.HasIndex(v => v.IsTrending);
+            entity.HasIndex(v => v.TrendingRank);
+        });
+
+        modelBuilder.Entity<SocialPost>(entity =>
+        {
+            entity.HasIndex(s => s.PublishedAt);
+            entity.HasIndex(s => s.AuthorHandle);
+        });
+
+        modelBuilder.Entity<FeedbackItem>(entity =>
+        {
+            entity.HasIndex(f => f.CreatedAt);
+            entity.HasIndex(f => f.Category);
+        });
+    }
+}

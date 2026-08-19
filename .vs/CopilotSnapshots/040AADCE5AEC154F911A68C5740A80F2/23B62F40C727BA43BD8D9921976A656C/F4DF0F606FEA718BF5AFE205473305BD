@@ -1,0 +1,155 @@
+﻿using System.Text.Json;
+using NigerianNewsGrid.Client;
+using NigerianNewsGrid.Client.Models;
+
+namespace NigerianNewGrid;
+
+public partial class MainPage : ContentPage
+{
+    private readonly NewsApiClient _apiClient;
+    private readonly List<BriefingItem> _bookmarks = new();
+
+    public MainPage()
+    {
+        InitializeComponent();
+        _apiClient = new NewsApiClient();
+        _apiClient.BaseUrl = DeviceInfo.Platform == DevicePlatform.Android ? "http://10.0.2.2:5000" : "http://localhost:5000";
+        Loaded += async (_, _) => await LoadBriefingAsync();
+    }
+
+    private async Task LoadBriefingAsync()
+    {
+        var language = Preferences.Get("preferred_language", "English");
+        StatusLabel.Text = $"Loading latest briefing for {language}...";
+
+        var categories = await _apiClient.GetDailyBriefingAsync();
+        if (categories.Count == 0)
+        {
+            var cachedJson = Preferences.Get("last_briefing", string.Empty);
+            if (!string.IsNullOrWhiteSpace(cachedJson))
+            {
+                try
+                {
+                    categories = JsonSerializer.Deserialize<List<BriefingCategory>>(cachedJson) ?? new List<BriefingCategory>();
+                    StatusLabel.Text = "Loaded cached briefing";
+                }
+                catch
+                {
+                    StatusLabel.Text = "No briefing available. Start the API server to fetch fresh content.";
+                }
+            }
+            else
+            {
+                StatusLabel.Text = "No briefing available. Start the API server to fetch fresh content.";
+            }
+        }
+        else
+        {
+            Preferences.Set("last_briefing", JsonSerializer.Serialize(categories));
+            StatusLabel.Text = $"Loaded {categories.Count} categories for {Preferences.Get("preferred_language", "English")}";
+        }
+
+        CategoriesView.ItemsSource = categories;
+        RestoreBookmarks();
+    }
+
+    private async void OnRefreshClicked(object? sender, EventArgs e) => await LoadBriefingAsync();
+
+    private async void OnOpenArticleClicked(object? sender, EventArgs e)
+    {
+        if (sender is Button button && button.CommandParameter is string url && !string.IsNullOrWhiteSpace(url))
+        {
+            await Launcher.OpenAsync(new Uri(url));
+        }
+    }
+
+    private async void OnPlayAudioClicked(object? sender, EventArgs e)
+    {
+        if (sender is Button button && button.CommandParameter is string audioUrl && !string.IsNullOrWhiteSpace(audioUrl))
+        {
+            if (Uri.TryCreate(audioUrl, UriKind.Absolute, out var uri))
+            {
+                await Launcher.OpenAsync(uri);
+            }
+            else
+            {
+                StatusLabel.Text = "Audio link was not valid.";
+            }
+        }
+        else
+        {
+            StatusLabel.Text = "No audio clip available yet for this story.";
+        }
+    }
+
+    private void OnBookmarkClicked(object? sender, EventArgs e)
+    {
+        if (sender is Button button && button.CommandParameter is BriefingItem item)
+        {
+            if (_bookmarks.Any(existing => existing.Id == item.Id))
+            {
+                _bookmarks.RemoveAll(existing => existing.Id == item.Id);
+                Preferences.Set("bookmarks", JsonSerializer.Serialize(_bookmarks));
+                StatusLabel.Text = "Removed bookmark.";
+            }
+            else
+            {
+                _bookmarks.Add(item);
+                Preferences.Set("bookmarks", JsonSerializer.Serialize(_bookmarks));
+                StatusLabel.Text = $"Saved bookmark for {item.Title}";
+            }
+        }
+    }
+
+    private async void OnBookmarksClicked(object? sender, EventArgs e)
+    {
+        if (_bookmarks.Count == 0)
+        {
+            StatusLabel.Text = "No bookmarks yet.";
+            return;
+        }
+
+        StatusLabel.Text = "Bookmarks: " + string.Join(", ", _bookmarks.Select(item => item.Title));
+        await DisplayAlert("Bookmarks", string.Join(Environment.NewLine, _bookmarks.Select(item => item.Title)), "OK");
+    }
+
+    private async void OnShareClicked(object? sender, EventArgs e)
+    {
+        if (sender is Button button && button.CommandParameter is BriefingItem item)
+        {
+            var text = $"Nigerian News Grid: {item.Title}\n{item.Summary ?? string.Empty}\n{item.Url ?? string.Empty}";
+            await Share.Default.RequestAsync(new ShareTextRequest { Text = text, Title = "Share story" });
+        }
+    }
+
+    private async void OnSettingsClicked(object? sender, EventArgs e)
+    {
+        var options = new[] { "English", "Yoruba", "Igbo", "Hausa" };
+        var selection = await DisplayActionSheet("Preferred briefing language", "Cancel", null, options);
+        if (!string.IsNullOrWhiteSpace(selection) && selection != "Cancel")
+        {
+            Preferences.Set("preferred_language", selection);
+            StatusLabel.Text = $"Preferred language set to {selection}";
+        }
+    }
+
+    private void RestoreBookmarks()
+    {
+        var cachedBookmarks = Preferences.Get("bookmarks", string.Empty);
+        if (!string.IsNullOrWhiteSpace(cachedBookmarks))
+        {
+            try
+            {
+                var items = JsonSerializer.Deserialize<List<BriefingItem>>(cachedBookmarks);
+                if (items != null)
+                {
+                    _bookmarks.Clear();
+                    _bookmarks.AddRange(items);
+                }
+            }
+            catch
+            {
+            }
+        }
+    }
+}

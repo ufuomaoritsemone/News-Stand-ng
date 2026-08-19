@@ -1,0 +1,43 @@
+﻿using Microsoft.Extensions.Logging;
+using System;
+using NigerianNewsGrid.Client;
+
+namespace NigerianNewGrid
+{
+    public static class MauiProgram
+    {
+        public static IServiceProvider? Services { get; private set; }
+
+        public static MauiApp CreateMauiApp()
+        {
+            var builder = MauiApp.CreateBuilder();
+            builder
+                .UseMauiApp<App>()
+                .ConfigureFonts(fonts =>
+                {
+                    fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
+                    fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
+                });
+
+#if DEBUG
+            builder.Logging.AddDebug();
+#endif
+
+            // Register NewsApiClient using a configured HttpClient instance.
+            // Avoid relying on IHttpClientFactory in case the HttpClientFactory extensions are not available in this project context.
+            builder.Services.AddSingleton<NewsApiClient>(sp =>
+            {
+                var client = new System.Net.Http.HttpClient
+                {
+                    BaseAddress = new Uri("http://localhost:5000"),
+                    Timeout = TimeSpan.FromSeconds(10)
+                };
+                return new NewsApiClient(client);
+            });
+
+            var app = builder.Build();
+            Services = app.Services;
+            return app;
+        }
+    }
+}

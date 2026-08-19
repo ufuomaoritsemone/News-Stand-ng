@@ -1,0 +1,19 @@
+[
+  {
+    "Name": "New Profile",
+    "Projects": [
+      {
+        "Path": "src\\AdminDashboard\\AdminDashboard.csproj",
+        "Action": "Start"
+      },
+      {
+        "Path": "src\\NewsApi\\NewsApi.csproj",
+        "Action": "Start"
+      },
+      {
+        "Path": "NigerianNewGrid\\NigerianNewGrid.csproj",
+        "Action": "Start"
+      }
+    ]
+  }
+]

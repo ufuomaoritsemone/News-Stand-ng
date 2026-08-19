@@ -1,0 +1,26 @@
+name: Build
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            10.0.x
+      - name: Restore dependencies
+        run: dotnet restore src/NewsApi/NewsApi.csproj
+      - name: Build NewsApi
+        run: dotnet build src/NewsApi/NewsApi.csproj --no-restore
+      - name: Build NewsScraperService
+        run: dotnet build src/NewsScraperService/NewsScraperService.csproj --no-restore
+      - name: Build TtsWorker
+        run: dotnet build src/TtsWorker/TtsWorker.csproj --no-restore

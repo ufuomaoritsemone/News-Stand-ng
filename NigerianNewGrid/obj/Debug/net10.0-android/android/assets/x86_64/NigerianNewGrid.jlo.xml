@@ -1,0 +1,37 @@
+<api>
+  <jcw-types>
+    <type name="MainActivity" package="crc64c06e9d0bd0bbf77f" application_java_class="android.app.Application" mono_runtime_initialization="mono.MonoPackageManager.LoadApplication (context);" extends_type="crc6488302ad6e9e4df1a.MauiAppCompatActivity" partial_assembly_qualified_name="NigerianNewGrid.MainActivity, NigerianNewGrid">
+      <constructors>
+        <constructor name="MainActivity" method="n_.ctor:()V:" jni_signature="()V" managed_parameters="" retval="void" is_dynamically_registered="True" />
+        <constructor name="MainActivity" method="n_.ctor:(I)V:" jni_signature="(I)V" managed_parameters="System.Int32, System.Private.CoreLib" params="int p0" retval="void" is_dynamically_registered="True" super_call="p0" activate_call="p0" />
+      </constructors>
+    </type>
+    <type name="MainApplication" package="crc64c06e9d0bd0bbf77f" application_java_class="android.app.Application" mono_runtime_initialization="mono.MonoPackageManager.LoadApplication (context);" extends_type="crc6488302ad6e9e4df1a.MauiApplication" is_application="True" partial_assembly_qualified_name="NigerianNewGrid.MainApplication, NigerianNewGrid" application_constructor="MainApplication">
+      <methods>
+        <method name="onCreate" method="n_onCreate:()V:GetOnCreateHandler" jni_signature="()V" retval="void" is_dynamically_registered="True" />
+      </methods>
+    </type>
+    <type name="BootCompletedReceiver" package="crc6457a23cbd635c6191" application_java_class="android.app.Application" mono_runtime_initialization="mono.MonoPackageManager.LoadApplication (context);" extends_type="android.content.BroadcastReceiver" partial_assembly_qualified_name="NigerianNewGrid.Platforms.Android.BootCompletedReceiver, NigerianNewGrid">
+      <constructors>
+        <constructor name="BootCompletedReceiver" method="n_.ctor:()V:" jni_signature="()V" managed_parameters="" retval="void" is_dynamically_registered="True" />
+      </constructors>
+      <methods>
+        <method name="onReceive" method="n_onReceive:(Landroid/content/Context;Landroid/content/Intent;)V:GetOnReceive_Landroid_content_Context_Landroid_content_Intent_Handler" jni_signature="(Landroid/content/Context;Landroid/content/Intent;)V" params="android.content.Context p0, android.content.Intent p1" retval="void" is_dynamically_registered="True" super_call="p0, p1" activate_call="p0, p1" />
+      </methods>
+    </type>
+    <type name="MorningBriefingReceiver" package="crc6457a23cbd635c6191" application_java_class="android.app.Application" mono_runtime_initialization="mono.MonoPackageManager.LoadApplication (context);" extends_type="android.content.BroadcastReceiver" partial_assembly_qualified_name="NigerianNewGrid.Platforms.Android.MorningBriefingReceiver, NigerianNewGrid">
+      <constructors>
+        <constructor name="MorningBriefingReceiver" method="n_.ctor:()V:" jni_signature="()V" managed_parameters="" retval="void" is_dynamically_registered="True" />
+      </constructors>
+      <methods>
+        <method name="onReceive" method="n_onReceive:(Landroid/content/Context;Landroid/content/Intent;)V:GetOnReceive_Landroid_content_Context_Landroid_content_Intent_Handler" jni_signature="(Landroid/content/Context;Landroid/content/Intent;)V" params="android.content.Context p0, android.content.Intent p1" retval="void" is_dynamically_registered="True" super_call="p0, p1" activate_call="p0, p1" />
+      </methods>
+    </type>
+  </jcw-types>
+  <acw-types partial-assembly-name="NigerianNewGrid" module-name="NigerianNewGrid.dll">
+    <type assembly-qualified-name="NigerianNewGrid.MainActivity, NigerianNewGrid, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null" compat-jni-name="nigeriannewgrid.MainActivity" java-key="crc64c06e9d0bd0bbf77f.MainActivity" managed-key="NigerianNewGrid.MainActivity" partial-assembly-qualified-name="NigerianNewGrid.MainActivity, NigerianNewGrid" />
+    <type assembly-qualified-name="NigerianNewGrid.MainApplication, NigerianNewGrid, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null" compat-jni-name="nigeriannewgrid.MainApplication" java-key="crc64c06e9d0bd0bbf77f.MainApplication" managed-key="NigerianNewGrid.MainApplication" partial-assembly-qualified-name="NigerianNewGrid.MainApplication, NigerianNewGrid" />
+    <type assembly-qualified-name="NigerianNewGrid.Platforms.Android.BootCompletedReceiver, NigerianNewGrid, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null" compat-jni-name="nigeriannewgrid.platforms.android.BootCompletedReceiver" java-key="crc6457a23cbd635c6191.BootCompletedReceiver" managed-key="NigerianNewGrid.Platforms.Android.BootCompletedReceiver" partial-assembly-qualified-name="NigerianNewGrid.Platforms.Android.BootCompletedReceiver, NigerianNewGrid" />
+    <type assembly-qualified-name="NigerianNewGrid.Platforms.Android.MorningBriefingReceiver, NigerianNewGrid, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null" compat-jni-name="nigeriannewgrid.platforms.android.MorningBriefingReceiver" java-key="crc6457a23cbd635c6191.MorningBriefingReceiver" managed-key="NigerianNewGrid.Platforms.Android.MorningBriefingReceiver" partial-assembly-qualified-name="NigerianNewGrid.Platforms.Android.MorningBriefingReceiver, NigerianNewGrid" />
+  </acw-types>
+</api>

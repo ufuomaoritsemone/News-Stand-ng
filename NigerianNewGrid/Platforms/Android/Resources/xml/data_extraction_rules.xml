@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Backup exclusion rules to prevent SecureStorage encrypted values from being
+     backed up and restored on a different device where the encryption key is invalid.
+     See: maui-secure-storage skill — Android Auto Backup gotcha. -->
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="sharedpref" path="." />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="sharedpref" path="." />
+    </device-transfer>
+</data-extraction-rules>

@@ -1,0 +1,104 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>NigerianNewGrid</name>
+    </assembly>
+    <members>
+        <member name="M:NigerianNewGrid.ArticleWebPage.#ctor(System.String,System.String,System.String,System.String,System.String)">
+            <summary>
+            Full constructor initializing Chrome-style Reader Mode with newspaper branding,
+            lead picture, full distilled story text, and multi-source related coverage.
+            </summary>
+        </member>
+        <member name="T:NigerianNewGrid.DiscoverPage">
+            <summary>
+            Discover tab — search + category filter over articles and trending YouTube video stories.
+            </summary>
+        </member>
+        <member name="M:NigerianNewGrid.MainPage.TimeAgo(System.DateTime)">
+            <summary>
+            Returns a human-readable "X ago" string for a given UTC datetime.
+            </summary>
+        </member>
+        <member name="M:NigerianNewGrid.Services.ArticleDistillerService.IdentifyPublisher(System.String)">
+            <summary>
+            Identifies publisher branding and logos for Nigerian and international news outlets.
+            </summary>
+        </member>
+        <member name="M:NigerianNewGrid.Services.ArticleDistillerService.GenerateChromeReaderDistillerScript(System.String,System.String,System.String,System.String,System.String,System.String,System.Boolean,System.String)">
+            <summary>
+            Generates the Chromium / Chrome Reader Mode DOM Distiller script.
+            Runs directly inside the live rendered WebView DOM to harvest ALL body text,
+            headlines, and images while stripping all advertisements and bloat.
+            </summary>
+        </member>
+        <member name="M:NigerianNewGrid.Services.ArticleDistillerService.GetToggleReaderScript(System.Boolean)">
+            <summary>
+            JavaScript snippet to toggle Reader Mode in the live WebView.
+            </summary>
+        </member>
+        <member name="M:NigerianNewGrid.Services.ArticleDistillerService.GetSetFontSizeScript(System.String)">
+            <summary>
+            JavaScript snippet to change font size in Reader Mode instantly.
+            </summary>
+        </member>
+        <member name="M:NigerianNewGrid.Services.IKeywordMatchingService.EvaluateFreshArticles(System.Collections.Generic.IEnumerable{NigerianNewsGrid.Client.Models.BriefingItem},System.Collections.Generic.IReadOnlyList{System.String},System.Nullable{System.DateTime},System.Collections.Generic.IReadOnlySet{System.String})">
+            <summary>
+            Evaluates incoming news articles against active monitored keywords.
+            Strictly enforces freshness rules so that only newly updated stories within the recency window trigger alerts.
+            </summary>
+        </member>
+        <member name="F:NigerianNewGrid.Services.KeywordMatchingService.MaxFreshnessWindow">
+            <summary>
+            Maximum lookback window for breaking news alerts (2 hours).
+            </summary>
+        </member>
+        <member name="T:NigerianNewGrid.Services.INotificationService">
+            <summary>
+            Cross-platform abstraction for scheduling morning briefings and posting breaking keyword notifications.
+            </summary>
+        </member>
+        <member name="M:NigerianNewGrid.Services.INotificationService.RequestPermissionAsync">
+            <summary>
+            Requests notification permissions on platforms that require runtime consent (Android 13+, iOS).
+            </summary>
+        </member>
+        <member name="M:NigerianNewGrid.Services.INotificationService.ScheduleDailyMorningBriefing(System.TimeSpan)">
+            <summary>
+            Schedules the repeating daily morning briefing at the designated time of day.
+            </summary>
+        </member>
+        <member name="M:NigerianNewGrid.Services.INotificationService.CancelDailyMorningBriefing">
+            <summary>
+            Cancels any scheduled daily morning briefings.
+            </summary>
+        </member>
+        <member name="M:NigerianNewGrid.Services.INotificationService.ShowBriefingNotification(System.String,System.String)">
+            <summary>
+            Immediately dispatches a morning briefing notification.
+            </summary>
+        </member>
+        <member name="M:NigerianNewGrid.Services.INotificationService.ShowKeywordAlertNotification(System.String,System.String,System.String)">
+            <summary>
+            Immediately dispatches a high-priority keyword alert notification.
+            </summary>
+        </member>
+        <member name="T:NigerianNewGrid.Services.NotificationPreferences">
+            <summary>
+            Manages on-device preferences for morning briefings, monitored keywords, and alert state.
+            All data remains strictly local to the device for privacy preservation.
+            </summary>
+        </member>
+        <member name="T:NigerianNewGrid.Services.NullNotificationService">
+            <summary>
+            Fallback no-op notification service for unsupported environments or unit tests.
+            </summary>
+        </member>
+        <member name="T:NigerianNewGrid.Resource">
+            <summary>
+            Android Resource Designer class.
+            Exposes the Android Resource designer assembly into the project Namespace.
+            </summary>
+        </member>
+    </members>
+</doc>

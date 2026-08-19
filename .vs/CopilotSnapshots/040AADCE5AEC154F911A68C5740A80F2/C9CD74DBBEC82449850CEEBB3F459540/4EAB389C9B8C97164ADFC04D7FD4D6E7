@@ -1,0 +1,66 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="NigerianNewGrid.MainPage"
+             Title="Nigerian News Grid">
+
+    <Grid RowDefinitions="Auto,Auto,*" Padding="16" RowSpacing="12">
+        <VerticalStackLayout Grid.Row="0" Spacing="4">
+            <Label Text="Nigerian News Grid" FontSize="28" FontAttributes="Bold" />
+            <Label Text="Daily briefing from Nigerian news outlets with audio links" FontSize="14" Opacity="0.8" />
+        </VerticalStackLayout>
+
+        <HorizontalStackLayout Grid.Row="1" Spacing="8">
+            <Button Text="Refresh" Clicked="OnRefreshClicked" />
+            <Button Text="Bookmarks" Clicked="OnBookmarksClicked" />
+            <Button Text="Settings" Clicked="OnSettingsClicked" />
+            <Button Text="Reminder" Clicked="OnReminderClicked" />
+        </HorizontalStackLayout>
+
+        <ScrollView Grid.Row="2">
+            <VerticalStackLayout Spacing="12">
+                <Label x:Name="StatusLabel" Text="Loading latest briefing..." FontAttributes="Bold" />
+
+                <CollectionView x:Name="CategoriesView" SelectionMode="None">
+                    <CollectionView.ItemTemplate>
+                        <DataTemplate>
+                            <Border Padding="12" Margin="0,0,0,10" StrokeShape="RoundRectangle 12" StrokeThickness="1">
+                                <VerticalStackLayout Spacing="8">
+                                    <Label Text="{Binding Category}" FontSize="20" FontAttributes="Bold" />
+
+                                    <CollectionView ItemsSource="{Binding Top}" SelectionMode="None">
+                                        <CollectionView.ItemTemplate>
+                                            <DataTemplate>
+                                                <Border Padding="10" Margin="0,0,0,8" BackgroundColor="#F8F8F8" StrokeShape="RoundRectangle 10" StrokeThickness="0">
+                                                    <VerticalStackLayout Spacing="6">
+                                                        <Label Text="{Binding Title}" FontAttributes="Bold" LineBreakMode="WordWrap" />
+                                                        <Label Text="{Binding Summary}" LineBreakMode="WordWrap" Opacity="0.8" />
+                                                        <HorizontalStackLayout Spacing="8">
+                                                            <Border Padding="6,3" BackgroundColor="#E7F1FF" StrokeShape="RoundRectangle 8" StrokeThickness="0">
+                                                                <Label Text="{Binding Source}" FontSize="12" />
+                                                            </Border>
+                                                            <Border Padding="6,3" BackgroundColor="#EEF7E8" StrokeShape="RoundRectangle 8" StrokeThickness="0">
+                                                                <Label Text="{Binding VoiceName}" FontSize="12" />
+                                                            </Border>
+                                                        </HorizontalStackLayout>
+                                                        <HorizontalStackLayout Spacing="8">
+                                                            <Button Text="Open" Clicked="OnOpenArticleClicked" CommandParameter="{Binding Url}" />
+                                                            <Button Text="Audio" Clicked="OnPlayAudioClicked" CommandParameter="{Binding AudioUrl}" />
+                                                            <Button Text="Save" Clicked="OnBookmarkClicked" CommandParameter="{Binding .}" />
+                                                            <Button Text="Share" Clicked="OnShareClicked" CommandParameter="{Binding .}" />
+                                                        </HorizontalStackLayout>
+                                                    </VerticalStackLayout>
+                                                </Border>
+                                            </DataTemplate>
+                                        </CollectionView.ItemTemplate>
+                                    </CollectionView>
+                                </VerticalStackLayout>
+                            </Border>
+                        </DataTemplate>
+                    </CollectionView.ItemTemplate>
+                </CollectionView>
+            </VerticalStackLayout>
+        </ScrollView>
+    </Grid>
+
+</ContentPage>

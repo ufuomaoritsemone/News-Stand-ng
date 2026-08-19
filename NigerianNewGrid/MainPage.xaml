@@ -1,0 +1,446 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:models="clr-namespace:NigerianNewsGrid.Client.Models;assembly=NigerianNewsGrid.Client"
+             xmlns:local="clr-namespace:NigerianNewGrid"
+             x:Class="NigerianNewGrid.MainPage"
+             Title="Home"
+             Background="{StaticResource SecondaryLightBrush}"
+             SafeAreaEdges="Container">
+
+    <RefreshView x:Name="BriefingRefreshView"
+                 Refreshing="OnPullToRefresh">
+        <ScrollView>
+            <VerticalStackLayout Spacing="0">
+
+                <!-- ══════════════════════════════════════════════
+                     TOP APP BAR — Logo · Title · Actions
+                ══════════════════════════════════════════════ -->
+                <Grid ColumnDefinitions="Auto,*,Auto,Auto"
+                      ColumnSpacing="10"
+                      Padding="20,16,20,12"
+                      Background="{StaticResource WhiteBrush}"
+                      VerticalOptions="Center">
+
+                    <!-- Logo -->
+                    <Image Grid.Column="0"
+                           Source="nng_logo.png"
+                           HeightRequest="36"
+                           Aspect="AspectFit"
+                           HorizontalOptions="Start"
+                           VerticalOptions="Center"
+                           SemanticProperties.Description="Nigerian News Grid" />
+
+                    <!-- Status / Subtitle with Date/Time -->
+                    <Label Grid.Column="1"
+                           x:Name="StatusLabel"
+                           VerticalOptions="Center"
+                           MaxLines="2"
+                           LineBreakMode="WordWrap">
+                        <Label.FormattedText>
+                            <FormattedString>
+                                <Span Text="Updated as at "
+                                      FontSize="10"
+                                      FontFamily="LegacySansBook"
+                                      TextColor="{StaticResource Gray500}" />
+                                <Span Text="Loading…"
+                                      FontSize="12"
+                                      FontAttributes="Bold"
+                                      FontFamily="LegacySansBook"
+                                      TextColor="{StaticResource Gray900Brush}" />
+                            </FormattedString>
+                        </Label.FormattedText>
+                    </Label>
+
+                    <!-- Refresh button -->
+                    <Button Grid.Column="2"
+                            Text="↻"
+                            Clicked="OnRefreshClicked"
+                            Padding="10,6"
+                            FontSize="16"
+                            CornerRadius="14"
+                            BorderWidth="1.5"
+                            BorderColor="{AppThemeBinding Light={StaticResource ButtonBorderLight}, Dark={StaticResource ButtonBorderDark}}"
+                            BackgroundColor="{AppThemeBinding Light={StaticResource ButtonBgLight}, Dark={StaticResource ButtonSecondaryBgDark}}"
+                            TextColor="{AppThemeBinding Light={StaticResource ButtonTextLight}, Dark={StaticResource ButtonTextDark}}"
+                            SemanticProperties.Hint="Reload briefing" />
+
+                    <!-- Audio briefing button -->
+                    <Button Grid.Column="3"
+                            Text="🎧"
+                            Clicked="OnPlayDailyAudioBriefingClicked"
+                            Padding="10,6"
+                            FontSize="16"
+                            CornerRadius="14"
+                            BorderWidth="1.5"
+                            BorderColor="{AppThemeBinding Light={StaticResource AccentOrange}, Dark={StaticResource DarkAccentOrange}}"
+                            BackgroundColor="{AppThemeBinding Light={StaticResource AccentOrangeLight}, Dark={StaticResource DarkAccentOrangeLight}}"
+                            TextColor="{AppThemeBinding Light={StaticResource AccentOrange}, Dark={StaticResource DarkAccentOrange}}"
+                            SemanticProperties.Hint="Play daily audio briefing" />
+                </Grid>
+
+                <!-- ══════════════════════════════════════════════
+                     LATEST STORIES FEED (Chronological Date Groups)
+                ══════════════════════════════════════════════ -->
+                <VerticalStackLayout Padding="20,16,20,0"
+                                     Spacing="12"
+                                     Background="{StaticResource SecondaryLightBrush}">
+
+                    <!-- Empty state -->
+                    <VerticalStackLayout x:Name="EmptyStateView"
+                                         IsVisible="False"
+                                         HorizontalOptions="Center"
+                                         VerticalOptions="Center"
+                                         Spacing="10"
+                                         Padding="32">
+                        <Label Text="📰" FontSize="40" HorizontalOptions="Center" />
+                        <Label Text="No stories found"
+                               FontFamily="LegacySerifBold"
+                               FontSize="18"
+                               FontAttributes="Bold"
+                               HorizontalTextAlignment="Center"
+                               TextColor="{StaticResource Gray900Brush}" />
+                        <Label Text="Pull down to refresh or check your internet connection."
+                               FontFamily="LegacySansBook"
+                               FontSize="13"
+                               HorizontalTextAlignment="Center"
+                               TextColor="{StaticResource Gray500}" />
+                    </VerticalStackLayout>
+
+                    <!-- Article list — rendered with smooth BindableLayout (avoiding nested Scroll conflicts) -->
+                    <VerticalStackLayout x:Name="CategoriesLayout"
+                                         Spacing="0">
+                        <BindableLayout.ItemTemplate>
+                            <DataTemplate x:DataType="local:BriefingDateGroup">
+                                <VerticalStackLayout Spacing="0" Margin="0,0,0,12">
+
+                                    <!-- Date Header separating news stories -->
+                                    <Grid ColumnDefinitions="Auto,*,Auto"
+                                          ColumnSpacing="8"
+                                          Margin="0,8,0,10"
+                                          VerticalOptions="Center">
+
+                                        <!-- Calendar Badge -->
+                                        <Border Grid.Column="0"
+                                                Padding="6,3"
+                                                BackgroundColor="{StaticResource SecondaryBrush}"
+                                                StrokeShape="RoundRectangle 8"
+                                                StrokeThickness="0"
+                                                VerticalOptions="Center">
+                                            <Label Text="📅" FontSize="11" VerticalOptions="Center" />
+                                        </Border>
+
+                                        <!-- Date Title -->
+                                        <Label Grid.Column="1"
+                                               Text="{Binding DateHeader}"
+                                               FontFamily="LegacySerifBold"
+                                               FontSize="15"
+                                               FontAttributes="Bold"
+                                               TextColor="{StaticResource Gray900Brush}"
+                                               VerticalOptions="Center" />
+
+                                        <!-- Story Count Badge -->
+                                        <Border Grid.Column="2"
+                                                Padding="8,3"
+                                                BackgroundColor="{StaticResource SecondaryBrush}"
+                                                StrokeShape="RoundRectangle 10"
+                                                StrokeThickness="0"
+                                                VerticalOptions="Center">
+                                            <Label Text="{Binding Stories.Count, StringFormat='{0} stories'}"
+                                                   FontFamily="LegacySansBook"
+                                                   FontSize="11"
+                                                   TextColor="{StaticResource Gray600Brush}" />
+                                        </Border>
+                                    </Grid>
+
+                                    <!-- Per-date article list via BindableLayout -->
+                                    <VerticalStackLayout BindableLayout.ItemsSource="{Binding Stories}"
+                                                         Spacing="0">
+                                        <BindableLayout.ItemTemplate>
+                                            <DataTemplate x:DataType="models:BriefingItem">
+
+                                                <!-- GoRead Card: thumbnail left, content right -->
+                                                <Border Padding="0"
+                                                        Margin="0,0,0,12"
+                                                        BackgroundColor="{StaticResource WhiteBrush}"
+                                                        StrokeShape="RoundRectangle 16"
+                                                        StrokeThickness="1"
+                                                        Stroke="{StaticResource Gray100Brush}">
+                                                    <Border.GestureRecognizers>
+                                                        <TapGestureRecognizer Tapped="OnArticleTapped"
+                                                                              CommandParameter="{Binding .}" />
+                                                    </Border.GestureRecognizers>
+
+                                                    <Grid ColumnDefinitions="132,*" ColumnSpacing="0"
+                                                          HeightRequest="132">
+
+                                                        <!-- Thumbnail (left panel, rounded left corners only) -->
+                                                        <Border Grid.Column="0"
+                                                                StrokeThickness="0"
+                                                                StrokeShape="RoundRectangle 16,0,16,0">
+                                                            <Image Source="{Binding ImageUrl}"
+                                                                   Aspect="AspectFill"
+                                                                   HeightRequest="132"
+                                                                   WidthRequest="132" />
+                                                        </Border>
+
+                                                        <!-- Content (right panel) -->
+                                                        <VerticalStackLayout Grid.Column="1"
+                                                                             Padding="14,10,14,10"
+                                                                             Spacing="4"
+                                                                             VerticalOptions="Center">
+
+                                                            <!-- Category label -->
+                                                            <Label Text="{Binding Category}"
+                                                                   FontFamily="LegacySansBook"
+                                                                   FontSize="11"
+                                                                   FontAttributes="Bold"
+                                                                   TextColor="{StaticResource AccentBlueBrush}"
+                                                                   TextTransform="Uppercase" />
+
+                                                            <!-- Headline -->
+                                                            <Label Text="{Binding Title}"
+                                                                   FontFamily="LegacySerifBold"
+                                                                   FontSize="15"
+                                                                   FontAttributes="Bold"
+                                                                   MaxLines="2"
+                                                                   LineBreakMode="TailTruncation"
+                                                                   TextColor="{StaticResource Gray900Brush}" />
+
+                                                            <!-- Source · time ago row -->
+                                                            <HorizontalStackLayout Spacing="4">
+                                                                <Label Text="{Binding Source}"
+                                                                       FontFamily="LegacySansBook"
+                                                                       FontSize="11"
+                                                                       TextColor="{StaticResource Gray500}"
+                                                                       MaxLines="1"
+                                                                       LineBreakMode="TailTruncation" />
+                                                                <Label Text="•"
+                                                                       FontSize="11"
+                                                                       TextColor="{StaticResource Gray400}" />
+                                                                <Label Text="{Binding TimeAgoText}"
+                                                                       FontFamily="LegacySansBook"
+                                                                       FontSize="11"
+                                                                       TextColor="{StaticResource Gray500}" />
+                                                            </HorizontalStackLayout>
+
+                                                            <!-- Action row — Bookmark + Share -->
+                                                            <HorizontalStackLayout Spacing="6" Margin="0,4,0,0">
+                                                                <Button Text="🔖"
+                                                                        Clicked="OnBookmarkClicked"
+                                                                        CommandParameter="{Binding .}"
+                                                                        Padding="0"
+                                                                        HeightRequest="36"
+                                                                        WidthRequest="36"
+                                                                        MinimumHeightRequest="36"
+                                                                        MinimumWidthRequest="36"
+                                                                        FontSize="13"
+                                                                        CornerRadius="10"
+                                                                        BorderWidth="1.5"
+                                                                        BorderColor="{AppThemeBinding Light={StaticResource ButtonBorderLight}, Dark={StaticResource ButtonBorderDark}}"
+                                                                        BackgroundColor="{AppThemeBinding Light={StaticResource ButtonBgLight}, Dark={StaticResource ButtonSecondaryBgDark}}"
+                                                                        TextColor="{AppThemeBinding Light={StaticResource ButtonTextLight}, Dark={StaticResource ButtonTextDark}}"
+                                                                        SemanticProperties.Hint="Bookmark story" />
+                                                                <Button Text="↗"
+                                                                        Clicked="OnShareClicked"
+                                                                        CommandParameter="{Binding .}"
+                                                                        Padding="0"
+                                                                        HeightRequest="36"
+                                                                        WidthRequest="36"
+                                                                        MinimumHeightRequest="36"
+                                                                        MinimumWidthRequest="36"
+                                                                        FontSize="13"
+                                                                        FontAttributes="Bold"
+                                                                        CornerRadius="10"
+                                                                        BorderWidth="1.5"
+                                                                        BorderColor="{AppThemeBinding Light={StaticResource ButtonBorderLight}, Dark={StaticResource ButtonBorderDark}}"
+                                                                        BackgroundColor="{AppThemeBinding Light={StaticResource ButtonBgLight}, Dark={StaticResource ButtonSecondaryBgDark}}"
+                                                                        TextColor="{AppThemeBinding Light={StaticResource ButtonTextLight}, Dark={StaticResource ButtonTextDark}}"
+                                                                        SemanticProperties.Hint="Share story" />
+                                                            </HorizontalStackLayout>
+                                                        </VerticalStackLayout>
+                                                    </Grid>
+                                                </Border>
+
+                                            </DataTemplate>
+                                        </BindableLayout.ItemTemplate>
+                                    </VerticalStackLayout>
+                                </VerticalStackLayout>
+                            </DataTemplate>
+                        </BindableLayout.ItemTemplate>
+                    </VerticalStackLayout>
+
+                    <!-- Pagination Controls / Load More Stories -->
+                    <VerticalStackLayout x:Name="PaginationLayout"
+                                         Spacing="8"
+                                         Margin="0,12,0,16"
+                                         HorizontalOptions="Fill">
+                        <Button x:Name="LoadMoreStoriesBtn"
+                                Text="Load More Stories (Showing 15)"
+                                Clicked="OnLoadMoreStoriesClicked"
+                                Style="{StaticResource ActionSecondaryButtonStyle}"
+                                HeightRequest="46"
+                                HorizontalOptions="Fill" />
+                        <Label x:Name="StoriesCountSummaryLabel"
+                               Text="Showing 15 stories"
+                               FontFamily="LegacySansBook"
+                               FontSize="11"
+                               TextColor="{StaticResource Gray500}"
+                               HorizontalTextAlignment="Center" />
+                    </VerticalStackLayout>
+
+                    <!-- ══════════════════════════════════════════════
+                         VIDEO STORIES — YouTube News Broadcasts & Reports
+                    ══════════════════════════════════════════════ -->
+                    <VerticalStackLayout Spacing="12" Margin="0,16,0,0">
+
+                        <!-- Red Gradient Banner -->
+                        <Border Padding="16,12"
+                                StrokeThickness="0"
+                                StrokeShape="RoundRectangle 16">
+                            <Border.Background>
+                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                                    <GradientStop Color="#E60000" Offset="0.0" />
+                                    <GradientStop Color="#990000" Offset="1.0" />
+                                </LinearGradientBrush>
+                            </Border.Background>
+                            <Grid ColumnDefinitions="Auto,*,Auto">
+                                <Label Grid.Column="0" Text="🎬" FontSize="20" VerticalOptions="Center" Margin="0,0,8,0" />
+                                <VerticalStackLayout Grid.Column="1" VerticalOptions="Center" Spacing="0">
+                                    <Label Text="Latest Video News"
+                                           FontFamily="LegacySerifBold"
+                                           FontSize="18"
+                                           FontAttributes="Bold"
+                                           TextColor="White" />
+                                    <Label Text="Fresh video stories &amp; broadcasts from Nigerian channels"
+                                           FontFamily="LegacySansBook"
+                                           FontSize="11"
+                                           TextColor="#FCE8E8" />
+                                </VerticalStackLayout>
+                                <Border Grid.Column="2" Padding="8,4"
+                                        BackgroundColor="#33FFFFFF"
+                                        StrokeShape="RoundRectangle 10"
+                                        StrokeThickness="0"
+                                        VerticalOptions="Center">
+                                    <Label Text="WATCH"
+                                           FontFamily="LegacySansBook"
+                                           FontSize="10"
+                                           FontAttributes="Bold"
+                                           TextColor="White" />
+                                </Border>
+                            </Grid>
+                        </Border>
+
+                        <!-- Horizontal Video Stories Carousel -->
+                        <CollectionView x:Name="VideoFeedsView"
+                                        SelectionMode="None"
+                                        HeightRequest="258">
+                            <CollectionView.ItemsLayout>
+                                <LinearItemsLayout Orientation="Horizontal" ItemSpacing="12" />
+                            </CollectionView.ItemsLayout>
+                            <CollectionView.ItemTemplate>
+                                <DataTemplate x:DataType="models:VideoStoryItem">
+                                    <Border Padding="0"
+                                            WidthRequest="260"
+                                            HeightRequest="252"
+                                            BackgroundColor="{StaticResource WhiteBrush}"
+                                            StrokeShape="RoundRectangle 16"
+                                            StrokeThickness="1"
+                                            Stroke="{StaticResource Gray100Brush}">
+                                        <Border.GestureRecognizers>
+                                            <TapGestureRecognizer Tapped="OnVideoStoryTapped" CommandParameter="{Binding .}" />
+                                        </Border.GestureRecognizers>
+                                        <Grid RowDefinitions="150,*">
+                                            <!-- Video Thumbnail + Play Overlay -->
+                                            <Grid Grid.Row="0">
+                                                <Image Source="{Binding ThumbnailUrl}"
+                                                       Aspect="AspectFill"
+                                                       HeightRequest="150"
+                                                       WidthRequest="260" />
+                                                <BoxView Color="#000000" Opacity="0.3" />
+                                                
+                                                <!-- Play Icon Circle -->
+                                                <Border BackgroundColor="#CC000000"
+                                                        StrokeThickness="0"
+                                                        StrokeShape="RoundRectangle 20"
+                                                        HeightRequest="38"
+                                                        WidthRequest="38"
+                                                        HorizontalOptions="Center"
+                                                        VerticalOptions="Center">
+                                                    <Label Text="▶"
+                                                           FontSize="16"
+                                                           TextColor="White"
+                                                           HorizontalOptions="Center"
+                                                           VerticalOptions="Center"
+                                                           Margin="2,0,0,0" />
+                                                </Border>
+
+                                                <!-- Channel Badge -->
+                                                <Border Padding="6,2"
+                                                        BackgroundColor="#CC000000"
+                                                        StrokeShape="RoundRectangle 6"
+                                                        StrokeThickness="0"
+                                                        HorizontalOptions="Start"
+                                                        VerticalOptions="Start"
+                                                        Margin="8">
+                                                    <Label Text="{Binding ChannelName}"
+                                                           FontSize="9"
+                                                           FontAttributes="Bold"
+                                                           TextColor="White" />
+                                                </Border>
+
+                                                <!-- Duration Badge -->
+                                                <Border Padding="6,2"
+                                                        BackgroundColor="#D9FF0000"
+                                                        StrokeShape="RoundRectangle 6"
+                                                        StrokeThickness="0"
+                                                        HorizontalOptions="End"
+                                                        VerticalOptions="Start"
+                                                        Margin="8">
+                                                    <Label Text="{Binding Duration}"
+                                                           FontSize="9"
+                                                           FontAttributes="Bold"
+                                                           TextColor="White" />
+                                                </Border>
+                                            </Grid>
+
+                                            <!-- Video Story Title & Meta -->
+                                            <VerticalStackLayout Grid.Row="1" Padding="12,10,12,10" Spacing="3" VerticalOptions="Center">
+                                                <Label Text="{Binding Title}"
+                                                       FontFamily="LegacySerifBold"
+                                                       FontSize="13"
+                                                       FontAttributes="Bold"
+                                                       MaxLines="2"
+                                                       LineBreakMode="TailTruncation"
+                                                       TextColor="{StaticResource Gray900Brush}" />
+                                                <HorizontalStackLayout Spacing="4">
+                                                    <Label Text="{Binding Category}"
+                                                           FontFamily="LegacySansBook"
+                                                           FontSize="10"
+                                                           FontAttributes="Bold"
+                                                           TextColor="{StaticResource AccentBlueBrush}" />
+                                                    <Label Text="•"
+                                                           FontSize="10"
+                                                           TextColor="{StaticResource Gray500}" />
+                                                    <Label Text="Watch story ↗"
+                                                           FontFamily="LegacySansBook"
+                                                           FontSize="10"
+                                                           TextColor="{StaticResource Gray500}" />
+                                                </HorizontalStackLayout>
+                                            </VerticalStackLayout>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </CollectionView.ItemTemplate>
+                        </CollectionView>
+                    </VerticalStackLayout>
+
+                    <!-- Bottom spacing so last card isn't hidden by tab bar -->
+                    <BoxView HeightRequest="20" Color="Transparent" />
+
+                </VerticalStackLayout>
+
+            </VerticalStackLayout>
+        </ScrollView>
+    </RefreshView>
+</ContentPage>

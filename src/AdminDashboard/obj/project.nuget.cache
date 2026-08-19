@@ -1,0 +1,17 @@
+{
+  "version": 2,
+  "dgSpecHash": "+VbrCeH1B7Y=",
+  "success": true,
+  "projectFilePath": "C:\\Users\\ufuom\\source\\repos\\NigerianNewGrid\\src\\AdminDashboard\\AdminDashboard.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\ufuom\\.nuget\\packages\\microsoft.aspnetcore.mvc.razor.extensions\\6.0.0\\microsoft.aspnetcore.mvc.razor.extensions.6.0.0.nupkg.sha512",
+    "C:\\Users\\ufuom\\.nuget\\packages\\microsoft.aspnetcore.mvc.razor.runtimecompilation\\10.0.10\\microsoft.aspnetcore.mvc.razor.runtimecompilation.10.0.10.nupkg.sha512",
+    "C:\\Users\\ufuom\\.nuget\\packages\\microsoft.aspnetcore.razor.language\\6.0.0\\microsoft.aspnetcore.razor.language.6.0.0.nupkg.sha512",
+    "C:\\Users\\ufuom\\.nuget\\packages\\microsoft.codeanalysis.analyzers\\3.3.2\\microsoft.codeanalysis.analyzers.3.3.2.nupkg.sha512",
+    "C:\\Users\\ufuom\\.nuget\\packages\\microsoft.codeanalysis.common\\4.0.0\\microsoft.codeanalysis.common.4.0.0.nupkg.sha512",
+    "C:\\Users\\ufuom\\.nuget\\packages\\microsoft.codeanalysis.csharp\\4.0.0\\microsoft.codeanalysis.csharp.4.0.0.nupkg.sha512",
+    "C:\\Users\\ufuom\\.nuget\\packages\\microsoft.codeanalysis.razor\\6.0.0\\microsoft.codeanalysis.razor.6.0.0.nupkg.sha512",
+    "C:\\Users\\ufuom\\.nuget\\packages\\microsoft.extensions.dependencymodel\\10.0.10\\microsoft.extensions.dependencymodel.10.0.10.nupkg.sha512"
+  ],
+  "logs": []
+}

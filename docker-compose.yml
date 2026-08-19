@@ -1,0 +1,87 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: nigeriannewsgrid-postgres
+    environment:
+      - POSTGRES_DB=newsgrid
+      - POSTGRES_USER=newsuser
+      - POSTGRES_PASSWORD=newspassword123!
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U newsuser -d newsgrid"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    restart: unless-stopped
+
+  news-api:
+    image: nigeriannewsgrid-newsapi:latest
+    build:
+      context: .
+      dockerfile: src/NewsApi/Dockerfile
+    ports:
+      - "5000:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ConnectionStrings__NewsDb=Host=postgres;Port=5432;Database=newsgrid;Username=newsuser;Password=newspassword123!
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/healthz/readiness || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+
+  admin-dashboard:
+    image: nigeriannewsgrid-admindashboard:latest
+    build:
+      context: .
+      dockerfile: src/AdminDashboard/Dockerfile
+    ports:
+      - "5001:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ApiBaseUrl=http://news-api:8080
+      - NewsApi__BaseUrl=http://news-api:8080
+    depends_on:
+      news-api:
+        condition: service_healthy
+    restart: unless-stopped
+
+  news-scraper-service:
+    image: nigeriannewsgrid-newsscraperservice:latest
+    build:
+      context: .
+      dockerfile: src/NewsScraperService/Dockerfile
+    environment:
+      - DOTNET_ENVIRONMENT=Production
+      - ApiBaseUrl=http://news-api:8080
+      - NewsApi__BaseUrl=http://news-api:8080
+    depends_on:
+      news-api:
+        condition: service_healthy
+    restart: unless-stopped
+
+  tts-worker:
+    image: nigeriannewsgrid-ttsworker:latest
+    build:
+      context: .
+      dockerfile: src/TtsWorker/Dockerfile
+    environment:
+      - DOTNET_ENVIRONMENT=Production
+      - ApiBaseUrl=http://news-api:8080
+      - NewsApi__BaseUrl=http://news-api:8080
+    depends_on:
+      news-api:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  pgdata:

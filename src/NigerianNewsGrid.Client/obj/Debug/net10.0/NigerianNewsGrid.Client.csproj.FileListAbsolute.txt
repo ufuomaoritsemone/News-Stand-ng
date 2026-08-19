@@ -1,0 +1,11 @@
+C:\Users\ufuom\source\repos\NigerianNewGrid\src\NigerianNewsGrid.Client\bin\Debug\net10.0\NigerianNewsGrid.Client.deps.json
+C:\Users\ufuom\source\repos\NigerianNewGrid\src\NigerianNewsGrid.Client\bin\Debug\net10.0\NigerianNewsGrid.Client.dll
+C:\Users\ufuom\source\repos\NigerianNewGrid\src\NigerianNewsGrid.Client\bin\Debug\net10.0\NigerianNewsGrid.Client.pdb
+C:\Users\ufuom\source\repos\NigerianNewGrid\src\NigerianNewsGrid.Client\obj\Debug\net10.0\NigerianNewsGrid.Client.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\ufuom\source\repos\NigerianNewGrid\src\NigerianNewsGrid.Client\obj\Debug\net10.0\NigerianNewsGrid.Client.AssemblyInfoInputs.cache
+C:\Users\ufuom\source\repos\NigerianNewGrid\src\NigerianNewsGrid.Client\obj\Debug\net10.0\NigerianNewsGrid.Client.AssemblyInfo.cs
+C:\Users\ufuom\source\repos\NigerianNewGrid\src\NigerianNewsGrid.Client\obj\Debug\net10.0\NigerianNewsGrid.Client.csproj.CoreCompileInputs.cache
+C:\Users\ufuom\source\repos\NigerianNewGrid\src\NigerianNewsGrid.Client\obj\Debug\net10.0\NigerianNewsGrid.Client.dll
+C:\Users\ufuom\source\repos\NigerianNewGrid\src\NigerianNewsGrid.Client\obj\Debug\net10.0\refint\NigerianNewsGrid.Client.dll
+C:\Users\ufuom\source\repos\NigerianNewGrid\src\NigerianNewsGrid.Client\obj\Debug\net10.0\NigerianNewsGrid.Client.pdb
+C:\Users\ufuom\source\repos\NigerianNewGrid\src\NigerianNewsGrid.Client\obj\Debug\net10.0\ref\NigerianNewsGrid.Client.dll

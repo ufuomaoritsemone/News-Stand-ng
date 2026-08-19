@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<Shell
+    x:Class="NigerianNewGrid.AppShell"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:local="clr-namespace:NigerianNewGrid"
+    Title="Nigerian News Grid"
+    NavBarIsVisible="False"
+    Shell.TabBarBackgroundColor="{AppThemeBinding Light=White, Dark=#121212}"
+    Shell.TabBarForegroundColor="{StaticResource AccentBlue}"
+    Shell.TabBarTitleColor="{StaticResource AccentBlue}"
+    Shell.TabBarUnselectedColor="{StaticResource Gray500}">
+
+    <!-- GoRead-style bottom tab navigation -->
+    <TabBar>
+        <!-- Tab 1: Home — Today's AI-curated briefing -->
+        <Tab Title="Home" Icon="tab_home.png">
+            <ShellContent Route="home" ContentTemplate="{DataTemplate local:MainPage}" />
+        </Tab>
+
+        <!-- Tab 2: Discover — search + category filter -->
+        <Tab Title="Discover" Icon="tab_discover.png">
+            <ShellContent Route="discover" ContentTemplate="{DataTemplate local:DiscoverPage}" />
+        </Tab>
+
+        <!-- Tab 3: Bookmarks — saved articles -->
+        <Tab Title="Bookmarks" Icon="tab_bookmark.png">
+            <ShellContent Route="bookmarks" ContentTemplate="{DataTemplate local:BookmarksPage}" />
+        </Tab>
+
+        <!-- Tab 4: Settings — language & preferences -->
+        <Tab Title="Settings" Icon="tab_settings.png">
+            <ShellContent Route="settings" ContentTemplate="{DataTemplate local:SettingsPage}" />
+        </Tab>
+    </TabBar>
+
+</Shell>

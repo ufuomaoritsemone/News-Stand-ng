@@ -1,0 +1,93 @@
+﻿using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using NewsScraperService.Scrapers;
+using NewsScraperService.Models;
+
+namespace NewsScraperService;
+
+public class ScraperWorker : BackgroundService
+{
+    private readonly ILogger<ScraperWorker> _logger;
+    private readonly IHttpClientFactory _httpFactory;
+
+    public ScraperWorker(ILogger<ScraperWorker> logger, IHttpClientFactory httpFactory)
+    {
+        _logger = logger;
+        _httpFactory = httpFactory;
+    }
+
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        _logger.LogInformation("ScraperWorker starting");
+
+        var client = _httpFactory.CreateClient();
+        var scrapers = new IScraper[] {
+            new GuardianScraper(client),
+            new PremiumTimesScraper(client),
+            new PunchScraper(client)
+        };
+
+        while (!stoppingToken.IsCancellationRequested)
+        {
+            foreach (var s in scrapers)
+            {
+                try
+                {
+                    var items = (await s.ScrapeAsync(stoppingToken)).ToList();
+                    _logger.LogInformation("{Source} returned {Count} items", s.SourceName, items.Count);
+
+                    // Normalize items
+                    foreach (var it in items)
+                    {
+                        it.Title = NormalizeTitle(it.Title);
+                        if (string.IsNullOrEmpty(it.Category)) it.Category = Categorize(it.Title + " " + (it.Summary ?? string.Empty));
+                        it.Source = s.SourceName;
+                    }
+
+                    var folder = Path.Combine(AppContext.BaseDirectory, "data");
+                    Directory.CreateDirectory(folder);
+
+                    // Per-source snapshot
+                    var file = Path.Combine(folder, $"{s.SourceId}.json");
+                    var json = System.Text.Json.JsonSerializer.Serialize(items);
+                    await File.WriteAllTextAsync(file, json, stoppingToken);
+
+                    // Merge into aggregated article list and deduplicate
+                    var aggFile = Path.Combine(folder, "articles.json");
+                    var agg = new List<ArticleModel>();
+                    if (File.Exists(aggFile))
+                    {
+                        try
+                        {
+                            var existing = await File.ReadAllTextAsync(aggFile, stoppingToken);
+                            agg = System.Text.Json.JsonSerializer.Deserialize<List<ArticleModel>>(existing) ?? new List<ArticleModel>();
+                        }
+                        catch { }
+                    }
+
+                    // Merge and dedupe by Url or normalized title
+                    foreach (var it in items)
+                    {
+                        var key = it.Url ?? it.Title;
+                        if (!agg.Any(a => (!string.IsNullOrEmpty(a.Url) && a.Url == it.Url) || NormalizeTitle(a.Title) == NormalizeTitle(it.Title)))
+                        {
+                            agg.Add(it);
+                        }
+                    }
+
+                    // Keep recent 1000 articles to bound file size
+                    agg = agg.OrderByDescending(a => a.PublishedAt ?? DateTime.MinValue).Take(1000).ToList();
+                    var aggJson = System.Text.Json.JsonSerializer.Serialize(agg);
+                    await File.WriteAllTextAsync(aggFile, aggJson, stoppingToken);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error scraping {Source}", s.SourceName);
+                }
+            }
+
+            // Run every 30 minutes
+            await Task.Delay(TimeSpan.FromMinutes(30), stoppingToken);
+        }
+    }
+}

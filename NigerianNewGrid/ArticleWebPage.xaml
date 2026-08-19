@@ -1,0 +1,389 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:local="clr-namespace:NigerianNewGrid"
+             x:Class="NigerianNewGrid.ArticleWebPage"
+             x:DataType="local:ArticleWebPage"
+             Title=""
+             BackgroundColor="{StaticResource WhiteBrush}"
+             SafeAreaEdges="Container">
+
+    <Grid RowDefinitions="Auto,Auto,*" Padding="0" RowSpacing="0">
+
+        <!-- ══════════════════════════════════════════════
+             TOP NAVIGATION & READER CONTROLS TOOLBAR
+        ══════════════════════════════════════════════ -->
+        <Border Grid.Row="0"
+                Padding="12,8"
+                BackgroundColor="{StaticResource WhiteBrush}"
+                StrokeShape="RoundRectangle 0"
+                StrokeThickness="0,0,0,1"
+                Stroke="{AppThemeBinding Light={StaticResource Gray200}, Dark={StaticResource DarkSecondary}}">
+            <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto,Auto" ColumnSpacing="6" VerticalOptions="Center">
+                
+                <!-- Back button -->
+                <Button Grid.Column="0"
+                        Text="← Back"
+                        Clicked="OnBackClicked"
+                        Padding="10,0"
+                        HeightRequest="36"
+                        MinimumHeightRequest="36"
+                        MinimumWidthRequest="62"
+                        FontSize="12"
+                        FontAttributes="Bold"
+                        CornerRadius="10"
+                        BorderWidth="1.5"
+                        BorderColor="{AppThemeBinding Light={StaticResource ButtonBorderLight}, Dark={StaticResource ButtonBorderDark}}"
+                        BackgroundColor="{AppThemeBinding Light={StaticResource ButtonBgLight}, Dark={StaticResource ButtonSecondaryBgDark}}"
+                        TextColor="{AppThemeBinding Light={StaticResource ButtonTextLight}, Dark={StaticResource ButtonTextDark}}" />
+
+                <!-- Publisher / Source Info (compact single line) -->
+                <Label Grid.Column="1"
+                       x:Name="HeaderPublisherLabel"
+                       Text="Newspaper"
+                       FontSize="12"
+                       FontAttributes="Bold"
+                       LineBreakMode="TailTruncation"
+                       VerticalOptions="Center"
+                       HorizontalOptions="Start"
+                       Margin="4,0,2,0"
+                       TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource DarkTextPrimary}}" />
+
+                <!-- Reader Mode / Web View Toggle Switch -->
+                <Button Grid.Column="2"
+                        x:Name="ModeToggleBtn"
+                        Text="📖 Reader"
+                        Clicked="OnToggleReaderModeClicked"
+                        Padding="8,0"
+                        HeightRequest="36"
+                        MinimumHeightRequest="36"
+                        MinimumWidthRequest="72"
+                        FontSize="11"
+                        FontAttributes="Bold"
+                        CornerRadius="10"
+                        BorderWidth="1.5"
+                        BorderColor="{AppThemeBinding Light=#0052CC, Dark=#60A5FA}"
+                        BackgroundColor="{AppThemeBinding Light={StaticResource AccentBlue}, Dark={StaticResource AccentBlue}}"
+                        TextColor="White"
+                        SemanticProperties.Hint="Toggle Reader Mode or Original Web" />
+
+                <!-- Font Size Adjuster -->
+                <Button Grid.Column="3"
+                        x:Name="FontSizeBtn"
+                        Text="A±"
+                        Clicked="OnAdjustFontSizeClicked"
+                        Padding="0"
+                        HeightRequest="36"
+                        WidthRequest="36"
+                        MinimumHeightRequest="36"
+                        MinimumWidthRequest="36"
+                        FontSize="12"
+                        FontAttributes="Bold"
+                        CornerRadius="10"
+                        BorderWidth="1.5"
+                        BorderColor="{AppThemeBinding Light={StaticResource ButtonBorderLight}, Dark={StaticResource ButtonBorderDark}}"
+                        BackgroundColor="{AppThemeBinding Light={StaticResource ButtonBgLight}, Dark={StaticResource ButtonSecondaryBgDark}}"
+                        TextColor="{AppThemeBinding Light={StaticResource ButtonTextLight}, Dark={StaticResource ButtonTextDark}}"
+                        SemanticProperties.Hint="Change Reader Text Size" />
+
+                <!-- Bookmark -->
+                <Button Grid.Column="4"
+                        x:Name="BookmarkBtn"
+                        Text="🔖"
+                        Clicked="OnBookmarkClicked"
+                        Padding="0"
+                        HeightRequest="36"
+                        WidthRequest="36"
+                        MinimumHeightRequest="36"
+                        MinimumWidthRequest="36"
+                        FontSize="13"
+                        CornerRadius="10"
+                        BorderWidth="1.5"
+                        BorderColor="{AppThemeBinding Light={StaticResource ButtonBorderLight}, Dark={StaticResource ButtonBorderDark}}"
+                        BackgroundColor="{AppThemeBinding Light={StaticResource ButtonBgLight}, Dark={StaticResource ButtonSecondaryBgDark}}"
+                        TextColor="{AppThemeBinding Light={StaticResource ButtonTextLight}, Dark={StaticResource ButtonTextDark}}"
+                        SemanticProperties.Hint="Bookmark this article" />
+
+                <!-- Share -->
+                <Button Grid.Column="5"
+                        x:Name="ShareBtn"
+                        Text="↗"
+                        Clicked="OnShareClicked"
+                        Padding="0"
+                        HeightRequest="36"
+                        WidthRequest="36"
+                        MinimumHeightRequest="36"
+                        MinimumWidthRequest="36"
+                        FontSize="13"
+                        FontAttributes="Bold"
+                        CornerRadius="10"
+                        BorderWidth="1.5"
+                        BorderColor="{AppThemeBinding Light={StaticResource ButtonBorderLight}, Dark={StaticResource ButtonBorderDark}}"
+                        BackgroundColor="{AppThemeBinding Light={StaticResource ButtonBgLight}, Dark={StaticResource ButtonSecondaryBgDark}}"
+                        TextColor="{AppThemeBinding Light={StaticResource ButtonTextLight}, Dark={StaticResource ButtonTextDark}}"
+                        SemanticProperties.Hint="Share this article" />
+            </Grid>
+        </Border>
+
+        <!-- Loading Progress Bar -->
+        <ProgressBar Grid.Row="1"
+                     x:Name="LoadingProgress"
+                     IsVisible="True"
+                     Progress="0.3"
+                     ProgressColor="{StaticResource AccentBlueBrush}"
+                     HeightRequest="3" />
+
+        <!-- WebView & Floating Related Stories Container -->
+        <Grid Grid.Row="2">
+            <!-- WebView: Renders either the clean Reader Mode HTML or Web Page -->
+            <WebView x:Name="ArticleWebView"
+                     Navigating="OnNavigating"
+                     Navigated="OnNavigated"
+                     HorizontalOptions="Fill"
+                     VerticalOptions="Fill" />
+
+            <!-- ══════════════════════════════════════════════
+                 RELATED STORIES BOTTOM DRAWER / FLOATING PILL
+            ══════════════════════════════════════════════ -->
+            <Grid x:Name="RelatedDrawerContainer"
+                  VerticalOptions="End"
+                  HorizontalOptions="Fill"
+                  InputTransparent="False">
+
+                <!-- 1. Collapsed Floating Pill Bar -->
+                <Border x:Name="RelatedCollapsedBar"
+                        IsVisible="False"
+                        Margin="16,0,16,16"
+                        Padding="14,10"
+                        BackgroundColor="{StaticResource MidnightBlue}"
+                        StrokeShape="RoundRectangle 24"
+                        StrokeThickness="0">
+                    <Border.Shadow>
+                        <Shadow Brush="#40000000" Offset="0,4" Radius="12" Opacity="0.8" />
+                    </Border.Shadow>
+                    <Border.GestureRecognizers>
+                        <TapGestureRecognizer Tapped="OnToggleRelatedClicked" />
+                    </Border.GestureRecognizers>
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                        <Label x:Name="RelatedCollapsedLabel"
+                               Grid.Column="0"
+                               Text="✨ Related Coverage · Loading..."
+                               FontSize="13"
+                               FontAttributes="Bold"
+                               TextColor="White"
+                               VerticalOptions="Center"
+                               LineBreakMode="TailTruncation" />
+                        <Border Grid.Column="1"
+                                Padding="8,4"
+                                BackgroundColor="#33FFFFFF"
+                                StrokeShape="RoundRectangle 12"
+                                StrokeThickness="0">
+                            <Label Text="Explore ▲"
+                                   FontSize="11"
+                                   FontAttributes="Bold"
+                                   TextColor="{StaticResource AccentBlueLight}"
+                                   VerticalOptions="Center" />
+                        </Border>
+                    </Grid>
+                </Border>
+
+                <!-- 2. Expanded Bottom Sheet Panel -->
+                <Border x:Name="RelatedExpandedSheet"
+                        IsVisible="False"
+                        HeightRequest="420"
+                        BackgroundColor="{StaticResource WhiteBrush}"
+                        StrokeShape="RoundRectangle 24,24,0,0"
+                        StrokeThickness="1"
+                        Stroke="{StaticResource Gray300Brush}">
+                    <Border.Shadow>
+                        <Shadow Brush="#60000000" Offset="0,-4" Radius="16" Opacity="0.9" />
+                    </Border.Shadow>
+                    <Grid RowDefinitions="Auto,Auto,*" Padding="0">
+                        <!-- Top Header & Drag Handle -->
+                        <VerticalStackLayout Grid.Row="0" Padding="16,10,16,8" Spacing="6">
+                            <!-- Drag Indicator -->
+                            <BoxView WidthRequest="44"
+                                     HeightRequest="4"
+                                     CornerRadius="2"
+                                     Color="{StaticResource Gray400}"
+                                     HorizontalOptions="Center" />
+
+                            <Grid ColumnDefinitions="*,Auto" Margin="0,4,0,0">
+                                <HorizontalStackLayout Grid.Column="0" Spacing="8" VerticalOptions="Center">
+                                    <Label Text="✨ Related Coverage"
+                                           FontFamily="LegacySerifBold"
+                                           FontSize="16"
+                                           FontAttributes="Bold"
+                                           TextColor="{StaticResource Gray900Brush}"
+                                           VerticalOptions="Center" />
+                                    <Border x:Name="RelatedTotalBadge"
+                                            Padding="8,2"
+                                            BackgroundColor="{StaticResource AccentBlueLight}"
+                                            StrokeShape="RoundRectangle 10"
+                                            StrokeThickness="0"
+                                            VerticalOptions="Center">
+                                        <Label x:Name="RelatedTotalCountLabel"
+                                               Text="0 found"
+                                               FontSize="11"
+                                               FontAttributes="Bold"
+                                               TextColor="{StaticResource AccentBlueBrush}" />
+                                    </Border>
+                                </HorizontalStackLayout>
+
+                                <Button Grid.Column="1"
+                                         Text="✕ Close"
+                                         Clicked="OnToggleRelatedClicked"
+                                         FontSize="12"
+                                         Padding="10,4"
+                                         CornerRadius="12"
+                                         BorderWidth="1.5"
+                                         BorderColor="{AppThemeBinding Light={StaticResource ButtonBorderLight}, Dark={StaticResource ButtonBorderDark}}"
+                                         BackgroundColor="{AppThemeBinding Light={StaticResource ButtonBgLight}, Dark={StaticResource ButtonSecondaryBgDark}}"
+                                         TextColor="{AppThemeBinding Light={StaticResource ButtonTextLight}, Dark={StaticResource ButtonTextDark}}" />
+                            </Grid>
+                        </VerticalStackLayout>
+
+                        <!-- Filter Chips Row -->
+                        <ScrollView Grid.Row="1"
+                                    Orientation="Horizontal"
+                                    HorizontalScrollBarVisibility="Never"
+                                    Padding="16,0,16,8">
+                            <HorizontalStackLayout Spacing="8">
+                                <Button x:Name="FilterAllBtn"
+                                        Text="All"
+                                        Clicked="OnRelatedFilterClicked"
+                                        CommandParameter="All"
+                                        Padding="14,6"
+                                        FontSize="12"
+                                        CornerRadius="14"
+                                        BorderWidth="1.5"
+                                        BorderColor="{AppThemeBinding Light=#0052CC, Dark=#60A5FA}"
+                                        BackgroundColor="{StaticResource AccentBlueBrush}"
+                                        TextColor="White" />
+                                <Button x:Name="FilterArticlesBtn"
+                                        Text="📰 Archive"
+                                        Clicked="OnRelatedFilterClicked"
+                                        CommandParameter="Articles"
+                                        Padding="14,6"
+                                        FontSize="12"
+                                        CornerRadius="14"
+                                        BorderWidth="1.5"
+                                        BorderColor="{AppThemeBinding Light={StaticResource ButtonBorderLight}, Dark={StaticResource ButtonBorderDark}}"
+                                        BackgroundColor="{AppThemeBinding Light={StaticResource ButtonBgLight}, Dark={StaticResource ButtonSecondaryBgDark}}"
+                                        TextColor="{AppThemeBinding Light={StaticResource ButtonTextLight}, Dark={StaticResource ButtonTextDark}}" />
+                                <Button x:Name="FilterVideosBtn"
+                                        Text="🎬 Videos"
+                                        Clicked="OnRelatedFilterClicked"
+                                        CommandParameter="Videos"
+                                        Padding="14,6"
+                                        FontSize="12"
+                                        CornerRadius="14"
+                                        BorderWidth="1.5"
+                                        BorderColor="{AppThemeBinding Light={StaticResource ButtonBorderLight}, Dark={StaticResource ButtonBorderDark}}"
+                                        BackgroundColor="{AppThemeBinding Light={StaticResource ButtonBgLight}, Dark={StaticResource ButtonSecondaryBgDark}}"
+                                        TextColor="{AppThemeBinding Light={StaticResource ButtonTextLight}, Dark={StaticResource ButtonTextDark}}" />
+                            </HorizontalStackLayout>
+                        </ScrollView>
+
+                        <!-- Related Items List -->
+                        <CollectionView Grid.Row="2"
+                                        x:Name="RelatedItemsList"
+                                        SelectionMode="None"
+                                        Margin="16,0,16,8">
+                            <CollectionView.EmptyView>
+                                <VerticalStackLayout HorizontalOptions="Center" VerticalOptions="Center" Spacing="8" Padding="24">
+                                    <Label Text="🔍" FontSize="32" HorizontalOptions="Center" />
+                                    <Label Text="No related stories in this category yet"
+                                           FontSize="13"
+                                           TextColor="{StaticResource Gray500}"
+                                           HorizontalOptions="Center" />
+                                </VerticalStackLayout>
+                            </CollectionView.EmptyView>
+                            <CollectionView.ItemTemplate>
+                                <DataTemplate x:DataType="local:RelatedStoryDisplayItem">
+                                    <Border Margin="0,0,0,8"
+                                            Padding="10"
+                                            BackgroundColor="{StaticResource SecondaryLight}"
+                                            StrokeShape="RoundRectangle 14"
+                                            Stroke="{StaticResource Gray200}"
+                                            StrokeThickness="1">
+                                        <Border.GestureRecognizers>
+                                            <TapGestureRecognizer Tapped="OnRelatedItemCardTapped" CommandParameter="{Binding .}" />
+                                        </Border.GestureRecognizers>
+                                        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10" VerticalOptions="Center">
+                                            <!-- Thumbnail Container -->
+                                            <Grid Grid.Column="0" WidthRequest="82" HeightRequest="68">
+                                                <Border StrokeShape="RoundRectangle 10" StrokeThickness="0">
+                                                    <Image Source="{Binding ImageUrl}"
+                                                           Aspect="AspectFill"
+                                                           WidthRequest="82"
+                                                           HeightRequest="68" />
+                                                </Border>
+                                                <!-- Red play badge for videos -->
+                                                <Border IsVisible="{Binding IsVideo}"
+                                                        Padding="4,2"
+                                                        BackgroundColor="#D9FF0000"
+                                                        StrokeShape="RoundRectangle 6"
+                                                        StrokeThickness="0"
+                                                        HorizontalOptions="Center"
+                                                        VerticalOptions="Center">
+                                                    <Label Text="▶" FontSize="11" TextColor="White" />
+                                                </Border>
+                                            </Grid>
+
+                                            <!-- Middle Info -->
+                                            <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center">
+                                                <HorizontalStackLayout Spacing="6">
+                                                    <Border Padding="6,1"
+                                                            BackgroundColor="{StaticResource AccentBlueLight}"
+                                                            StrokeShape="RoundRectangle 6"
+                                                            StrokeThickness="0">
+                                                        <Label Text="{Binding Category}"
+                                                                FontSize="9"
+                                                                FontAttributes="Bold"
+                                                                TextColor="{StaticResource AccentBlueBrush}" />
+                                                    </Border>
+                                                    <Label Text="{Binding Source}"
+                                                           FontSize="11"
+                                                           FontAttributes="Bold"
+                                                           TextColor="{StaticResource Gray900Brush}"
+                                                           LineBreakMode="TailTruncation" />
+                                                    <Label Text="•" FontSize="10" TextColor="{StaticResource Gray400}" />
+                                                    <Label Text="{Binding TimeAgo}"
+                                                           FontSize="10"
+                                                           TextColor="{StaticResource Gray500}" />
+                                                </HorizontalStackLayout>
+
+                                                <Label Text="{Binding Title}"
+                                                       FontSize="13"
+                                                       FontAttributes="Bold"
+                                                       MaxLines="2"
+                                                       LineBreakMode="TailTruncation"
+                                                       TextColor="{StaticResource Gray900Brush}" />
+
+                                                <Label Text="{Binding Subtitle}"
+                                                       FontSize="11"
+                                                       TextColor="{StaticResource Gray600}"
+                                                       MaxLines="1"
+                                                       LineBreakMode="TailTruncation" />
+                                            </VerticalStackLayout>
+
+                                            <!-- Right Action Indicator -->
+                                            <Label Grid.Column="2"
+                                                   Text="→"
+                                                   FontSize="16"
+                                                   FontAttributes="Bold"
+                                                   TextColor="{StaticResource AccentBlueBrush}"
+                                                   VerticalOptions="Center"
+                                                   Margin="4,0,0,0" />
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </CollectionView.ItemTemplate>
+                        </CollectionView>
+                    </Grid>
+                </Border>
+            </Grid>
+        </Grid>
+    </Grid>
+</ContentPage>

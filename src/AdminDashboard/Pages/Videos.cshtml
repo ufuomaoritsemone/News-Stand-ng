@@ -1,0 +1,285 @@
+@page
+@model AdminDashboard.Pages.VideosModel
+@{
+    ViewData["Title"] = "Video Stories | Nigerian News Grid";
+}
+
+<div class="container-fluid px-4 py-3">
+
+    <!-- Header -->
+    <div class="dashboard-header d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
+        <div>
+            <div class="d-flex align-items-center gap-3">
+                <h1 class="h2 mb-0 text-white brand-font">🎬 Video News Stories</h1>
+                <span class="badge-video">YOUTUBE SYNDICATION</span>
+            </div>
+            <p class="text-muted mb-0 mt-1">Trending news videos in Nigeria and latest broadcasts from monitored news channels</p>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <a href="/Index" class="btn btn-outline-light btn-sm"><i class="bi bi-arrow-left"></i> Dashboard</a>
+            <a href="/Socials" class="btn btn-outline-info btn-sm"><i class="bi bi-twitter-x me-1"></i> Socials</a>
+            <form method="post" asp-page-handler="SyncTrending" class="d-inline">
+                <button type="submit" class="btn btn-warning btn-sm text-dark font-weight-bold"><i class="bi bi-fire me-1"></i> Sync Trending Now</button>
+            </form>
+            <form method="post" asp-page-handler="SyncVideos" class="d-inline">
+                <button type="submit" class="btn btn-danger btn-sm"><i class="bi bi-arrow-repeat me-1"></i> Sync Channels</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Alert Messages -->
+    @if (TempData["Message"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show glass-card border-success text-white mb-4" role="alert">
+            <i class="bi bi-check-circle-fill me-2"></i> @TempData["Message"]
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show glass-card border-danger text-white mb-4" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i> @TempData["Error"]
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    <!-- Stats Row -->
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-md-3">
+            <div class="glass-card stat-card">
+                <div class="text-muted small text-uppercase font-weight-bold">🔥 Trending in Nigeria</div>
+                <div class="stat-value text-warning">@Model.TrendingStories.Count</div>
+                <div class="small text-warning mt-1"><i class="bi bi-fire me-1"></i> Most Popular News Videos</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="glass-card stat-card">
+                <div class="text-muted small text-uppercase font-weight-bold">All Video Stories</div>
+                <div class="stat-value text-danger">@Model.Stories.Count</div>
+                <div class="small text-danger mt-1"><i class="bi bi-play-circle-fill me-1"></i> Ingested Video News</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="glass-card stat-card">
+                <div class="text-muted small text-uppercase font-weight-bold">Monitored Channels</div>
+                <div class="stat-value">@Model.Channels.Count</div>
+                <div class="small text-info mt-1"><i class="bi bi-broadcast me-1"></i> Official Broadcast Feeds</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+
+        <!-- Main Column: Video Stories Grid -->
+        <div class="col-lg-8 col-xl-9">
+
+            @if (Model.TrendingStories.Any())
+            {
+                <!-- Trending Section -->
+                <div class="mb-5">
+                    <div class="d-flex align-items-center justify-content-between mb-3">
+                        <h4 class="text-white mb-0 brand-font">
+                            <i class="bi bi-fire text-warning me-2"></i>🔥 Top Trending News Videos in Nigeria
+                            <span class="badge bg-warning text-dark rounded-pill font-weight-bold ms-2" style="font-size: 0.8rem;">@Model.TrendingStories.Count</span>
+                        </h4>
+                        <form method="post" asp-page-handler="SyncTrending">
+                            <button class="btn btn-outline-warning btn-sm" title="Refresh YouTube Trending data"><i class="bi bi-arrow-clockwise me-1"></i> Refresh Trending</button>
+                        </form>
+                    </div>
+
+                    <div class="row g-3">
+                        @foreach (var story in Model.TrendingStories)
+                        {
+                            var cleanTitle = story.Title;
+                            var cleanSummary = story.Summary;
+                            <div class="col-md-6 col-xl-4">
+                                <div class="article-card border-warning border-opacity-25">
+                                    <div class="article-img-wrapper">
+                                        <a href="@story.VideoUrl" target="_blank" rel="noopener noreferrer" title="Watch on YouTube">
+                                            <img src="@story.ThumbnailUrl" alt="@cleanTitle" class="article-img"
+                                                 onerror="this.src='https://images.unsplash.com/photo-1585829365295-ab7cd400c167?w=600&auto=format&fit=crop&q=80'" />
+                                        </a>
+                                        @if (story.TrendingRank.HasValue)
+                                        {
+                                            <span class="position-absolute top-0 start-0 m-2 badge bg-warning text-dark font-weight-bold shadow-sm" style="font-size: 0.82rem;">
+                                                #@story.TrendingRank
+                                            </span>
+                                        }
+                                        <span class="source-badge bg-danger text-white"><i class="bi bi-youtube me-1"></i>@story.ChannelName</span>
+                                        <span class="position-absolute bottom-0 end-0 m-2 badge bg-dark bg-opacity-75 text-white" style="font-size: 0.72rem;">
+                                            <i class="bi bi-clock me-1"></i>@story.Duration
+                                        </span>
+                                    </div>
+                                    <div class="article-body">
+                                        <a href="@story.VideoUrl" target="_blank" rel="noopener noreferrer" class="article-title-link">
+                                            <h5 class="article-title" title="@cleanTitle">@cleanTitle</h5>
+                                        </a>
+                                        <p class="article-summary">@(string.IsNullOrWhiteSpace(cleanSummary) ? "Trending video story from " + story.ChannelName : cleanSummary)</p>
+                                        
+                                        <div class="article-meta">
+                                            <span>
+                                                @if (story.ViewCount > 0)
+                                                {
+                                                    <span class="text-warning font-weight-bold me-2"><i class="bi bi-eye-fill me-1"></i>@(story.ViewCount >= 1000 ? $"{story.ViewCount / 1000.0:F1}K" : story.ViewCount.ToString()) views</span>
+                                                }
+                                                <i class="bi bi-clock me-1"></i> @story.PublishedAt.ToString("MMM dd, HH:mm")
+                                            </span>
+                                            <div class="d-flex align-items-center gap-1.5 ms-auto">
+                                                <a href="@story.VideoUrl" target="_blank" rel="noopener noreferrer" class="btn-open-source" title="Watch video story">
+                                                    <i class="bi bi-play-circle"></i> Watch
+                                                </a>
+                                                <form method="post" asp-page-handler="RemoveStory" class="d-inline">
+                                                    <input type="hidden" name="id" value="@story.Id" />
+                                                    <button class="btn btn-outline-danger btn-sm px-2 py-1" style="font-size: 0.78rem;" title="Remove story">
+                                                        <i class="bi bi-trash"></i>
+                                                    </button>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+
+            <div class="d-flex align-items-center justify-content-between mb-3">
+                <h4 class="text-white mb-0 brand-font">
+                    <i class="bi bi-collection-play-fill text-danger me-2"></i>All Channel Video Stories
+                    <span class="badge bg-danger rounded-pill font-weight-normal ms-2" style="font-size: 0.8rem;">@Model.Stories.Count</span>
+                </h4>
+                <form method="post" asp-page-handler="SyncVideos">
+                    <button class="btn btn-outline-danger btn-sm" title="Pull latest videos posted within 24 hours"><i class="bi bi-arrow-clockwise me-1"></i> Refresh Channel Feeds</button>
+                </form>
+            </div>
+
+            @if (!Model.Stories.Any())
+            {
+                <div class="glass-card p-5 text-center my-4">
+                    <div class="text-muted display-4 mb-3"><i class="bi bi-camera-video-off"></i></div>
+                    <h4 class="text-white">No Video Stories Ingested Yet</h4>
+                    <p class="text-muted">Click "Sync Trending Now" or "Sync Channels" to ingest Nigerian video news.</p>
+                    <div class="d-flex justify-content-center gap-2 mt-3">
+                        <form method="post" asp-page-handler="SyncTrending">
+                            <button class="btn btn-warning btn-sm font-weight-bold text-dark"><i class="bi bi-fire me-1"></i> Sync Trending</button>
+                        </form>
+                        <form method="post" asp-page-handler="SyncVideos">
+                            <button class="btn btn-danger btn-sm"><i class="bi bi-arrow-repeat me-1"></i> Sync Channels</button>
+                        </form>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="row g-3">
+                    @foreach (var story in Model.Stories)
+                    {
+                        var cleanTitle = story.Title;
+                        var cleanSummary = story.Summary;
+                        <div class="col-md-6 col-xl-4">
+                            <div class="article-card">
+                                <div class="article-img-wrapper">
+                                    <a href="@story.VideoUrl" target="_blank" rel="noopener noreferrer" title="Watch on YouTube">
+                                        <img src="@story.ThumbnailUrl" alt="@cleanTitle" class="article-img"
+                                             onerror="this.src='https://images.unsplash.com/photo-1585829365295-ab7cd400c167?w=600&auto=format&fit=crop&q=80'" />
+                                    </a>
+                                    <span class="source-badge bg-danger text-white"><i class="bi bi-youtube me-1"></i>@story.ChannelName</span>
+                                    <span class="position-absolute bottom-0 end-0 m-2 badge bg-dark bg-opacity-75 text-white" style="font-size: 0.72rem;">
+                                        <i class="bi bi-clock me-1"></i>@story.Duration
+                                    </span>
+                                </div>
+                                <div class="article-body">
+                                    <a href="@story.VideoUrl" target="_blank" rel="noopener noreferrer" class="article-title-link">
+                                        <h5 class="article-title" title="@cleanTitle">@cleanTitle</h5>
+                                    </a>
+                                    <p class="article-summary">@(string.IsNullOrWhiteSpace(cleanSummary) ? "Latest video broadcast from " + story.ChannelName : cleanSummary)</p>
+                                    
+                                    <div class="article-meta">
+                                        <span><i class="bi bi-clock me-1"></i> @story.PublishedAt.ToString("MMM dd, HH:mm")</span>
+                                        <div class="d-flex align-items-center gap-1.5 ms-auto">
+                                            <a href="@story.VideoUrl" target="_blank" rel="noopener noreferrer" class="btn-open-source" title="Watch video story">
+                                                <i class="bi bi-play-circle"></i> Watch
+                                            </a>
+                                            <form method="post" asp-page-handler="RemoveStory" class="d-inline">
+                                                <input type="hidden" name="id" value="@story.Id" />
+                                                <button class="btn btn-outline-danger btn-sm px-2 py-1" style="font-size: 0.78rem;" title="Remove story">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+
+        <!-- Sidebar: Monitored Channels & Add Channel Form -->
+        <div class="col-lg-4 col-xl-3">
+
+            <!-- Add Channel Card -->
+            <div class="glass-card p-4 mb-4 video-add-card">
+                <h5 class="text-white mb-3 brand-font"><i class="bi bi-plus-circle-fill text-danger me-2"></i> Add YouTube Channel</h5>
+                <p class="text-muted small">Specify a news channel. The app will automatically fetch its latest posted videos.</p>
+                <form method="post" asp-page-handler="AddChannel">
+                    <div class="mb-3">
+                        <label class="form-label text-muted small">Channel Name *</label>
+                        <input asp-for="NewChannel.ChannelName" class="form-control form-control-glass" placeholder="e.g. Channels Television" required />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted small">YouTube Channel ID</label>
+                        <input asp-for="NewChannel.YoutubeChannelId" class="form-control form-control-glass" placeholder="e.g. UCsXr-UaEPJnJMkVfBwF0TJg" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted small">Channel URL / Handle</label>
+                        <input asp-for="NewChannel.ChannelUrl" class="form-control form-control-glass" placeholder="https://www.youtube.com/@@channel" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted small">Thumbnail URL</label>
+                        <input asp-for="NewChannel.ThumbnailUrl" class="form-control form-control-glass" placeholder="https://yt3.googleusercontent.com/..." />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted small">Description</label>
+                        <textarea asp-for="NewChannel.Description" class="form-control form-control-glass" rows="2" placeholder="Brief channel description"></textarea>
+                    </div>
+                    <button class="btn btn-video-gradient w-100"><i class="bi bi-plus-lg me-1"></i> Add Channel & Sync Videos</button>
+                </form>
+            </div>
+
+            <!-- Monitored Channels List -->
+            <div class="glass-card p-4 mb-4">
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                    <h5 class="text-white mb-0 brand-font"><i class="bi bi-broadcast text-warning me-2"></i> Monitored Channels</h5>
+                    <span class="badge bg-danger rounded-pill">@Model.Channels.Count</span>
+                </div>
+                <div class="list-group list-group-flush bg-transparent">
+                    @foreach (var channel in Model.Channels)
+                    {
+                        <div class="list-group-item bg-transparent text-white border-secondary border-opacity-25 px-0 py-2.5 d-flex align-items-center justify-content-between">
+                            <div>
+                                <div class="font-weight-bold text-white small">@channel.ChannelName</div>
+                                <div class="text-muted" style="font-size: 0.72rem; max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">@(channel.YoutubeChannelId ?? channel.ChannelUrl ?? "YouTube RSS")</div>
+                            </div>
+                            <form method="post" asp-page-handler="RemoveChannel" class="d-inline">
+                                <input type="hidden" name="id" value="@channel.Id" />
+                                <button class="btn btn-outline-danger btn-sm p-1 px-2" style="font-size: 0.75rem;" title="Remove channel">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </form>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <!-- Info Card -->
+            <div class="glass-card p-4">
+                <h5 class="text-white mb-2 brand-font"><i class="bi bi-info-circle-fill text-danger me-2"></i> Automated Ingestion</h5>
+                <p class="text-muted small mb-2">Video stories are synced directly via YouTube RSS Atom feeds (<code>/feeds/videos.xml</code>). Mobile users see the latest stories posted in the last 24-48 hours.</p>
+            </div>
+        </div>
+
+    </div>
+</div>

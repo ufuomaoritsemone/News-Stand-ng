@@ -1,0 +1,57 @@
+﻿using Microsoft.AspNetCore.Mvc;
+using NewsApi.Data;
+using NewsApi.Models;
+
+namespace NewsApi.Controllers;
+
+[ApiController]
+[Route("api/v1/[controller]")]
+public class BriefingsController : ControllerBase
+{
+    private readonly NewsDbContext _db;
+
+    public BriefingsController(NewsDbContext db)
+    {
+        _db = db;
+    }
+
+    [HttpGet]
+    public IActionResult GetDailyBriefing([FromQuery] string? language)
+    {
+        var preferredLanguage = string.IsNullOrWhiteSpace(language) ? "English" : language;
+
+        var items = _db.Articles
+            .Where(a => a.PublishedAt != null)
+            .OrderByDescending(a => a.PublishedAt)
+            .ToList();
+
+        var audioMap = _db.AudioAssets.ToDictionary(x => x.ArticleId ?? string.Empty, x => x.Url);
+
+        var grouped = items
+            .GroupBy(a => a.Category ?? "General")
+            .Select(g => new
+            {
+                Category = g.Key,
+                Top = g.Take(3).Select(a => new
+                {
+                    a.Id,
+                    a.Title,
+                    a.Summary,
+                    a.Url,
+                    a.ImageUrl,
+                    Source = a.Source ?? "Unknown",
+                    Language = preferredLanguage,
+                    VoiceName = preferredLanguage switch
+                    {
+                        "Yoruba" => "Yoruba Female",
+                        "Igbo" => "Igbo Female",
+                        "Hausa" => "Hausa Female",
+                        _ => "English Female"
+                    },
+                    AudioUrl = (audioMap.ContainsKey(a.Id.ToString()) ? audioMap[a.Id.ToString()] : a.AudioUrl)
+                })
+            });
+
+        return Ok(grouped);
+    }
+}

@@ -1,0 +1,56 @@
+﻿using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using NewsScraperService.Scrapers;
+using NewsScraperService.Models;
+
+namespace NewsScraperService;
+
+public class ScraperWorker : BackgroundService
+{
+    private readonly ILogger<ScraperWorker> _logger;
+    private readonly IHttpClientFactory _httpFactory;
+
+    public ScraperWorker(ILogger<ScraperWorker> logger, IHttpClientFactory httpFactory)
+    {
+        _logger = logger;
+        _httpFactory = httpFactory;
+    }
+
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        _logger.LogInformation("ScraperWorker starting");
+
+        var client = _httpFactory.CreateClient();
+        var scrapers = new IScraper[] {
+            new GuardianScraper(client),
+            new PremiumTimesScraper(client),
+            new PunchScraper(client)
+        };
+
+        while (!stoppingToken.IsCancellationRequested)
+        {
+            foreach (var s in scrapers)
+            {
+                try
+                {
+                    var items = await s.ScrapeAsync(stoppingToken);
+                    _logger.LogInformation("{Source} returned {Count} items", s.SourceName, items.Count());
+
+                    // For MVP write to a simple JSON file per source
+                    var folder = Path.Combine(AppContext.BaseDirectory, "data");
+                    Directory.CreateDirectory(folder);
+                    var file = Path.Combine(folder, $"{s.SourceId}.json");
+                    var json = System.Text.Json.JsonSerializer.Serialize(items);
+                    await File.WriteAllTextAsync(file, json, stoppingToken);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error scraping {Source}", s.SourceName);
+                }
+            }
+
+            // Run every 30 minutes
+            await Task.Delay(TimeSpan.FromMinutes(30), stoppingToken);
+        }
+    }
+}

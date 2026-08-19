@@ -1,0 +1,332 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="NigerianNewGrid.SettingsPage"
+             Title="Settings"
+             BackgroundColor="{StaticResource SecondaryLightBrush}"
+             SafeAreaEdges="Container">
+
+    <ScrollView>
+        <VerticalStackLayout Spacing="0" Padding="20,16,20,32">
+
+            <!-- Header -->
+            <Label Text="Settings"
+                   FontFamily="LegacySerifBold"
+                   FontSize="28"
+                   FontAttributes="Bold"
+                   TextColor="{StaticResource Gray900Brush}"
+                   Margin="0,0,0,4"
+                   SemanticProperties.HeadingLevel="Level1" />
+            <Label Text="Customise your experience"
+                   FontFamily="LegacySansBook"
+                   FontSize="13"
+                   TextColor="{StaticResource Gray500}"
+                   Margin="0,0,0,24" />
+
+            <!-- Briefing Language Section -->
+            <Label Text="BRIEFING LANGUAGE"
+                   FontFamily="LegacySansBook"
+                   FontSize="11"
+                   FontAttributes="Bold"
+                   TextColor="{StaticResource Gray500}"
+                   Margin="0,0,0,8" />
+
+            <Border Padding="0"
+                    BackgroundColor="{StaticResource WhiteBrush}"
+                    StrokeShape="RoundRectangle 16"
+                    StrokeThickness="1"
+                    Stroke="{StaticResource Gray100Brush}"
+                    Margin="0,0,0,12">
+                <VerticalStackLayout Spacing="0">
+
+                    <!-- English row -->
+                    <Grid Padding="16,14" ColumnDefinitions="*,Auto">
+                        <Grid.GestureRecognizers>
+                            <TapGestureRecognizer Tapped="OnLanguageTapped" CommandParameter="English" />
+                        </Grid.GestureRecognizers>
+                        <Label Grid.Column="0"
+                               x:Name="LblEnglish"
+                               Text="🇬🇧  English"
+                               FontFamily="LegacySansBook"
+                               FontSize="15"
+                               TextColor="{StaticResource Gray900Brush}"
+                               VerticalOptions="Center" />
+                        <Label Grid.Column="1"
+                               x:Name="CheckEnglish"
+                               Text="✓"
+                               FontSize="16"
+                               TextColor="{StaticResource AccentBlueBrush}"
+                               IsVisible="True"
+                               VerticalOptions="Center" />
+                    </Grid>
+                    <BoxView HeightRequest="1" Color="{StaticResource Gray100Brush}" Margin="16,0" />
+
+                    <!-- Yoruba row -->
+                    <Grid Padding="16,14" ColumnDefinitions="*,Auto">
+                        <Grid.GestureRecognizers>
+                            <TapGestureRecognizer Tapped="OnLanguageTapped" CommandParameter="Yoruba" />
+                        </Grid.GestureRecognizers>
+                        <Label Grid.Column="0"
+                               x:Name="LblYoruba"
+                               Text="🇳🇬  Yoruba"
+                               FontFamily="LegacySansBook"
+                               FontSize="15"
+                               TextColor="{StaticResource Gray900Brush}"
+                               VerticalOptions="Center" />
+                        <Label Grid.Column="1"
+                               x:Name="CheckYoruba"
+                               Text="✓"
+                               FontSize="16"
+                               TextColor="{StaticResource AccentBlueBrush}"
+                               IsVisible="False"
+                               VerticalOptions="Center" />
+                    </Grid>
+                    <BoxView HeightRequest="1" Color="{StaticResource Gray100Brush}" Margin="16,0" />
+
+                    <!-- Igbo row -->
+                    <Grid Padding="16,14" ColumnDefinitions="*,Auto">
+                        <Grid.GestureRecognizers>
+                            <TapGestureRecognizer Tapped="OnLanguageTapped" CommandParameter="Igbo" />
+                        </Grid.GestureRecognizers>
+                        <Label Grid.Column="0"
+                               x:Name="LblIgbo"
+                               Text="🇳🇬  Igbo"
+                               FontFamily="LegacySansBook"
+                               FontSize="15"
+                               TextColor="{StaticResource Gray900Brush}"
+                               VerticalOptions="Center" />
+                        <Label Grid.Column="1"
+                               x:Name="CheckIgbo"
+                               Text="✓"
+                               FontSize="16"
+                               TextColor="{StaticResource AccentBlueBrush}"
+                               IsVisible="False"
+                               VerticalOptions="Center" />
+                    </Grid>
+                    <BoxView HeightRequest="1" Color="{StaticResource Gray100Brush}" Margin="16,0" />
+
+                    <!-- Hausa row -->
+                    <Grid Padding="16,14" ColumnDefinitions="*,Auto">
+                        <Grid.GestureRecognizers>
+                            <TapGestureRecognizer Tapped="OnLanguageTapped" CommandParameter="Hausa" />
+                        </Grid.GestureRecognizers>
+                        <Label Grid.Column="0"
+                               x:Name="LblHausa"
+                               Text="🇳🇬  Hausa"
+                               FontFamily="LegacySansBook"
+                               FontSize="15"
+                               TextColor="{StaticResource Gray900Brush}"
+                               VerticalOptions="Center" />
+                        <Label Grid.Column="1"
+                               x:Name="CheckHausa"
+                               Text="✓"
+                               FontSize="16"
+                               TextColor="{StaticResource AccentBlueBrush}"
+                               IsVisible="False"
+                               VerticalOptions="Center" />
+                    </Grid>
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Current Language Status -->
+            <Label x:Name="CurrentLanguageLabel"
+                   Text="Currently: English"
+                   FontFamily="LegacySansBook"
+                   FontSize="13"
+                   TextColor="{StaticResource AccentBlueBrush}"
+                   Margin="0,0,0,24" />
+
+            <!-- Notifications & Alerts Section -->
+            <Label Text="NOTIFICATIONS &amp; TOPIC ALERTS"
+                   FontFamily="LegacySansBook"
+                   FontSize="11"
+                   FontAttributes="Bold"
+                   TextColor="{StaticResource Gray500}"
+                   Margin="0,0,0,8" />
+
+            <!-- Morning Briefing Card -->
+            <Border Padding="16"
+                    BackgroundColor="{StaticResource WhiteBrush}"
+                    StrokeShape="RoundRectangle 16"
+                    StrokeThickness="1"
+                    Stroke="{StaticResource Gray100Brush}"
+                    Margin="0,0,0,14">
+                <VerticalStackLayout Spacing="12">
+                    <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto">
+                        <HorizontalStackLayout Grid.Column="0" Grid.Row="0" Spacing="8">
+                            <Label Text="☀️" FontSize="18" VerticalOptions="Center" />
+                            <Label Text="Daily Morning Briefing"
+                                   FontFamily="LegacySerifBold"
+                                   FontSize="15"
+                                   FontAttributes="Bold"
+                                   TextColor="{StaticResource Gray900Brush}"
+                                   VerticalOptions="Center" />
+                        </HorizontalStackLayout>
+                        <Switch Grid.Column="1" Grid.Row="0" Grid.RowSpan="2"
+                                x:Name="SwitchMorningBriefing"
+                                Toggled="OnMorningBriefingToggled"
+                                VerticalOptions="Center" />
+                        <Label Grid.Column="0" Grid.Row="1"
+                               Text="Curated morning digest delivered to your device"
+                               FontFamily="LegacySansBook"
+                               FontSize="12"
+                               TextColor="{StaticResource Gray500}"
+                               Margin="26,2,0,0" />
+                    </Grid>
+
+                    <VerticalStackLayout x:Name="MorningTimeContainer" Spacing="8">
+                        <BoxView HeightRequest="1" Color="{StaticResource Gray100Brush}" />
+                        <Grid ColumnDefinitions="*,Auto" Padding="4,4,4,0">
+                            <Label Grid.Column="0"
+                                   Text="Delivery Time"
+                                   FontFamily="LegacySansBook"
+                                   FontSize="14"
+                                   TextColor="{StaticResource Gray700Brush}"
+                                   VerticalOptions="Center" />
+                            <TimePicker Grid.Column="1"
+                                        x:Name="TimePickerMorning"
+                                        Format="hh:mm tt"
+                                        FontFamily="LegacySansBook"
+                                        FontSize="14"
+                                        TextColor="{StaticResource AccentBlueBrush}"
+                                        PropertyChanged="OnMorningTimeChanged"
+                                        VerticalOptions="Center" />
+                        </Grid>
+                    </VerticalStackLayout>
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Keyword Alerts Card -->
+            <Border Padding="16"
+                    BackgroundColor="{StaticResource WhiteBrush}"
+                    StrokeShape="RoundRectangle 16"
+                    StrokeThickness="1"
+                    Stroke="{StaticResource Gray100Brush}"
+                    Margin="0,0,0,24">
+                <VerticalStackLayout Spacing="12">
+                    <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto">
+                        <HorizontalStackLayout Grid.Column="0" Grid.Row="0" Spacing="8">
+                            <Label Text="🔔" FontSize="18" VerticalOptions="Center" />
+                            <Label Text="Keyword Alerts"
+                                   FontFamily="LegacySerifBold"
+                                   FontSize="15"
+                                   FontAttributes="Bold"
+                                   TextColor="{StaticResource Gray900Brush}"
+                                   VerticalOptions="Center" />
+                        </HorizontalStackLayout>
+                        <Switch Grid.Column="1" Grid.Row="0" Grid.RowSpan="2"
+                                x:Name="SwitchKeywordAlerts"
+                                Toggled="OnKeywordAlertsToggled"
+                                VerticalOptions="Center" />
+                        <Label Grid.Column="0" Grid.Row="1"
+                               Text="Private on-device alerts for freshly updated stories"
+                               FontFamily="LegacySansBook"
+                               FontSize="12"
+                               TextColor="{StaticResource Gray500}"
+                               Margin="26,2,0,0" />
+                    </Grid>
+
+                    <VerticalStackLayout x:Name="KeywordAlertsContainer" Spacing="12">
+                        <BoxView HeightRequest="1" Color="{StaticResource Gray100Brush}" />
+
+                        <!-- Active Keywords Header -->
+                        <Label Text="ACTIVE MONITORED TOPICS"
+                               FontFamily="LegacySansBook"
+                               FontSize="10"
+                               FontAttributes="Bold"
+                               TextColor="{StaticResource Gray500}" />
+
+                        <!-- Keyword Chips Container -->
+                        <FlexLayout x:Name="ActiveKeywordsFlexLayout"
+                                    Wrap="Wrap"
+                                    Direction="Row"
+                                    AlignItems="Start"
+                                    JustifyContent="Start" />
+
+                        <!-- Empty state when no keywords are registered -->
+                        <Label x:Name="LblEmptyKeywords"
+                               Text="No active keywords. Add custom topics or pick from suggestions below."
+                               FontFamily="LegacySansBook"
+                               FontSize="12"
+                               TextColor="{StaticResource Gray400}"
+                               IsVisible="False" />
+
+                        <!-- Add Custom Keyword Entry -->
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8" Margin="0,4,0,0">
+                            <Border Grid.Column="0"
+                                    Padding="12,0"
+                                    BackgroundColor="{StaticResource SecondaryLightBrush}"
+                                    StrokeShape="RoundRectangle 8"
+                                    Stroke="{StaticResource Gray200Brush}"
+                                    StrokeThickness="1"
+                                    HeightRequest="42">
+                                <Entry x:Name="TxtNewKeyword"
+                                       Placeholder="Add custom topic (e.g. Dangote, Osimhen)..."
+                                       FontFamily="LegacySansBook"
+                                       FontSize="13"
+                                       TextColor="{StaticResource Gray900Brush}"
+                                       PlaceholderColor="{StaticResource Gray400}"
+                                       VerticalOptions="Center"
+                                       Completed="OnAddKeywordClicked" />
+                            </Border>
+                            <Button Grid.Column="1"
+                                    Text="+ Add"
+                                    Clicked="OnAddKeywordClicked"
+                                    HeightRequest="42"
+                                    Padding="14,0"
+                                    FontSize="13"
+                                    FontAttributes="Bold" />
+                        </Grid>
+
+                        <!-- Trending Suggestions -->
+                        <VerticalStackLayout Spacing="6" Margin="0,4,0,0">
+                            <Label Text="POPULAR NIGERIAN TOPICS"
+                                   FontFamily="LegacySansBook"
+                                   FontSize="10"
+                                   FontAttributes="Bold"
+                                   TextColor="{StaticResource Gray500}" />
+                            <FlexLayout x:Name="PresetSuggestionsFlexLayout"
+                                        Wrap="Wrap"
+                                        Direction="Row"
+                                        AlignItems="Start"
+                                        JustifyContent="Start" />
+                        </VerticalStackLayout>
+                    </VerticalStackLayout>
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- App Info Section -->
+            <Label Text="ABOUT"
+                   FontFamily="LegacySansBook"
+                   FontSize="11"
+                   FontAttributes="Bold"
+                   TextColor="{StaticResource Gray500}"
+                   Margin="0,0,0,8" />
+
+            <Border Padding="16"
+                    BackgroundColor="{StaticResource WhiteBrush}"
+                    StrokeShape="RoundRectangle 16"
+                    StrokeThickness="1"
+                    Stroke="{StaticResource Gray100Brush}">
+                <VerticalStackLayout Spacing="6">
+                    <Label Text="Nigerian News Grid"
+                           FontFamily="LegacySerifBold"
+                           FontSize="17"
+                           FontAttributes="Bold"
+                           TextColor="{StaticResource Gray900Brush}" />
+                    <Label Text="AI-powered daily briefings from trusted Nigerian news sources. Verified. Categorised. Audio-ready."
+                           FontFamily="LegacySansBook"
+                           FontSize="13"
+                           TextColor="{StaticResource Gray600Brush}"
+                           LineBreakMode="WordWrap" />
+                    <Label Text="Version 1.0 · Nigerian News Grid"
+                           FontFamily="LegacySansBook"
+                           FontSize="11"
+                           TextColor="{StaticResource Gray500}"
+                           Margin="0,4,0,0" />
+                </VerticalStackLayout>
+            </Border>
+
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

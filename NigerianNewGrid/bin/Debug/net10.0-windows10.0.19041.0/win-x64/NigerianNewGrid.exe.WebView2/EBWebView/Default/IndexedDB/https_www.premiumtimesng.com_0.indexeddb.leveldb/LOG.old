@@ -1,0 +1,6 @@
+2026/08/14-15:06:12.736 5bb8 Creating DB C:\Users\ufuom\source\repos\NigerianNewGrid\NigerianNewGrid\bin\Debug\net10.0-windows10.0.19041.0\win-x64\NigerianNewGrid.exe.WebView2\EBWebView\Default\IndexedDB\https_www.premiumtimesng.com_0.indexeddb.leveldb since it was missing.
+2026/08/14-15:06:12.747 5bb8 Reusing MANIFEST C:\Users\ufuom\source\repos\NigerianNewGrid\NigerianNewGrid\bin\Debug\net10.0-windows10.0.19041.0\win-x64\NigerianNewGrid.exe.WebView2\EBWebView\Default\IndexedDB\https_www.premiumtimesng.com_0.indexeddb.leveldb/MANIFEST-000001
+2026/08/14-15:06:13.663 3b18 Level-0 table #5: started
+2026/08/14-15:06:13.667 3b18 Level-0 table #5: 5049 bytes OK
+2026/08/14-15:06:13.670 3b18 Delete type=0 #3
+2026/08/14-15:06:13.671 5bb8 Manual compaction at level-0 from '\x00\x01\x00\x00\x00' @ 72057594037927935 : 1 .. '\x00\x02\x00\x00\x00' @ 0 : 0; will stop at (end)

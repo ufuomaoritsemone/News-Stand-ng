@@ -1,0 +1,48 @@
+0:00:17 Tab1 StartNav45 #renderer-script #auto_subframe
+0:00:17 Tab1 StartNav46 #renderer-script #auto_subframe
+0:00:17 Tab1 FinishNav44
+0:00:17 Tab1 PageLoad
+0:00:18 Tab1 FinishNav45
+0:00:18 Tab1 PageLoad
+0:00:18 Tab1 FinishNav46
+0:00:18 Memory Pressure: Critical
+0:00:19 Tab1 PageLoad
+0:00:20 Memory Pressure: Critical
+0:00:27 Tab1 StartNav47 #renderer-script #auto_subframe
+0:00:27 Tab1 StartNav48 #renderer-script #auto_subframe
+0:00:27 Tab1 FinishNav47
+0:00:27 Tab1 PageLoad
+0:00:27 Tab1 FinishNav48
+0:00:27 Tab1 PageLoad
+0:00:28 Tab1 StartNav49 #renderer-script #auto_subframe
+0:00:28 Tab1 StartNav50 #google #renderer-script #auto_subframe
+0:00:28 Tab1 FinishNav49
+0:00:28 Tab1 PageLoad
+0:00:28 Tab1 StartNav51 #renderer-script #auto_subframe
+0:00:28 Tab1 FinishNav51
+0:00:28 Tab1 PageLoad
+0:00:28 Tab1 FinishNav50
+0:00:28 Tab1 PageLoad #google
+0:00:28 Tab1 PageLoad
+0:00:28 Tab1 StartNav52 #renderer-user #link
+0:00:28 Tab1 FinishNav52
+0:00:28 Media.Shown
+0:00:30 Memory Pressure: Critical
+0:00:30 Widget Closed: StatusBubble
+0:00:30 Tab1 StartNav53 #renderer-user #auto_subframe
+0:00:30 Tab1 StartNav54 #renderer-script #auto_subframe
+0:00:30 Tab1 FinishNav54
+0:00:30 Tab1 PageLoad
+0:00:31 Tab1 FinishNav53
+0:00:31 Tab1 PageLoad
+0:00:32 Tab1 StartNav55 #renderer-script #auto_subframe
+0:00:32 Tab1 FinishNav55
+0:00:32 Tab1 PageLoad
+0:00:32 Tab1 StartNav56 #renderer-script #auto_subframe
+0:00:32 Tab1 FinishNav56
+0:00:32 Tab1 PageLoad
+0:00:32 Tab1 StartNav57 #renderer-script #auto_subframe
+0:00:33 Tab1 FinishNav57
+0:00:33 Tab1 PageLoad
+0:00:40 Memory Pressure: Moderate
+0:00:45 Microsoft.UnloadController.IsUnclosableApp_IsNotWebApp

@@ -1,0 +1,385 @@
+@page
+@model AdminDashboard.Pages.IndexModel
+@{
+    ViewData["Title"] = "Admin Dashboard | Nigerian News Grid";
+}
+
+<div class="container-fluid px-4 py-3">
+
+    <!-- Top Dashboard Header -->
+    <div class="dashboard-header d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
+        <div>
+            <div class="d-flex align-items-center gap-3">
+                <h1 class="h2 mb-0 text-white brand-font">🇳🇬 Nigerian News Grid</h1>
+                <span class="badge-live">LIVE API SYNC</span>
+                @if (Model.IsUpToDate)
+                {
+                    <span class="badge bg-success rounded-pill px-3 py-1 text-uppercase" style="font-size: 0.72rem; letter-spacing: 0.5px;"><i class="bi bi-shield-check me-1"></i> Storage Up-To-Date</span>
+                }
+                else
+                {
+                    <span class="badge bg-warning text-dark rounded-pill px-3 py-1 text-uppercase" style="font-size: 0.72rem; letter-spacing: 0.5px;"><i class="bi bi-arrow-repeat me-1"></i> Auto-Refreshing Feed</span>
+                }
+            </div>
+            <p class="text-muted mb-0 mt-1">Admin Management & Searchable Archived News Feed</p>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <a href="/Videos" class="btn btn-outline-danger btn-sm"><i class="bi bi-youtube me-1"></i> Videos</a>
+            <a href="/Socials" class="btn btn-outline-info btn-sm"><i class="bi bi-twitter-x me-1"></i> Socials</a>
+            <form method="get" class="d-flex gap-2">
+                <input type="hidden" name="selectedChannel" value="@Model.SelectedChannel" />
+                <input type="hidden" name="selectedCategory" value="@Model.SelectedCategory" />
+                <input type="text" name="searchQuery" value="@Model.SearchQuery" placeholder="Search keywords or topics..." class="form-control form-control-glass form-control-sm" style="width: 240px;" />
+                <button type="submit" class="btn btn-outline-light btn-sm"><i class="bi bi-search"></i> Search</button>
+            </form>
+            <a href="/" class="btn btn-gradient btn-sm"><i class="bi bi-arrow-clockwise"></i> Refresh Storage</a>
+        </div>
+    </div>
+
+    <!-- Alert Messages -->
+    @if (TempData["Message"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show glass-card border-success text-white mb-4" role="alert">
+            <i class="bi bi-check-circle-fill me-2"></i> @TempData["Message"]
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show glass-card border-danger text-white mb-4" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i> @TempData["Error"]
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    <!-- Stat Metrics Row -->
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-md-3">
+            <div class="glass-card stat-card">
+                <div class="text-muted small text-uppercase font-weight-bold">Archived Stories</div>
+                <div class="stat-value">@Model.TotalArticlesCount</div>
+                <div class="small text-info mt-1"><i class="bi bi-archive-fill me-1"></i> Permanent Storage</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="glass-card stat-card">
+                <div class="text-muted small text-uppercase font-weight-bold">Today's Fresh Stories</div>
+                <div class="stat-value">@Model.TodayArticlesCount</div>
+                <div class="small text-success mt-1"><i class="bi bi-calendar-check me-1"></i> Up to Date (@DateTime.UtcNow.ToString("yyyy-MM-dd"))</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="glass-card stat-card">
+                <div class="text-muted small text-uppercase font-weight-bold">Active News Channels</div>
+                <div class="stat-value">@(Model.Channels.Count - 1)</div>
+                <div class="small text-warning mt-1"><i class="bi bi-rss me-1"></i> Scraped RSS Feeds</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="glass-card stat-card">
+                <div class="text-muted small text-uppercase font-weight-bold">Active Topic / Keyword</div>
+                <div class="stat-value text-truncate" style="font-size: 1.3rem;" title="@Model.SelectedCategory">@Model.SelectedCategory</div>
+                <div class="small text-muted mt-1"><i class="bi bi-search me-1"></i> Query: @(string.IsNullOrEmpty(Model.SearchQuery) ? "All Keywords" : Model.SearchQuery)</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Grid Layout: Left Stories Feed, Right Channel Manager -->
+    <div class="row g-4">
+
+        <!-- Main Column: Stories Feed & Filter Tabs -->
+        <div class="col-lg-8 col-xl-9">
+
+            <!-- Channel Filter Pills -->
+            <div class="glass-card p-3 mb-4">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <h5 class="text-white mb-0 brand-font"><i class="bi bi-newspaper me-2 text-info"></i> News Channels</h5>
+                    <span class="text-muted small">Select a channel to view stories</span>
+                </div>
+                <div class="channel-pills mt-2">
+                    @foreach (var ch in Model.Channels)
+                    {
+                        var isActive = string.Equals(Model.SelectedChannel, ch, StringComparison.OrdinalIgnoreCase);
+                        var url = Url.Page("/Index", new { selectedChannel = ch, selectedCategory = Model.SelectedCategory, searchQuery = Model.SearchQuery });
+                        <a href="@url" class="channel-pill @(isActive ? "active" : "")">
+                            @if (ch == "All")
+                            {
+                                <i class="bi bi-grid-fill"></i> <span>All Channels</span>
+                            }
+                            else
+                            {
+                                <i class="bi bi-broadcast"></i> <span>@ch</span>
+                            }
+                        </a>
+                    }
+                </div>
+
+                <!-- Category Sub-Filters -->
+                <div class="d-flex align-items-center gap-2 mt-3 pt-3 border-top border-secondary border-opacity-25 flex-wrap">
+                    <span class="text-muted small me-2"><i class="bi bi-tag-fill"></i> Category:</span>
+                    @foreach (var cat in Model.Categories)
+                    {
+                        var isCatActive = string.Equals(Model.SelectedCategory, cat, StringComparison.OrdinalIgnoreCase);
+                        var catUrl = Url.Page("/Index", new { selectedChannel = Model.SelectedChannel, selectedCategory = cat, searchQuery = Model.SearchQuery });
+                        <a href="@catUrl" class="btn btn-sm @(isCatActive ? "btn-info text-dark" : "btn-outline-secondary text-light") rounded-pill py-1 px-3" style="font-size: 0.8rem;">
+                            @cat
+                        </a>
+                    }
+                </div>
+            </div>
+
+            <!-- Section Title -->
+            <div class="d-flex align-items-center justify-content-between mb-3">
+                <h4 class="text-white mb-0 brand-font">
+                    Mobile App Feed Preview 
+                    <span class="badge bg-secondary rounded-pill font-weight-normal ms-2" style="font-size: 0.8rem;">@Model.Articles.Count stories</span>
+                </h4>
+                @if (Model.SelectedChannel != "All" || Model.SelectedCategory != "All" || !string.IsNullOrEmpty(Model.SearchQuery))
+                {
+                    <a href="/Index" class="btn btn-link text-info p-0 text-decoration-none small"><i class="bi bi-x-circle"></i> Clear Filters</a>
+                }
+            </div>
+
+            <!-- News Cards Grid -->
+            @if (!Model.Articles.Any())
+            {
+                <div class="glass-card p-5 text-center my-4">
+                    <div class="text-muted display-4 mb-3"><i class="bi bi-newspaper"></i></div>
+                    <h4 class="text-white">No News Stories Found</h4>
+                    <p class="text-muted">There are no articles matching channel "<strong>@Model.SelectedChannel</strong>" and category "<strong>@Model.SelectedCategory</strong>".</p>
+                    <a href="/Index" class="btn btn-gradient btn-sm mt-2">View All Stories</a>
+                </div>
+            }
+            else
+            {
+                <div class="row g-3">
+                    @foreach (var article in Model.Articles)
+                    {
+                        var articleUrl = string.IsNullOrWhiteSpace(article.Url) ? "#" : article.Url;
+                        var cleanTitle = AdminDashboard.Pages.IndexModel.CleanHtml(article.Title);
+                        var cleanSummary = AdminDashboard.Pages.IndexModel.CleanHtml(article.Summary ?? string.Empty);
+                        <div class="col-md-6 col-xl-4">
+                            <div class="article-card">
+                                <div class="article-img-wrapper">
+                                    <a href="@articleUrl" target="_blank" rel="noopener noreferrer" title="Read full story on @article.Source">
+                                        <img src="@article.ImageUrl" alt="@cleanTitle" class="article-img" onerror="this.src='https://images.unsplash.com/photo-1585829365295-ab7cd400c167?w=600&auto=format&fit=crop&q=80'" />
+                                    </a>
+                                    <span class="source-badge">@article.Source</span>
+                                    <form method="post" asp-page-handler="UpdateCategory" class="position-absolute top-0 end-0 m-2">
+                                        <input type="hidden" name="articleId" value="@article.Id" />
+                                        <select name="newCategory" class="form-select form-select-sm border-info text-white bg-dark bg-opacity-90 py-0 px-2 rounded-pill shadow-sm" style="font-size: 0.72rem; height: 26px; cursor: pointer;" onchange="this.form.submit()" title="Re-categorize story to train ML model">
+                                            <option value="Politics" selected="@(article.Category == "Politics")">🏷️ Politics</option>
+                                            <option value="Business" selected="@(article.Category == "Business")">🏷️ Business</option>
+                                            <option value="Sports" selected="@(article.Category == "Sports")">🏷️ Sports</option>
+                                            <option value="Entertainment" selected="@(article.Category == "Entertainment")">🏷️ Entertainment</option>
+                                            <option value="Technology" selected="@(article.Category == "Technology")">🏷️ Technology</option>
+                                            <option value="Crime" selected="@(article.Category == "Crime")">🏷️ Crime</option>
+                                            <option value="General" selected="@(article.Category == "General")">🏷️ General</option>
+                                        </select>
+                                    </form>
+                                </div>
+                                <div class="article-body">
+                                    <a href="@articleUrl" target="_blank" rel="noopener noreferrer" class="article-title-link">
+                                        <h5 class="article-title" title="@cleanTitle">@cleanTitle</h5>
+                                    </a>
+                                    <p class="article-summary">@(string.IsNullOrWhiteSpace(cleanSummary) ? "No detailed summary available." : cleanSummary)</p>
+                                    
+                                    <div class="article-meta">
+                                        <span><i class="bi bi-clock me-1"></i> @article.PublishedAt.ToString("MMM dd, HH:mm")</span>
+                                        <div class="d-flex align-items-center gap-1.5 ms-auto">
+                                            @if (!string.IsNullOrWhiteSpace(article.Url))
+                                            {
+                                                <a href="@article.Url" target="_blank" rel="noopener noreferrer" class="btn-open-source" title="Open news source">
+                                                    <i class="bi bi-box-arrow-up-right"></i> Source
+                                                </a>
+                                            }
+                                            <button type="button" class="btn-share" onclick="shareArticle('@JavaScriptEncoder.Default.Encode(articleUrl)', '@JavaScriptEncoder.Default.Encode(cleanTitle)', '@JavaScriptEncoder.Default.Encode(article.Source)')" title="Share story">
+                                                <i class="bi bi-share-fill"></i> Share
+                                            </button>
+                                            @if (!string.IsNullOrEmpty(article.AudioUrl))
+                                            {
+                                                <span class="btn-audio" onclick="playAudio('@article.AudioUrl', '@JavaScriptEncoder.Default.Encode(cleanTitle)')" style="cursor: pointer;" title="Listen to audio briefing">
+                                                    <i class="bi bi-volume-up-fill"></i> Audio
+                                                </span>
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+
+        </div>
+
+        <!-- Sidebar Column: Source Management & RSS Controls -->
+        <div class="col-lg-4 col-xl-3">
+
+            <!-- Add Source Card -->
+            <div class="glass-card p-4 mb-4">
+                <h5 class="text-white mb-3 brand-font"><i class="bi bi-plus-circle-fill text-info me-2"></i> Add News Channel</h5>
+                <form method="post" asp-page-handler="AddSource">
+                    <div class="mb-3">
+                        <label class="form-label text-muted small">Channel Name</label>
+                        <input asp-for="NewSource.Name" class="form-control form-control-glass" placeholder="e.g. Daily Post Nigeria" required />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted small">Google News Sitemap URL (Recommended)</label>
+                        <input asp-for="NewSource.SitemapUrl" class="form-control form-control-glass" placeholder="https://dailypost.ng/news-sitemap.xml" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted small">RSS Feed URL (Fallback)</label>
+                        <input asp-for="NewSource.RssUrl" class="form-control form-control-glass" placeholder="https://dailypost.ng/feed/" />
+                    </div>
+                    <button class="btn btn-gradient w-100"><i class="bi bi-plus-lg"></i> Add Channel Source</button>
+                </form>
+            </div>
+
+            <!-- Existing Channels List -->
+            <div class="glass-card p-4 mb-4">
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                    <h5 class="text-white mb-0 brand-font"><i class="bi bi-rss-fill text-warning me-2"></i> Active Ingestion Sources</h5>
+                    <span class="badge bg-primary rounded-pill">@Model.Sources.Count</span>
+                </div>
+                <div class="list-group list-group-flush bg-transparent">
+                    @foreach (var source in Model.Sources)
+                    {
+                        <div class="list-group-item bg-transparent text-white border-secondary border-opacity-25 px-0 py-2.5 d-flex align-items-center justify-content-between">
+                            <div>
+                                <div class="font-weight-bold text-white small d-flex align-items-center gap-1.5">
+                                    @source.Name
+                                    @if (!string.IsNullOrEmpty(source.SitemapUrl))
+                                    {
+                                        <span class="badge bg-info text-dark" style="font-size: 0.62rem; padding: 2px 5px;">SITEMAP</span>
+                                    }
+                                    @if (!string.IsNullOrEmpty(source.RssUrl))
+                                    {
+                                        <span class="badge bg-secondary" style="font-size: 0.62rem; padding: 2px 5px;">RSS</span>
+                                    }
+                                </div>
+                                <div class="text-muted" style="font-size: 0.72rem; max-width: 170px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                    @(source.SitemapUrl ?? source.RssUrl ?? "Auto-scraped")
+                                </div>
+                            </div>
+                            <div class="d-flex align-items-center gap-1">
+                                <form method="post" asp-page-handler="ScrapeSource" class="d-inline">
+                                    <input type="hidden" name="id" value="@source.Id" />
+                                    <button class="btn btn-outline-info btn-sm p-1 px-2" style="font-size: 0.75rem;" title="Scrape source now">
+                                        <i class="bi bi-arrow-repeat"></i>
+                                    </button>
+                                </form>
+                                <form method="post" asp-page-handler="RemoveSource" class="d-inline">
+                                    <input type="hidden" name="id" value="@source.Id" />
+                                    <button class="btn btn-outline-danger btn-sm p-1 px-2" style="font-size: 0.75rem;" title="Remove source">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <!-- System Info & Mobile App Notes -->
+            <div class="glass-card p-4">
+                <h5 class="text-white mb-2 brand-font"><i class="bi bi-info-circle-fill text-cyan me-2"></i> Mobile App Sync</h5>
+                <p class="text-muted small mb-2">Stories displayed above are consumed directly by the .NET MAUI mobile app via REST API <code>/api/v1/briefings</code>.</p>
+                <div class="p-2.5 rounded bg-dark bg-opacity-50 border border-secondary border-opacity-25 small text-light">
+                    <div><i class="bi bi-translate text-info me-1"></i> Multilingual Voices:</div>
+                    <ul class="mb-0 ps-3 mt-1 text-muted" style="font-size: 0.78rem;">
+                        <li>English (Female)</li>
+                        <li>Yoruba (Female)</li>
+                        <li>Igbo (Female)</li>
+                        <li>Hausa (Female)</li>
+                    </ul>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+<!-- Audio Player Modal -->
+<div class="modal fade" id="audioModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content glass-card border-info text-white" style="background: #0f172a;">
+            <div class="modal-header border-secondary border-opacity-25">
+                <h5 class="modal-title brand-font text-info" id="audioModalTitle"><i class="bi bi-volume-up-fill me-2"></i> Audio Briefing Player</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center py-4">
+                <div class="mb-3 text-muted" id="audioTrackName">Audio Clip</div>
+                <audio id="modalAudioPlayer" controls class="w-100" style="outline: none;">
+                    Your browser does not support the audio element.
+                </audio>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Share Feedback Toast Container -->
+<div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1100;">
+    <div id="shareToast" class="toast align-items-center text-white bg-dark border border-cyan shadow-lg" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="d-flex">
+            <div class="toast-body d-flex align-items-center gap-2">
+                <i class="bi bi-check-circle-fill text-info fs-5"></i>
+                <span id="toastMessage">Link copied to clipboard!</span>
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function playAudio(url, title) {
+            document.getElementById('audioModalTitle').innerHTML = '<i class="bi bi-volume-up-fill me-2"></i> Audio Preview';
+            document.getElementById('audioTrackName').innerText = title || 'Audio Briefing';
+            var player = document.getElementById('modalAudioPlayer');
+            player.src = url;
+            var modal = new bootstrap.Modal(document.getElementById('audioModal'));
+            modal.show();
+            player.play();
+        }
+
+        function shareArticle(url, title, source) {
+            if (!url || url === '#') {
+                showToast('No URL available for this story.', 'warning');
+                return;
+            }
+
+            var shareData = {
+                title: title + ' - ' + source,
+                text: title + ' (' + source + ')',
+                url: url
+            };
+
+            if (navigator.share && navigator.canShare && navigator.canShare(shareData)) {
+                navigator.share(shareData).catch(function(err) {
+                    console.log('Share canceled or non-fatal:', err);
+                });
+            } else {
+                navigator.clipboard.writeText(url).then(function() {
+                    showToast('Story link copied to clipboard!');
+                }).catch(function() {
+                    prompt('Copy story link:', url);
+                });
+            }
+        }
+
+        function showToast(message, type) {
+            var msgEl = document.getElementById('toastMessage');
+            if (msgEl) {
+                msgEl.innerText = message;
+            }
+            var toastEl = document.getElementById('shareToast');
+            if (toastEl) {
+                var toast = new bootstrap.Toast(toastEl, { delay: 3000 });
+                toast.show();
+            }
+        }
+    </script>
+}
