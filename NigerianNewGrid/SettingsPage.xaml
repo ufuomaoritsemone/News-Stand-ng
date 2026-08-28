@@ -3,7 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              x:Class="NigerianNewGrid.SettingsPage"
              Title="Settings"
-             BackgroundColor="{StaticResource SecondaryLightBrush}"
+             Background="{StaticResource SecondaryLightBrush}"
              SafeAreaEdges="Container">
 
     <ScrollView>
@@ -14,7 +14,7 @@
                    FontFamily="LegacySerifBold"
                    FontSize="28"
                    FontAttributes="Bold"
-                   TextColor="{StaticResource Gray900Brush}"
+                   TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource DarkTextPrimary}}"
                    Margin="0,0,0,4"
                    SemanticProperties.HeadingLevel="Level1" />
             <Label Text="Customise your experience"
@@ -32,7 +32,7 @@
                    Margin="0,0,0,8" />
 
             <Border Padding="0"
-                    BackgroundColor="{StaticResource WhiteBrush}"
+                    Background="{StaticResource WhiteBrush}"
                     StrokeShape="RoundRectangle 16"
                     StrokeThickness="1"
                     Stroke="{StaticResource Gray100Brush}"
@@ -49,17 +49,17 @@
                                Text="🇬🇧  English"
                                FontFamily="LegacySansBook"
                                FontSize="15"
-                               TextColor="{StaticResource Gray900Brush}"
+                               TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource DarkTextPrimary}}"
                                VerticalOptions="Center" />
                         <Label Grid.Column="1"
                                x:Name="CheckEnglish"
                                Text="✓"
                                FontSize="16"
-                               TextColor="{StaticResource AccentBlueBrush}"
+                               TextColor="{AppThemeBinding Light={StaticResource AccentBlue}, Dark={StaticResource DarkPrimary}}"
                                IsVisible="True"
                                VerticalOptions="Center" />
                     </Grid>
-                    <BoxView HeightRequest="1" Color="{StaticResource Gray100Brush}" Margin="16,0" />
+                    <BoxView HeightRequest="1" Color="{AppThemeBinding Light={StaticResource Gray100}, Dark={StaticResource DarkSurfaceCard}}" Margin="16,0" />
 
                     <!-- Yoruba row -->
                     <Grid Padding="16,14" ColumnDefinitions="*,Auto">
@@ -71,17 +71,17 @@
                                Text="🇳🇬  Yoruba"
                                FontFamily="LegacySansBook"
                                FontSize="15"
-                               TextColor="{StaticResource Gray900Brush}"
+                               TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource DarkTextPrimary}}"
                                VerticalOptions="Center" />
                         <Label Grid.Column="1"
                                x:Name="CheckYoruba"
                                Text="✓"
                                FontSize="16"
-                               TextColor="{StaticResource AccentBlueBrush}"
+                               TextColor="{AppThemeBinding Light={StaticResource AccentBlue}, Dark={StaticResource DarkPrimary}}"
                                IsVisible="False"
                                VerticalOptions="Center" />
                     </Grid>
-                    <BoxView HeightRequest="1" Color="{StaticResource Gray100Brush}" Margin="16,0" />
+                    <BoxView HeightRequest="1" Color="{AppThemeBinding Light={StaticResource Gray100}, Dark={StaticResource DarkSurfaceCard}}" Margin="16,0" />
 
                     <!-- Igbo row -->
                     <Grid Padding="16,14" ColumnDefinitions="*,Auto">
@@ -93,17 +93,17 @@
                                Text="🇳🇬  Igbo"
                                FontFamily="LegacySansBook"
                                FontSize="15"
-                               TextColor="{StaticResource Gray900Brush}"
+                               TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource DarkTextPrimary}}"
                                VerticalOptions="Center" />
                         <Label Grid.Column="1"
                                x:Name="CheckIgbo"
                                Text="✓"
                                FontSize="16"
-                               TextColor="{StaticResource AccentBlueBrush}"
+                               TextColor="{AppThemeBinding Light={StaticResource AccentBlue}, Dark={StaticResource DarkPrimary}}"
                                IsVisible="False"
                                VerticalOptions="Center" />
                     </Grid>
-                    <BoxView HeightRequest="1" Color="{StaticResource Gray100Brush}" Margin="16,0" />
+                    <BoxView HeightRequest="1" Color="{AppThemeBinding Light={StaticResource Gray100}, Dark={StaticResource DarkSurfaceCard}}" Margin="16,0" />
 
                     <!-- Hausa row -->
                     <Grid Padding="16,14" ColumnDefinitions="*,Auto">
@@ -115,13 +115,13 @@
                                Text="🇳🇬  Hausa"
                                FontFamily="LegacySansBook"
                                FontSize="15"
-                               TextColor="{StaticResource Gray900Brush}"
+                               TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource DarkTextPrimary}}"
                                VerticalOptions="Center" />
                         <Label Grid.Column="1"
                                x:Name="CheckHausa"
                                Text="✓"
                                FontSize="16"
-                               TextColor="{StaticResource AccentBlueBrush}"
+                               TextColor="{AppThemeBinding Light={StaticResource AccentBlue}, Dark={StaticResource DarkPrimary}}"
                                IsVisible="False"
                                VerticalOptions="Center" />
                     </Grid>
@@ -133,7 +133,7 @@
                    Text="Currently: English"
                    FontFamily="LegacySansBook"
                    FontSize="13"
-                   TextColor="{StaticResource AccentBlueBrush}"
+                   TextColor="{AppThemeBinding Light={StaticResource AccentBlue}, Dark={StaticResource DarkPrimary}}"
                    Margin="0,0,0,24" />
 
             <!-- Notifications & Alerts Section -->
@@ -146,7 +146,7 @@
 
             <!-- Morning Briefing Card -->
             <Border Padding="16"
-                    BackgroundColor="{StaticResource WhiteBrush}"
+                    Background="{StaticResource WhiteBrush}"
                     StrokeShape="RoundRectangle 16"
                     StrokeThickness="1"
                     Stroke="{StaticResource Gray100Brush}"
@@ -159,7 +159,7 @@
                                    FontFamily="LegacySerifBold"
                                    FontSize="15"
                                    FontAttributes="Bold"
-                                   TextColor="{StaticResource Gray900Brush}"
+                                   TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource DarkTextPrimary}}"
                                    VerticalOptions="Center" />
                         </HorizontalStackLayout>
                         <Switch Grid.Column="1" Grid.Row="0" Grid.RowSpan="2"
@@ -175,20 +175,20 @@
                     </Grid>
 
                     <VerticalStackLayout x:Name="MorningTimeContainer" Spacing="8">
-                        <BoxView HeightRequest="1" Color="{StaticResource Gray100Brush}" />
+                        <BoxView HeightRequest="1" Color="{AppThemeBinding Light={StaticResource Gray100}, Dark={StaticResource DarkSurfaceCard}}" />
                         <Grid ColumnDefinitions="*,Auto" Padding="4,4,4,0">
                             <Label Grid.Column="0"
                                    Text="Delivery Time"
                                    FontFamily="LegacySansBook"
                                    FontSize="14"
-                                   TextColor="{StaticResource Gray700Brush}"
+                                   TextColor="{AppThemeBinding Light={StaticResource Gray700}, Dark={StaticResource DarkTextSecondary}}"
                                    VerticalOptions="Center" />
                             <TimePicker Grid.Column="1"
                                         x:Name="TimePickerMorning"
                                         Format="hh:mm tt"
                                         FontFamily="LegacySansBook"
                                         FontSize="14"
-                                        TextColor="{StaticResource AccentBlueBrush}"
+                                        TextColor="{AppThemeBinding Light={StaticResource AccentBlue}, Dark={StaticResource DarkPrimary}}"
                                         PropertyChanged="OnMorningTimeChanged"
                                         VerticalOptions="Center" />
                         </Grid>
@@ -198,7 +198,7 @@
 
             <!-- Keyword Alerts Card -->
             <Border Padding="16"
-                    BackgroundColor="{StaticResource WhiteBrush}"
+                    Background="{StaticResource WhiteBrush}"
                     StrokeShape="RoundRectangle 16"
                     StrokeThickness="1"
                     Stroke="{StaticResource Gray100Brush}"
@@ -211,7 +211,7 @@
                                    FontFamily="LegacySerifBold"
                                    FontSize="15"
                                    FontAttributes="Bold"
-                                   TextColor="{StaticResource Gray900Brush}"
+                                   TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource DarkTextPrimary}}"
                                    VerticalOptions="Center" />
                         </HorizontalStackLayout>
                         <Switch Grid.Column="1" Grid.Row="0" Grid.RowSpan="2"
@@ -227,7 +227,7 @@
                     </Grid>
 
                     <VerticalStackLayout x:Name="KeywordAlertsContainer" Spacing="12">
-                        <BoxView HeightRequest="1" Color="{StaticResource Gray100Brush}" />
+                        <BoxView HeightRequest="1" Color="{AppThemeBinding Light={StaticResource Gray100}, Dark={StaticResource DarkSurfaceCard}}" />
 
                         <!-- Active Keywords Header -->
                         <Label Text="ACTIVE MONITORED TOPICS"
@@ -255,7 +255,7 @@
                         <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8" Margin="0,4,0,0">
                             <Border Grid.Column="0"
                                     Padding="12,0"
-                                    BackgroundColor="{StaticResource SecondaryLightBrush}"
+                                    Background="{StaticResource SecondaryLightBrush}"
                                     StrokeShape="RoundRectangle 8"
                                     Stroke="{StaticResource Gray200Brush}"
                                     StrokeThickness="1"
@@ -264,7 +264,7 @@
                                        Placeholder="Add custom topic (e.g. Dangote, Osimhen)..."
                                        FontFamily="LegacySansBook"
                                        FontSize="13"
-                                       TextColor="{StaticResource Gray900Brush}"
+                                       TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource DarkTextPrimary}}"
                                        PlaceholderColor="{StaticResource Gray400}"
                                        VerticalOptions="Center"
                                        Completed="OnAddKeywordClicked" />
@@ -304,7 +304,7 @@
                    Margin="0,0,0,8" />
 
             <Border Padding="16"
-                    BackgroundColor="{StaticResource WhiteBrush}"
+                    Background="{StaticResource WhiteBrush}"
                     StrokeShape="RoundRectangle 16"
                     StrokeThickness="1"
                     Stroke="{StaticResource Gray100Brush}">
@@ -313,17 +313,63 @@
                            FontFamily="LegacySerifBold"
                            FontSize="17"
                            FontAttributes="Bold"
-                           TextColor="{StaticResource Gray900Brush}" />
+                           TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource DarkTextPrimary}}" />
                     <Label Text="AI-powered daily briefings from trusted Nigerian news sources. Verified. Categorised. Audio-ready."
                            FontFamily="LegacySansBook"
                            FontSize="13"
-                           TextColor="{StaticResource Gray600Brush}"
+                           TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource DarkTextSecondary}}"
                            LineBreakMode="WordWrap" />
                     <Label Text="Version 1.0 · Nigerian News Grid"
                            FontFamily="LegacySansBook"
                            FontSize="11"
                            TextColor="{StaticResource Gray500}"
                            Margin="0,4,0,0" />
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Privacy & Analytics Section -->
+            <Label Text="PRIVACY &amp; ANALYTICS"
+                   FontFamily="LegacySansBook"
+                   FontSize="11"
+                   FontAttributes="Bold"
+                   TextColor="{StaticResource Gray500}"
+                   Margin="0,24,0,8" />
+
+            <Border Padding="16"
+                    Background="{StaticResource WhiteBrush}"
+                    StrokeShape="RoundRectangle 16"
+                    StrokeThickness="1"
+                    Stroke="{StaticResource Gray100Brush}"
+                    Margin="0,0,0,8">
+                <VerticalStackLayout Spacing="12">
+                    <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto">
+                        <HorizontalStackLayout Grid.Column="0" Grid.Row="0" Spacing="8">
+                            <Label Text="📊" FontSize="18" VerticalOptions="Center" />
+                            <Label Text="Usage Analytics"
+                                   FontFamily="LegacySerifBold"
+                                   FontSize="15"
+                                   FontAttributes="Bold"
+                                   TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource DarkTextPrimary}}"
+                                   VerticalOptions="Center" />
+                        </HorizontalStackLayout>
+                        <Switch Grid.Column="1" Grid.Row="0" Grid.RowSpan="2"
+                                x:Name="SwitchAnalytics"
+                                Toggled="OnAnalyticsToggled"
+                                VerticalOptions="Center" />
+                        <Label Grid.Column="0" Grid.Row="1"
+                               Text="Share anonymous usage data to help improve the app"
+                               FontFamily="LegacySansBook"
+                               FontSize="12"
+                               TextColor="{StaticResource Gray500}"
+                               Margin="26,2,0,0" />
+                    </Grid>
+                    <BoxView HeightRequest="1"
+                             Color="{AppThemeBinding Light={StaticResource Gray100}, Dark={StaticResource DarkSurfaceCard}}" />
+                    <Label Text="No personal information is ever collected. Events are linked only to a random device identifier that cannot be traced back to you."
+                           FontFamily="LegacySansBook"
+                           FontSize="11"
+                           TextColor="{StaticResource Gray400}"
+                           LineBreakMode="WordWrap" />
                 </VerticalStackLayout>
             </Border>
 

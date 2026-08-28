@@ -47,7 +47,7 @@
                                       FontSize="12"
                                       FontAttributes="Bold"
                                       FontFamily="LegacySansBook"
-                                      TextColor="{StaticResource Gray900Brush}" />
+                                      TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource DarkTextPrimary}}" />
                             </FormattedString>
                         </Label.FormattedText>
                     </Label>
@@ -86,6 +86,37 @@
                                      Spacing="12"
                                      Background="{StaticResource SecondaryLightBrush}">
 
+                    <!-- Skeleton Loading State -->
+                    <VerticalStackLayout x:Name="SkeletonLoadingView"
+                                         IsVisible="False"
+                                         Spacing="14"
+                                         Padding="0,4,0,12">
+                        <Border Padding="16"
+                                StrokeThickness="1"
+                                Stroke="{AppThemeBinding Light={StaticResource Gray200Brush}, Dark={StaticResource Gray700Brush}}"
+                                StrokeShape="RoundRectangle 16"
+                                Background="{AppThemeBinding Light={StaticResource WhiteBrush}, Dark={StaticResource Gray800Brush}}">
+                            <Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="*,90" RowSpacing="8" ColumnSpacing="12">
+                                <BoxView Grid.Row="0" Grid.Column="0" HeightRequest="14" WidthRequest="80" HorizontalOptions="Start" CornerRadius="4" Color="{AppThemeBinding Light={StaticResource Gray200}, Dark={StaticResource Gray700}}" />
+                                <BoxView Grid.Row="1" Grid.Column="0" HeightRequest="20" HorizontalOptions="Fill" CornerRadius="4" Color="{AppThemeBinding Light={StaticResource Gray200}, Dark={StaticResource Gray700}}" />
+                                <BoxView Grid.Row="2" Grid.Column="0" HeightRequest="14" WidthRequest="180" HorizontalOptions="Start" CornerRadius="4" Color="{AppThemeBinding Light={StaticResource Gray200}, Dark={StaticResource Gray700}}" />
+                                <BoxView Grid.Row="0" Grid.RowSpan="3" Grid.Column="1" HeightRequest="80" WidthRequest="90" CornerRadius="12" Color="{AppThemeBinding Light={StaticResource Gray200}, Dark={StaticResource Gray700}}" />
+                            </Grid>
+                        </Border>
+                        <Border Padding="16"
+                                StrokeThickness="1"
+                                Stroke="{AppThemeBinding Light={StaticResource Gray200Brush}, Dark={StaticResource Gray700Brush}}"
+                                StrokeShape="RoundRectangle 16"
+                                Background="{AppThemeBinding Light={StaticResource WhiteBrush}, Dark={StaticResource Gray800Brush}}">
+                            <Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="*,90" RowSpacing="8" ColumnSpacing="12">
+                                <BoxView Grid.Row="0" Grid.Column="0" HeightRequest="14" WidthRequest="100" HorizontalOptions="Start" CornerRadius="4" Color="{AppThemeBinding Light={StaticResource Gray200}, Dark={StaticResource Gray700}}" />
+                                <BoxView Grid.Row="1" Grid.Column="0" HeightRequest="20" HorizontalOptions="Fill" CornerRadius="4" Color="{AppThemeBinding Light={StaticResource Gray200}, Dark={StaticResource Gray700}}" />
+                                <BoxView Grid.Row="2" Grid.Column="0" HeightRequest="14" WidthRequest="150" HorizontalOptions="Start" CornerRadius="4" Color="{AppThemeBinding Light={StaticResource Gray200}, Dark={StaticResource Gray700}}" />
+                                <BoxView Grid.Row="0" Grid.RowSpan="3" Grid.Column="1" HeightRequest="80" WidthRequest="90" CornerRadius="12" Color="{AppThemeBinding Light={StaticResource Gray200}, Dark={StaticResource Gray700}}" />
+                            </Grid>
+                        </Border>
+                    </VerticalStackLayout>
+
                     <!-- Empty state -->
                     <VerticalStackLayout x:Name="EmptyStateView"
                                          IsVisible="False"
@@ -99,7 +130,7 @@
                                FontSize="18"
                                FontAttributes="Bold"
                                HorizontalTextAlignment="Center"
-                               TextColor="{StaticResource Gray900Brush}" />
+                               TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource DarkTextPrimary}}" />
                         <Label Text="Pull down to refresh or check your internet connection."
                                FontFamily="LegacySansBook"
                                FontSize="13"
@@ -123,7 +154,7 @@
                                         <!-- Calendar Badge -->
                                         <Border Grid.Column="0"
                                                 Padding="6,3"
-                                                BackgroundColor="{StaticResource SecondaryBrush}"
+                                                Background="{StaticResource SecondaryBrush}"
                                                 StrokeShape="RoundRectangle 8"
                                                 StrokeThickness="0"
                                                 VerticalOptions="Center">
@@ -136,20 +167,20 @@
                                                FontFamily="LegacySerifBold"
                                                FontSize="15"
                                                FontAttributes="Bold"
-                                               TextColor="{StaticResource Gray900Brush}"
+                                               TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource DarkTextPrimary}}"
                                                VerticalOptions="Center" />
 
                                         <!-- Story Count Badge -->
                                         <Border Grid.Column="2"
                                                 Padding="8,3"
-                                                BackgroundColor="{StaticResource SecondaryBrush}"
+                                                Background="{StaticResource SecondaryBrush}"
                                                 StrokeShape="RoundRectangle 10"
                                                 StrokeThickness="0"
                                                 VerticalOptions="Center">
                                             <Label Text="{Binding Stories.Count, StringFormat='{0} stories'}"
                                                    FontFamily="LegacySansBook"
                                                    FontSize="11"
-                                                   TextColor="{StaticResource Gray600Brush}" />
+                                                   TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource DarkTextSecondary}}" />
                                         </Border>
                                     </Grid>
 
@@ -162,7 +193,7 @@
                                                 <!-- GoRead Card: thumbnail left, content right -->
                                                 <Border Padding="0"
                                                         Margin="0,0,0,12"
-                                                        BackgroundColor="{StaticResource WhiteBrush}"
+                                                        Background="{StaticResource WhiteBrush}"
                                                         StrokeShape="RoundRectangle 16"
                                                         StrokeThickness="1"
                                                         Stroke="{StaticResource Gray100Brush}">
@@ -171,17 +202,19 @@
                                                                               CommandParameter="{Binding .}" />
                                                     </Border.GestureRecognizers>
 
-                                                    <Grid ColumnDefinitions="132,*" ColumnSpacing="0"
-                                                          HeightRequest="132">
+                                                    <Grid ColumnDefinitions="130,*" ColumnSpacing="0"
+                                                          MinimumHeightRequest="140">
 
                                                         <!-- Thumbnail (left panel, rounded left corners only) -->
                                                         <Border Grid.Column="0"
                                                                 StrokeThickness="0"
-                                                                StrokeShape="RoundRectangle 16,0,16,0">
+                                                                StrokeShape="RoundRectangle 16,0,16,0"
+                                                                VerticalOptions="Fill">
                                                             <Image Source="{Binding ImageUrl}"
                                                                    Aspect="AspectFill"
-                                                                   HeightRequest="132"
-                                                                   WidthRequest="132" />
+                                                                   MinimumHeightRequest="140"
+                                                                   WidthRequest="130"
+                                                                   VerticalOptions="Fill" />
                                                         </Border>
 
                                                         <!-- Content (right panel) -->
@@ -195,7 +228,7 @@
                                                                    FontFamily="LegacySansBook"
                                                                    FontSize="11"
                                                                    FontAttributes="Bold"
-                                                                   TextColor="{StaticResource AccentBlueBrush}"
+                                                                   TextColor="{AppThemeBinding Light={StaticResource AccentBlue}, Dark={StaticResource DarkPrimary}}"
                                                                    TextTransform="Uppercase" />
 
                                                             <!-- Headline -->
@@ -203,9 +236,9 @@
                                                                    FontFamily="LegacySerifBold"
                                                                    FontSize="15"
                                                                    FontAttributes="Bold"
-                                                                   MaxLines="2"
-                                                                   LineBreakMode="TailTruncation"
-                                                                   TextColor="{StaticResource Gray900Brush}" />
+                                                                   MaxLines="4"
+                                                                   LineBreakMode="WordWrap"
+                                                                   TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource DarkTextPrimary}}" />
 
                                                             <!-- Source · time ago row -->
                                                             <HorizontalStackLayout Spacing="4">
@@ -343,7 +376,7 @@
                                     <Border Padding="0"
                                             WidthRequest="260"
                                             HeightRequest="252"
-                                            BackgroundColor="{StaticResource WhiteBrush}"
+                                            Background="{StaticResource WhiteBrush}"
                                             StrokeShape="RoundRectangle 16"
                                             StrokeThickness="1"
                                             Stroke="{StaticResource Gray100Brush}">
@@ -410,15 +443,15 @@
                                                        FontFamily="LegacySerifBold"
                                                        FontSize="13"
                                                        FontAttributes="Bold"
-                                                       MaxLines="2"
-                                                       LineBreakMode="TailTruncation"
-                                                       TextColor="{StaticResource Gray900Brush}" />
+                                                       MaxLines="3"
+                                                       LineBreakMode="WordWrap"
+                                                       TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource DarkTextPrimary}}" />
                                                 <HorizontalStackLayout Spacing="4">
                                                     <Label Text="{Binding Category}"
                                                            FontFamily="LegacySansBook"
                                                            FontSize="10"
                                                            FontAttributes="Bold"
-                                                           TextColor="{StaticResource AccentBlueBrush}" />
+                                                           TextColor="{AppThemeBinding Light={StaticResource AccentBlue}, Dark={StaticResource DarkPrimary}}" />
                                                     <Label Text="•"
                                                            FontSize="10"
                                                            TextColor="{StaticResource Gray500}" />

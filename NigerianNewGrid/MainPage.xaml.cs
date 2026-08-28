@@ -20,34 +20,42 @@ public partial class MainPage : ContentPage
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly IKeywordMatchingService _keywordMatchingService;
     private readonly INotificationService _notificationService;
-    private readonly List<BriefingItem> _bookmarks = [];
+    private readonly IBookmarkService _bookmarkService;
+    private readonly IBriefingCacheService _cacheService;
+    private readonly ITextToSpeechService _ttsService;
+
     private List<BriefingCategory> _allCategories = [];
     private CancellationTokenSource? _loadCts;
+    private bool _hasLoadedOnce;
 
     private const int PageSize = 15;
     private int _displayedCount = 15;
     private int _totalAvailableStories = 0;
 
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        PropertyNameCaseInsensitive = true
-    };
-
     public MainPage(
         NewsApiClient apiClient, 
         IHttpClientFactory httpClientFactory,
         IKeywordMatchingService keywordMatchingService,
-        INotificationService notificationService)
+        INotificationService notificationService,
+        IBookmarkService bookmarkService,
+        IBriefingCacheService cacheService,
+        ITextToSpeechService ttsService)
     {
         InitializeComponent();
         _apiClient = apiClient;
         _httpClientFactory = httpClientFactory;
         _keywordMatchingService = keywordMatchingService;
         _notificationService = notificationService;
+        _bookmarkService = bookmarkService;
+        _cacheService = cacheService;
+        _ttsService = ttsService;
 
-        Loaded += async (_, _) =>
+        _bookmarkService.BookmarksChanged += OnBookmarksChanged;
+
+        Appearing += async (_, _) =>
         {
+            if (_hasLoadedOnce) return;
+            _hasLoadedOnce = true;
             try
             {
                 await EnsureOnboardingAsync();
@@ -61,6 +69,20 @@ public partial class MainPage : ContentPage
         };
     }
 
+    protected override void OnDisappearing()
+    {
+        base.OnDisappearing();
+        _bookmarkService.BookmarksChanged -= OnBookmarksChanged;
+    }
+
+    protected override void OnAppearing()
+    {
+        base.OnAppearing();
+        _bookmarkService.BookmarksChanged += OnBookmarksChanged;
+    }
+
+    private void OnBookmarksChanged(object? sender, EventArgs e) => RestoreBookmarks();
+
     // ──────────────────────────────────────────────────────────
     // Data Loading
     // ──────────────────────────────────────────────────────────
@@ -68,6 +90,7 @@ public partial class MainPage : ContentPage
     private async Task LoadBriefingAsync()
     {
         _loadCts?.Cancel();
+        _loadCts?.Dispose();
         _loadCts = new CancellationTokenSource();
         var ct = _loadCts.Token;
 
@@ -79,30 +102,22 @@ public partial class MainPage : ContentPage
             var language = Preferences.Get("preferred_language", "English");
             SetStatusLoading(language);
 
+            SkeletonLoadingView.IsVisible = true;
+            EmptyStateView.IsVisible = false;
+            CategoriesLayout.IsVisible = false;
+
             var categories = await _apiClient.GetDailyBriefingAsync(language, ct);
             if (categories.Count == 0)
             {
-                var cachedJson = Preferences.Get("last_briefing", string.Empty);
-                if (!string.IsNullOrWhiteSpace(cachedJson))
+                categories = await _cacheService.GetCachedBriefingAsync();
+                if (categories.Count == 0)
                 {
-                    try
-                    {
-                        categories = JsonSerializer.Deserialize<List<BriefingCategory>>(cachedJson, JsonOptions) ?? [];
-                    }
-                    catch (JsonException ex)
-                    {
-                        Debug.WriteLine($"Cache deserialization failed: {ex.Message}");
-                        categories = GetFallbackSampleBriefing(language);
-                    }
-                }
-                else
-                {
-                    categories = GetFallbackSampleBriefing(language);
+                    categories = _cacheService.GetFallbackSampleBriefing(language);
                 }
             }
             else
             {
-                Preferences.Set("last_briefing", JsonSerializer.Serialize(categories, JsonOptions));
+                await _cacheService.SaveBriefingAsync(categories);
                 Preferences.Set("api_base_url", _apiClient.BaseUrl);
             }
 
@@ -124,6 +139,11 @@ public partial class MainPage : ContentPage
         {
             // cancelled cleanly
         }
+        finally
+        {
+            SkeletonLoadingView.IsVisible = false;
+            CategoriesLayout.IsVisible = true;
+        }
     }
 
     private void EvaluateKeywordAlerts(List<BriefingCategory> categories)
@@ -139,7 +159,8 @@ public partial class MainPage : ContentPage
 
             var matches = _keywordMatchingService.EvaluateFreshArticles(
                 allStories,
-                NotificationPreferences.MonitoredKeywords);
+                NotificationPreferences.MonitoredKeywords,
+                excludedArticleIds: NotificationPreferences.NotifiedArticleIds);
 
             foreach (var match in matches)
             {
@@ -147,7 +168,9 @@ public partial class MainPage : ContentPage
                 _notificationService.ShowKeywordAlertNotification(
                     match.MatchedKeyword,
                     match.Article.Title,
-                    match.Article.Id);
+                    match.Article.Id,
+                    match.Article.Url,
+                    match.Article.Category);
             }
 
             if (matches.Count > 0)
@@ -366,39 +389,44 @@ public partial class MainPage : ContentPage
 
     private async void OnPlayDailyAudioBriefingClicked(object? sender, EventArgs e)
     {
-        var audioUrl = $"{_apiClient.BaseUrl.TrimEnd('/')}/api/v1/briefings/audio";
-        if (Uri.TryCreate(audioUrl, UriKind.Absolute, out var uri))
+        if (_ttsService.IsSpeaking)
         {
-            SemanticScreenReader.Announce("Opening daily audio briefing…");
-            await Launcher.OpenAsync(uri);
+            _ttsService.Cancel();
+            SemanticScreenReader.Announce("Daily briefing audio paused.");
+            return;
         }
-        else
+
+        var topStories = _allCategories
+            .SelectMany(c => c.Top)
+            .Take(8)
+            .ToList();
+
+        if (topStories.Count == 0)
         {
-            await DisplayAlertAsync("Daily Audio Briefing",
-                "The AI audio pipeline synthesizes top headlines into a unified track. Ensure the TTS service is running.",
-                "OK");
+            await DisplayAlertAsync("Daily Audio Briefing", "No headlines are available to read right now.", "OK");
+            return;
         }
+
+        var language = Preferences.Get("preferred_language", "English");
+        SemanticScreenReader.Announce($"Playing daily audio briefing in {language}…");
+        await _ttsService.SpeakBriefingAsync(topStories, language);
     }
 
     private void OnBookmarkClicked(object? sender, EventArgs e)
     {
         if (sender is not Button { CommandParameter: BriefingItem item }) return;
 
-        string message;
-        if (_bookmarks.Any(b => b.Id == item.Id))
-        {
-            _bookmarks.RemoveAll(b => b.Id == item.Id);
-            message = "Bookmark removed.";
-        }
-        else
-        {
-            _bookmarks.Add(item);
-            message = $"Saved: {item.Title}";
-        }
-
-        Preferences.Set("bookmarks", JsonSerializer.Serialize(_bookmarks, JsonOptions));
+        bool added = _bookmarkService.ToggleBookmark(item);
+        string message = added ? $"Saved: {item.Title}" : "Bookmark removed.";
         SemanticScreenReader.Announce(message);
     }
+
+    /// <summary>
+    /// Tagline appended to every share so recipients know where to follow Nigerian news.
+    /// Update this string once the app store listing is live.
+    /// </summary>
+    private const string AppShareTagline =
+        "\n\n📲 Follow Nigerian news as it breaks — download Nigerian News Grid and never miss a story.";
 
     private async void OnShareClicked(object? sender, EventArgs e)
     {
@@ -407,7 +435,7 @@ public partial class MainPage : ContentPage
         else if (sender is BindableObject { BindingContext: BriefingItem bItem }) item = bItem;
         if (item is null) return;
 
-        var shareText = $"Check out this story from {item.Source ?? "Nigerian News Grid"}:\n\n{item.Title}\n\n{item.Summary}\n\nRead more: {item.Url}".Trim();
+        var shareText = $"Check out this story from {item.Source ?? "Nigerian News Grid"}:\n\n{item.Title}\n\n{item.Summary}\n\nRead more: {item.Url}{AppShareTagline}".Trim();
         await Share.Default.RequestAsync(new ShareTextRequest
         {
             Title = "Share News Story",
@@ -532,20 +560,7 @@ public partial class MainPage : ContentPage
 
     private void RestoreBookmarks()
     {
-        var cached = Preferences.Get("bookmarks", string.Empty);
-        if (string.IsNullOrWhiteSpace(cached)) return;
-        try
-        {
-            var items = JsonSerializer.Deserialize<List<BriefingItem>>(cached, JsonOptions);
-            if (items is null) return;
-            _bookmarks.Clear();
-            _bookmarks.AddRange(items);
-        }
-        catch (JsonException ex)
-        {
-            Debug.WriteLine($"Bookmark restore failed: {ex.Message}");
-            Preferences.Remove("bookmarks");
-        }
+        // Bookmarks are reactive via IBookmarkService.BookmarksChanged
     }
 
     // ──────────────────────────────────────────────────────────
@@ -642,99 +657,5 @@ public partial class MainPage : ContentPage
         var fallback = DeviceInfo.Platform == DevicePlatform.Android ? "http://10.0.2.2:56193" : "http://localhost:56193";
         Preferences.Set("api_base_url", fallback);
         return fallback;
-    }
-
-    // ──────────────────────────────────────────────────────────
-    // Fallback Data
-    // ──────────────────────────────────────────────────────────
-
-    private static List<BriefingCategory> GetFallbackSampleBriefing(string language)
-    {
-
-        var imageByCategory = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-        {
-            ["Politics"] = "https://images.unsplash.com/photo-1540910419892-4a36d2c3266c?w=600&auto=format&fit=crop&q=80",
-            ["Business"] = "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=600&auto=format&fit=crop&q=80",
-            ["Sports"] = "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=600&auto=format&fit=crop&q=80",
-            ["Technology"] = "https://images.unsplash.com/photo-1518770660439-4636190af475?w=600&auto=format&fit=crop&q=80",
-            ["Entertainment"] = "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=600&auto=format&fit=crop&q=80",
-        };
-
-        BriefingItem MakeItem(string title, string summary, string url, string source, string category) =>
-            new()
-            {
-                Id = Guid.NewGuid().ToString(),
-                Title = title,
-                Summary = summary,
-                Url = url,
-                Source = source,
-                Category = category,
-                ImageUrl = imageByCategory.GetValueOrDefault(category,
-                    "https://images.unsplash.com/photo-1585829365295-ab7cd400c167?w=600&auto=format&fit=crop&q=80"),
-                PublishedAt = DateTime.UtcNow.AddHours(-new Random().Next(1, 12)),
-                VoiceName = $"{language} Female"
-            };
-
-        return
-        [
-            new BriefingCategory
-            {
-                Category = "Politics",
-                Top =
-                [
-                    MakeItem(
-                        "Federal Government Unveils New Digital Economy Roadmap",
-                        "The Ministry of Communications and Digital Economy announced a strategic initiative targeting infrastructure expansion, broadband coverage, and youth technical skill development nationwide.",
-                        "https://punchng.com/news/digital-roadmap",
-                        "Punch Newspaper",
-                        "Politics"),
-                    MakeItem(
-                        "National Assembly Passes Key Energy & Power Sector Reform Bill",
-                        "Lawmakers approved comprehensive legislative measures to enhance power grid reliability and boost renewable energy investments across state governments.",
-                        "https://guardian.ng/news/energy-bill-passed",
-                        "The Guardian Nigeria",
-                        "Politics")
-                ]
-            },
-            new BriefingCategory
-            {
-                Category = "Sports",
-                Top =
-                [
-                    MakeItem(
-                        "Super Eagles Prepare for International Friendly Match",
-                        "Coaching staff confirmed full squad arrival at camp ahead of weekend international clash, highlighting tactical adjustments and player fitness.",
-                        "https://guardian.ng/sports/super-eagles-friendly",
-                        "The Guardian Nigeria",
-                        "Sports")
-                ]
-            },
-            new BriefingCategory
-            {
-                Category = "Business",
-                Top =
-                [
-                    MakeItem(
-                        "Central Bank Highlights Monetary Policy & Foreign Exchange Outlook",
-                        "Key financial indicators show steady stabilization across foreign exchange markets, trade balances, and agricultural sector loans.",
-                        "https://www.premiumtimesng.com/business/cbn-monetary-policy",
-                        "Premium Times",
-                        "Business")
-                ]
-            },
-            new BriefingCategory
-            {
-                Category = "Technology",
-                Top =
-                [
-                    MakeItem(
-                        "Tech Hub Ecosystem Expands Across Lagos, Abuja and Port Harcourt",
-                        "Venture capital investments in Nigerian fintech and artificial intelligence startups reached new record milestones this quarter.",
-                        "https://punchng.com/tech/startup-growth",
-                        "Punch Newspaper",
-                        "Technology")
-                ]
-            }
-        ];
     }
 }

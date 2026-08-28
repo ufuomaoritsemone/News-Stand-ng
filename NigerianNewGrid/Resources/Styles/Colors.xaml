@@ -58,6 +58,8 @@
     <Color x:Key="Gray500">#6C757D</Color>
     <Color x:Key="MidnightBlue">#0F172A</Color>
     <Color x:Key="Gray600">#495057</Color>
+    <Color x:Key="Gray700">#334155</Color>
+    <Color x:Key="Gray800">#1E293B</Color>
     <Color x:Key="Gray900">#212529</Color>
     <Color x:Key="Gray950">#111111</Color>
 
@@ -106,10 +108,16 @@
 
     <SolidColorBrush x:Key="Gray100Brush"
                      Color="{AppThemeBinding Light={StaticResource Gray100}, Dark={StaticResource DarkSurfaceCard}}"/>
+    <SolidColorBrush x:Key="Gray200Brush"
+                     Color="{AppThemeBinding Light={StaticResource Gray200}, Dark={StaticResource DarkSurfaceCard}}"/>
     <SolidColorBrush x:Key="Gray300Brush"
                      Color="{AppThemeBinding Light={StaticResource Gray300}, Dark={StaticResource DarkTextSecondary}}"/>
     <SolidColorBrush x:Key="Gray600Brush"
                      Color="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource DarkTextSecondary}}"/>
+    <SolidColorBrush x:Key="Gray700Brush"
+                     Color="{AppThemeBinding Light={StaticResource Gray700}, Dark={StaticResource DarkTextSecondary}}"/>
+    <SolidColorBrush x:Key="Gray800Brush"
+                     Color="{AppThemeBinding Light={StaticResource Gray800}, Dark={StaticResource DarkSurfaceCard}}"/>
     <SolidColorBrush x:Key="Gray900Brush"
                      Color="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource DarkTextPrimary}}"/>
 

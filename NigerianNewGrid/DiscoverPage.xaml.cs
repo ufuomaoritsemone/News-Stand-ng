@@ -2,15 +2,18 @@ using System.Diagnostics;
 using System.Text.Json;
 using NigerianNewsGrid.Client;
 using NigerianNewsGrid.Client.Models;
+using NigerianNewGrid.Services;
 
 namespace NigerianNewGrid;
 
 /// <summary>
-/// Discover tab — search + category filter over articles and trending YouTube video stories.
+/// Discover tab — search + category filter over articles and trending YouTube video stories,
+/// including a dedicated 🔔 Keyword Alerts tab matching user monitored topics.
 /// </summary>
 public partial class DiscoverPage : ContentPage
 {
     private readonly NewsApiClient? _apiClient;
+    private readonly IKeywordMatchingService? _keywordMatchingService;
     private List<BriefingItem> _allItems = [];
     private List<VideoStoryItem> _trendingVideos = [];
     private string _selectedCategory = "All";
@@ -21,14 +24,24 @@ public partial class DiscoverPage : ContentPage
         PropertyNameCaseInsensitive = true
     };
 
-    public DiscoverPage() : this(null)
+    // Safe resource lookup — returns fallback if key missing or wrong type
+    private static T GetRes<T>(string key, T fallback)
+    {
+        if (Application.Current?.Resources is { } res &&
+            res.TryGetValue(key, out var raw) && raw is T typed)
+            return typed;
+        return fallback;
+    }
+
+    public DiscoverPage() : this(null, null)
     {
     }
 
-    public DiscoverPage(NewsApiClient? apiClient)
+    public DiscoverPage(NewsApiClient? apiClient, IKeywordMatchingService? keywordMatchingService = null)
     {
         InitializeComponent();
         _apiClient = apiClient;
+        _keywordMatchingService = keywordMatchingService ?? IPlatformApplication.Current?.Services.GetService<IKeywordMatchingService>();
 
         Appearing += async (_, _) =>
         {
@@ -110,11 +123,11 @@ public partial class DiscoverPage : ContentPage
         var cardBorder = new Border
         {
             WidthRequest = 200,
-            HeightRequest = 240,
+            MinimumHeightRequest = 240,
             Padding = 0,
             BackgroundColor = Colors.White,
             StrokeThickness = 1,
-            Stroke = (Brush)Application.Current!.Resources["Gray100Brush"],
+            Stroke = GetRes<Brush>("Gray100Brush", new SolidColorBrush(Color.FromArgb("#E4ECE6"))),
             StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = new CornerRadius(16) }
         };
 
@@ -219,7 +232,7 @@ public partial class DiscoverPage : ContentPage
             FontFamily = "LegacySansBook",
             FontSize = 10,
             FontAttributes = FontAttributes.Bold,
-            TextColor = (Color)Application.Current!.Resources["AccentBlue"],
+            TextColor = GetRes<Color>("AccentBlue", Color.FromArgb("#0066FF")),
             MaxLines = 1,
             LineBreakMode = LineBreakMode.TailTruncation
         };
@@ -230,9 +243,9 @@ public partial class DiscoverPage : ContentPage
             FontFamily = "LegacySerifBold",
             FontSize = 12,
             FontAttributes = FontAttributes.Bold,
-            TextColor = (Color)Application.Current!.Resources["Gray900"],
-            MaxLines = 2,
-            LineBreakMode = LineBreakMode.TailTruncation
+            TextColor = GetRes<Color>("Gray900", Color.FromArgb("#212529")),
+            MaxLines = 3,
+            LineBreakMode = LineBreakMode.WordWrap
         };
 
         var viewsText = video.ViewCount > 0
@@ -244,7 +257,7 @@ public partial class DiscoverPage : ContentPage
             Text = viewsText,
             FontFamily = "LegacySansBook",
             FontSize = 10,
-            TextColor = (Color)Application.Current!.Resources["Gray500"]
+            TextColor = GetRes<Color>("Gray500", Color.FromArgb("#6C757D"))
         };
 
         metaStack.Children.Add(channelLabel);
@@ -277,15 +290,37 @@ public partial class DiscoverPage : ContentPage
 
         IEnumerable<BriefingItem> filtered = _allItems;
 
-        if (_selectedCategory != "All")
+        if (string.Equals(_selectedCategory, "KeywordAlerts", StringComparison.OrdinalIgnoreCase))
+        {
+            var keywords = NotificationPreferences.MonitoredKeywords;
+            if (keywords.Count > 0)
+            {
+                var matcher = _keywordMatchingService ?? new KeywordMatchingService();
+                var matches = matcher.EvaluateFreshArticles(
+                    _allItems,
+                    keywords,
+                    publishedAfterUtc: DateTime.MinValue); // Show all historical matches for active keywords
+
+                filtered = matches.Select(m => m.Article);
+            }
+            else
+            {
+                filtered = [];
+            }
+        }
+        else if (_selectedCategory != "All")
+        {
             filtered = filtered.Where(i =>
                 string.Equals(i.Category, _selectedCategory, StringComparison.OrdinalIgnoreCase));
+        }
 
         if (!string.IsNullOrEmpty(query))
+        {
             filtered = filtered.Where(i =>
                 (i.Title?.Contains(query, StringComparison.OrdinalIgnoreCase) == true) ||
                 (i.Summary?.Contains(query, StringComparison.OrdinalIgnoreCase) == true) ||
                 (i.Source?.Contains(query, StringComparison.OrdinalIgnoreCase) == true));
+        }
 
         var list = filtered.ToList();
         RenderArticles(list);
@@ -304,9 +339,20 @@ public partial class DiscoverPage : ContentPage
 
         EmptyStateView.IsVisible = false;
         ResultsHeaderLabel.IsVisible = true;
-        ResultsHeaderLabel.Text = _selectedCategory == "All"
-            ? $"All News Articles ({articles.Count})"
-            : $"{_selectedCategory} Articles ({articles.Count})";
+
+        if (_selectedCategory == "KeywordAlerts")
+        {
+            var keywords = string.Join(", ", NotificationPreferences.MonitoredKeywords);
+            ResultsHeaderLabel.Text = string.IsNullOrWhiteSpace(keywords)
+                ? "🔔 Monitored Keyword Topics (No active keywords)"
+                : $"🔔 Monitored Topic Alerts ({articles.Count} stories matching: {keywords})";
+        }
+        else
+        {
+            ResultsHeaderLabel.Text = _selectedCategory == "All"
+                ? $"All News Articles ({articles.Count})"
+                : $"{_selectedCategory} Articles ({articles.Count})";
+        }
 
         foreach (var item in articles)
         {
@@ -320,18 +366,18 @@ public partial class DiscoverPage : ContentPage
         var border = new Border
         {
             Padding = 0,
-            BackgroundColor = (Color)Application.Current!.Resources["White"],
+            BackgroundColor = GetRes<Color>("White", Colors.White),
             StrokeThickness = 1,
-            Stroke = (Brush)Application.Current!.Resources["Gray100Brush"],
+            Stroke = GetRes<Brush>("Gray100Brush", new SolidColorBrush(Color.FromArgb("#E4ECE6"))),
             StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = new CornerRadius(16) },
-            HeightRequest = 132
+            MinimumHeightRequest = 140
         };
 
         var grid = new Grid
         {
             ColumnDefinitions =
             {
-                new ColumnDefinition { Width = new GridLength(132) },
+                new ColumnDefinition { Width = new GridLength(130) },
                 new ColumnDefinition { Width = GridLength.Star }
             },
             ColumnSpacing = 0
@@ -341,12 +387,14 @@ public partial class DiscoverPage : ContentPage
         {
             StrokeThickness = 0,
             StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = new CornerRadius(16, 0, 16, 0) },
+            VerticalOptions = LayoutOptions.Fill,
             Content = new Image
             {
                 Source = !string.IsNullOrWhiteSpace(item.ImageUrl) ? item.ImageUrl : "https://images.unsplash.com/photo-1585829365295-ab7cd400c167?w=600",
                 Aspect = Aspect.AspectFill,
-                HeightRequest = 132,
-                WidthRequest = 132
+                MinimumHeightRequest = 140,
+                WidthRequest = 130,
+                VerticalOptions = LayoutOptions.Fill
             }
         };
         grid.Children.Add(imgBorder);
@@ -365,7 +413,7 @@ public partial class DiscoverPage : ContentPage
             FontFamily = "LegacySansBook",
             FontSize = 11,
             FontAttributes = FontAttributes.Bold,
-            TextColor = (Color)Application.Current!.Resources["AccentBlue"]
+            TextColor = GetRes<Color>("AccentBlue", Color.FromArgb("#0066FF"))
         };
 
         var titleLabel = new Label
@@ -374,9 +422,9 @@ public partial class DiscoverPage : ContentPage
             FontFamily = "LegacySerifBold",
             FontSize = 15,
             FontAttributes = FontAttributes.Bold,
-            MaxLines = 2,
-            LineBreakMode = LineBreakMode.TailTruncation,
-            TextColor = (Color)Application.Current!.Resources["Gray900"]
+            MaxLines = 4,
+            LineBreakMode = LineBreakMode.WordWrap,
+            TextColor = GetRes<Color>("Gray900", Color.FromArgb("#212529"))
         };
 
         var sourceLabel = new Label
@@ -384,7 +432,7 @@ public partial class DiscoverPage : ContentPage
             Text = item.Source,
             FontFamily = "LegacySansBook",
             FontSize = 11,
-            TextColor = (Color)Application.Current!.Resources["Gray500"]
+            TextColor = GetRes<Color>("Gray500", Color.FromArgb("#6C757D"))
         };
 
         textStack.Children.Add(catLabel);
@@ -423,22 +471,21 @@ public partial class DiscoverPage : ContentPage
         _selectedCategory = cat;
 
         // Reset all pill backgrounds
-        var pills = new[] { PillAll, PillPolitics, PillSports, PillBusiness, PillEntertainment, PillTech };
-        var labels = new[] { "All", "Politics", "Sports", "Business", "Entertainment", "Technology" };
+        var pills = new[] { PillAll, PillKeywordAlerts, PillPolitics, PillSports, PillBusiness, PillEntertainment, PillTech };
+        var labels = new[] { "All", "KeywordAlerts", "Politics", "Sports", "Business", "Entertainment", "Technology" };
 
         for (int i = 0; i < pills.Length; i++)
         {
             bool isSelected = string.Equals(labels[i], cat, StringComparison.OrdinalIgnoreCase) ||
                               (cat == "All" && labels[i] == "All");
             pills[i].BackgroundColor = isSelected
-                ? (Color)Application.Current!.Resources["AccentBlue"]
-                : (Color)Application.Current!.Resources["Secondary"];
+                ? GetRes<Color>("AccentBlue", Color.FromArgb("#0066FF"))
+                : GetRes<Color>("Secondary", Color.FromArgb("#EAF2EC"));
 
             if (pills[i].Content is Label lbl)
-                lbl.TextColor = isSelected ? Colors.White : (Color)Application.Current!.Resources["Gray900"];
+                lbl.TextColor = isSelected ? Colors.White : GetRes<Color>("Gray900", Color.FromArgb("#212529"));
         }
 
         ApplyFilter();
     }
 }
-

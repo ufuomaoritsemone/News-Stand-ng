@@ -3,6 +3,14 @@
   "WorkspaceRootPath": "C:\\Users\\ufuom\\source\\repos\\NigerianNewGrid\\",
   "Documents": [
     {
+      "AbsoluteMoniker": "D:0:0:{40E0BC61-40BA-0B29-EFA4-1618577447B2}|NigerianNewGrid\\NigerianNewGrid.csproj|c:\\users\\ufuom\\source\\repos\\nigeriannewgrid\\nigeriannewgrid\\mainpage.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}",
+      "RelativeMoniker": "D:0:0:{40E0BC61-40BA-0B29-EFA4-1618577447B2}|NigerianNewGrid\\NigerianNewGrid.csproj|solutionrelative:nigeriannewgrid\\mainpage.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{40E0BC61-40BA-0B29-EFA4-1618577447B2}|NigerianNewGrid\\NigerianNewGrid.csproj|c:\\users\\ufuom\\source\\repos\\nigeriannewgrid\\nigeriannewgrid\\nigeriannewgrid.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|",
+      "RelativeMoniker": "D:0:0:{40E0BC61-40BA-0B29-EFA4-1618577447B2}|NigerianNewGrid\\NigerianNewGrid.csproj|solutionrelative:nigeriannewgrid\\nigeriannewgrid.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|"
+    },
+    {
       "AbsoluteMoniker": "D:0:0:{40E0BC61-40BA-0B29-EFA4-1618577447B2}|NigerianNewGrid\\NigerianNewGrid.csproj|c:\\users\\ufuom\\source\\repos\\nigeriannewgrid\\nigeriannewgrid\\mainpage.xaml.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{40E0BC61-40BA-0B29-EFA4-1618577447B2}|NigerianNewGrid\\NigerianNewGrid.csproj|solutionrelative:nigeriannewgrid\\mainpage.xaml.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
@@ -26,7 +34,7 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 4,
+          "SelectedChildIndex": 1,
           "Children": [
             {
               "$type": "Bookmark",
@@ -34,7 +42,33 @@
             },
             {
               "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "MainPage.xaml",
+              "DocumentMoniker": "C:\\Users\\ufuom\\source\\repos\\NigerianNewGrid\\NigerianNewGrid\\MainPage.xaml",
+              "RelativeDocumentMoniker": "NigerianNewGrid\\MainPage.xaml",
+              "ToolTip": "C:\\Users\\ufuom\\source\\repos\\NigerianNewGrid\\NigerianNewGrid\\MainPage.xaml*",
+              "RelativeToolTip": "NigerianNewGrid\\MainPage.xaml*",
+              "ViewState": "AgIAAMwAAAAAAAAAAAAkwNYAAABbAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003549|",
+              "WhenOpened": "2026-08-23T19:54:35.472Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
               "DocumentIndex": 1,
+              "Title": "NigerianNewGrid.csproj",
+              "DocumentMoniker": "C:\\Users\\ufuom\\source\\repos\\NigerianNewGrid\\NigerianNewGrid\\NigerianNewGrid.csproj",
+              "RelativeDocumentMoniker": "NigerianNewGrid\\NigerianNewGrid.csproj",
+              "ToolTip": "C:\\Users\\ufuom\\source\\repos\\NigerianNewGrid\\NigerianNewGrid\\NigerianNewGrid.csproj",
+              "RelativeToolTip": "NigerianNewGrid\\NigerianNewGrid.csproj",
+              "ViewState": "AgIAABsAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000758|",
+              "WhenOpened": "2026-08-20T08:37:30.835Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 3,
               "Title": "App.g.i.cs",
               "DocumentMoniker": "C:\\Users\\ufuom\\source\\repos\\NigerianNewGrid\\NigerianNewGrid\\obj\\Debug\\net10.0-windows10.0.19041.0\\win-x64\\Platforms\\Windows\\App.g.i.cs",
               "RelativeDocumentMoniker": "NigerianNewGrid\\obj\\Debug\\net10.0-windows10.0.19041.0\\win-x64\\Platforms\\Windows\\App.g.i.cs",
@@ -42,12 +76,11 @@
               "RelativeToolTip": "NigerianNewGrid\\obj\\Debug\\net10.0-windows10.0.19041.0\\win-x64\\Platforms\\Windows\\App.g.i.cs",
               "ViewState": "AgIAABkAAAAAAAAAAAAlwEQAAABEAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-18T11:37:02.325Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-08-18T11:37:02.325Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 2,
+              "DocumentIndex": 4,
               "Title": "Index.cshtml.cs",
               "DocumentMoniker": "C:\\Users\\ufuom\\source\\repos\\NigerianNewGrid\\src\\AdminDashboard\\Pages\\Index.cshtml.cs",
               "RelativeDocumentMoniker": "src\\AdminDashboard\\Pages\\Index.cshtml.cs",
@@ -55,12 +88,11 @@
               "RelativeToolTip": "src\\AdminDashboard\\Pages\\Index.cshtml.cs",
               "ViewState": "AgIAABcBAAAAAAAAAAAiwBcBAAANAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-17T18:23:37.187Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-08-17T18:23:37.187Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 3,
+              "DocumentIndex": 5,
               "Title": "launchSettings.json",
               "DocumentMoniker": "C:\\Users\\ufuom\\source\\repos\\NigerianNewGrid\\src\\AdminDashboard\\Properties\\launchSettings.json",
               "RelativeDocumentMoniker": "src\\AdminDashboard\\Properties\\launchSettings.json",
@@ -72,16 +104,15 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 0,
+              "DocumentIndex": 2,
               "Title": "MainPage.xaml.cs",
               "DocumentMoniker": "C:\\Users\\ufuom\\source\\repos\\NigerianNewGrid\\NigerianNewGrid\\MainPage.xaml.cs",
               "RelativeDocumentMoniker": "NigerianNewGrid\\MainPage.xaml.cs",
               "ToolTip": "C:\\Users\\ufuom\\source\\repos\\NigerianNewGrid\\NigerianNewGrid\\MainPage.xaml.cs",
               "RelativeToolTip": "NigerianNewGrid\\MainPage.xaml.cs",
-              "ViewState": "AgIAAI8CAAAAAAAAAAAAAI8CAAAAAAAAAAAAAA==",
+              "ViewState": "AgIAAI0CAAAAAAAAAAAAAI0CAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-08-17T09:26:27.965Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-08-17T09:26:27.965Z"
             }
           ]
         }

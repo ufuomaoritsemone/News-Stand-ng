@@ -115,25 +115,32 @@ public class NotificationService : INotificationService
 
     public void ShowBriefingNotification(string title, string message)
     {
-        PostNotification(MorningChannelId, 2001, title, message, null);
+        PostNotification(MorningChannelId, 2001, title, message, null, null, null);
     }
 
-    public void ShowKeywordAlertNotification(string keyword, string articleTitle, string articleId)
+    public void ShowKeywordAlertNotification(string keyword, string articleTitle, string articleId, string? articleUrl = null, string? category = null)
     {
         var title = $"🔔 {keyword} — Breaking News";
-        PostNotification(KeywordChannelId, (int)(DateTime.UtcNow.Ticks % int.MaxValue), title, articleTitle, articleId);
+        PostNotification(KeywordChannelId, (int)(DateTime.UtcNow.Ticks % int.MaxValue), title, articleTitle, articleId, articleUrl, category);
     }
 
-    private static void PostNotification(string channelId, int notificationId, string title, string message, string? articleId)
+    private static void PostNotification(
+        string channelId,
+        int notificationId,
+        string title,
+        string message,
+        string? articleId,
+        string? articleUrl = null,
+        string? category = null)
     {
         var context = global::Android.App.Application.Context;
         var launchIntent = new Intent(context, typeof(MainActivity));
         launchIntent.AddFlags(ActivityFlags.SingleTop | ActivityFlags.ClearTop);
 
-        if (!string.IsNullOrEmpty(articleId))
-        {
-            launchIntent.PutExtra("article_id", articleId);
-        }
+        if (!string.IsNullOrEmpty(articleId)) launchIntent.PutExtra("article_id", articleId);
+        if (!string.IsNullOrEmpty(articleUrl)) launchIntent.PutExtra("article_url", articleUrl);
+        if (!string.IsNullOrEmpty(message)) launchIntent.PutExtra("article_title", message);
+        if (!string.IsNullOrEmpty(category)) launchIntent.PutExtra("article_category", category);
 
         var pendingIntentFlags = (Build.VERSION.SdkInt >= BuildVersionCodes.S)
             ? PendingIntentFlags.UpdateCurrent | PendingIntentFlags.Immutable

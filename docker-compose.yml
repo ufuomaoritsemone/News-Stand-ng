@@ -64,20 +64,7 @@ services:
       - DOTNET_ENVIRONMENT=Production
       - ApiBaseUrl=http://news-api:8080
       - NewsApi__BaseUrl=http://news-api:8080
-    depends_on:
-      news-api:
-        condition: service_healthy
-    restart: unless-stopped
-
-  tts-worker:
-    image: nigeriannewsgrid-ttsworker:latest
-    build:
-      context: .
-      dockerfile: src/TtsWorker/Dockerfile
-    environment:
-      - DOTNET_ENVIRONMENT=Production
-      - ApiBaseUrl=http://news-api:8080
-      - NewsApi__BaseUrl=http://news-api:8080
+      - Scraper__IntervalMinutes=15
     depends_on:
       news-api:
         condition: service_healthy

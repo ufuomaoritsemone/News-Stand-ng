@@ -4,7 +4,7 @@
              xmlns:models="clr-namespace:NigerianNewsGrid.Client.Models;assembly=NigerianNewsGrid.Client"
              x:Class="NigerianNewGrid.DiscoverPage"
              Title="Discover"
-             BackgroundColor="{StaticResource SecondaryLightBrush}"
+             Background="{StaticResource SecondaryLightBrush}"
              SafeAreaEdges="Container">
 
     <Grid RowDefinitions="Auto,Auto,*" Padding="20,16,20,0" RowSpacing="0">
@@ -15,7 +15,7 @@
                    FontFamily="LegacySerifBold"
                    FontSize="32"
                    FontAttributes="Bold"
-                   TextColor="{StaticResource Gray900Brush}"
+                   TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource DarkTextPrimary}}"
                    SemanticProperties.HeadingLevel="Level1" />
             <Label Text="Trending news and stories from all around Nigeria"
                    FontFamily="LegacySansBook"
@@ -26,7 +26,7 @@
         <!-- Search Bar (GoRead style) -->
         <Border Grid.Row="1"
                 Padding="12,10"
-                BackgroundColor="{StaticResource WhiteBrush}"
+                Background="{StaticResource WhiteBrush}"
                 StrokeShape="RoundRectangle 24"
                 StrokeThickness="1"
                 Stroke="{StaticResource Gray100Brush}"
@@ -73,13 +73,13 @@
                                    FontFamily="LegacySerifBold"
                                    FontSize="17"
                                    FontAttributes="Bold"
-                                   TextColor="{StaticResource Gray900Brush}" />
+                                   TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource DarkTextPrimary}}" />
                         </HorizontalStackLayout>
                         <Label Grid.Column="1"
                                Text="Nigeria"
                                FontFamily="LegacySansBook"
                                FontSize="12"
-                               TextColor="{StaticResource AccentBlueBrush}"
+                               TextColor="{AppThemeBinding Light={StaticResource AccentBlue}, Dark={StaticResource DarkPrimary}}"
                                FontAttributes="Bold"
                                VerticalOptions="Center" />
                     </Grid>
@@ -101,7 +101,7 @@
                            FontFamily="LegacySerifBold"
                            FontSize="16"
                            FontAttributes="Bold"
-                           TextColor="{StaticResource Gray900Brush}" />
+                           TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource DarkTextPrimary}}" />
 
                     <ScrollView Orientation="Horizontal"
                                 HorizontalScrollBarVisibility="Never"
@@ -110,7 +110,7 @@
                         <HorizontalStackLayout x:Name="FilterPillsLayout" Spacing="8">
                             <Border Padding="16,8"
                                     x:Name="PillAll"
-                                    BackgroundColor="{StaticResource AccentBlueBrush}"
+                                    BackgroundColor="{StaticResource AccentBlue}"
                                     StrokeThickness="0"
                                     StrokeShape="RoundRectangle 20">
                                 <Border.GestureRecognizers>
@@ -119,50 +119,61 @@
                                 <Label Text="All" FontFamily="LegacySansBook" FontSize="13"
                                        FontAttributes="Bold" TextColor="White" />
                             </Border>
+                            <Border Padding="16,8"
+                                    x:Name="PillKeywordAlerts"
+                                    BackgroundColor="{StaticResource Secondary}"
+                                    StrokeThickness="0"
+                                    StrokeShape="RoundRectangle 20">
+                                <Border.GestureRecognizers>
+                                    <TapGestureRecognizer Tapped="OnCategoryPillTapped" CommandParameter="KeywordAlerts" />
+                                </Border.GestureRecognizers>
+                                <Label Text="🔔 Keyword Alerts" FontFamily="LegacySansBook" FontSize="13"
+                                       TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource DarkTextPrimary}}" />
+                            </Border>
                             <Border Padding="16,8" x:Name="PillPolitics"
-                                    BackgroundColor="{StaticResource SecondaryBrush}"
+                                    BackgroundColor="{StaticResource Secondary}"
                                     StrokeThickness="0" StrokeShape="RoundRectangle 20">
                                 <Border.GestureRecognizers>
                                     <TapGestureRecognizer Tapped="OnCategoryPillTapped" CommandParameter="Politics" />
                                 </Border.GestureRecognizers>
                                 <Label Text="Politics" FontFamily="LegacySansBook" FontSize="13"
-                                       TextColor="{StaticResource Gray900Brush}" />
+                                   TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource DarkTextPrimary}}" />
                             </Border>
                             <Border Padding="16,8" x:Name="PillSports"
-                                    BackgroundColor="{StaticResource SecondaryBrush}"
+                                    BackgroundColor="{StaticResource Secondary}"
                                     StrokeThickness="0" StrokeShape="RoundRectangle 20">
                                 <Border.GestureRecognizers>
                                     <TapGestureRecognizer Tapped="OnCategoryPillTapped" CommandParameter="Sports" />
                                 </Border.GestureRecognizers>
                                 <Label Text="Sports" FontFamily="LegacySansBook" FontSize="13"
-                                       TextColor="{StaticResource Gray900Brush}" />
+                                   TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource DarkTextPrimary}}" />
                             </Border>
                             <Border Padding="16,8" x:Name="PillBusiness"
-                                    BackgroundColor="{StaticResource SecondaryBrush}"
+                                    BackgroundColor="{StaticResource Secondary}"
                                     StrokeThickness="0" StrokeShape="RoundRectangle 20">
                                 <Border.GestureRecognizers>
                                     <TapGestureRecognizer Tapped="OnCategoryPillTapped" CommandParameter="Business" />
                                 </Border.GestureRecognizers>
                                 <Label Text="Business" FontFamily="LegacySansBook" FontSize="13"
-                                       TextColor="{StaticResource Gray900Brush}" />
+                                   TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource DarkTextPrimary}}" />
                             </Border>
                             <Border Padding="16,8" x:Name="PillEntertainment"
-                                    BackgroundColor="{StaticResource SecondaryBrush}"
+                                    BackgroundColor="{StaticResource Secondary}"
                                     StrokeThickness="0" StrokeShape="RoundRectangle 20">
                                 <Border.GestureRecognizers>
                                     <TapGestureRecognizer Tapped="OnCategoryPillTapped" CommandParameter="Entertainment" />
                                 </Border.GestureRecognizers>
                                 <Label Text="Entertainment" FontFamily="LegacySansBook" FontSize="13"
-                                       TextColor="{StaticResource Gray900Brush}" />
+                                   TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource DarkTextPrimary}}" />
                             </Border>
                             <Border Padding="16,8" x:Name="PillTech"
-                                    BackgroundColor="{StaticResource SecondaryBrush}"
+                                    BackgroundColor="{StaticResource Secondary}"
                                     StrokeThickness="0" StrokeShape="RoundRectangle 20">
                                 <Border.GestureRecognizers>
                                     <TapGestureRecognizer Tapped="OnCategoryPillTapped" CommandParameter="Technology" />
                                 </Border.GestureRecognizers>
                                 <Label Text="Technology" FontFamily="LegacySansBook" FontSize="13"
-                                       TextColor="{StaticResource Gray900Brush}" />
+                                   TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource DarkTextPrimary}}" />
                             </Border>
                         </HorizontalStackLayout>
                     </ScrollView>
@@ -174,7 +185,7 @@
                        FontFamily="LegacySerifBold"
                        FontSize="16"
                        FontAttributes="Bold"
-                       TextColor="{StaticResource Gray900Brush}" />
+                       TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource DarkTextPrimary}}" />
 
                 <!-- Results List Container (StackLayout based for seamless parent scroll) -->
                 <VerticalStackLayout x:Name="ResultsContainer" Spacing="12">
@@ -191,7 +202,7 @@
                     <Label Text="No stories found"
                            FontFamily="LegacySerifBold" FontSize="16"
                            HorizontalTextAlignment="Center"
-                           TextColor="{StaticResource Gray900Brush}" />
+                           TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource DarkTextPrimary}}" />
                     <Label Text="Try a different search or category filter."
                            FontFamily="LegacySansBook" FontSize="12"
                            HorizontalTextAlignment="Center"

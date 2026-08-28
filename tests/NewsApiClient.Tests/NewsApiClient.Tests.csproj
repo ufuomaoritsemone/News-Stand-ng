@@ -22,6 +22,7 @@
 
   <ItemGroup>
     <Compile Include="..\..\NigerianNewGrid\Services\IKeywordMatchingService.cs" Link="Services\IKeywordMatchingService.cs" />
+    <Compile Include="..\..\NigerianNewGrid\Services\ArticleDistillerService.cs" Link="Services\ArticleDistillerService.cs" />
   </ItemGroup>
 
 </Project>

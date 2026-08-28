@@ -1,46 +1,48 @@
-using System.Text.Json;
+using NigerianNewGrid.Services;
 using NigerianNewsGrid.Client.Models;
 
 namespace NigerianNewGrid;
 
 public partial class BookmarksPage : ContentPage
 {
-    private static readonly JsonSerializerOptions JsonOptions = new()
+    private readonly IBookmarkService _bookmarkService;
+
+    public BookmarksPage() : this(null)
     {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        PropertyNameCaseInsensitive = true
-    };
+    }
 
-    private readonly List<BriefingItem> _bookmarks = [];
-
-    public BookmarksPage()
+    public BookmarksPage(IBookmarkService? bookmarkService)
     {
         InitializeComponent();
-
-        Appearing += (_, _) => RefreshBookmarks();
+        _bookmarkService = bookmarkService 
+            ?? IPlatformApplication.Current?.Services.GetService<IBookmarkService>()
+            ?? new BookmarkService();
     }
+
+    protected override void OnAppearing()
+    {
+        base.OnAppearing();
+        _bookmarkService.BookmarksChanged += OnBookmarksChanged;
+        RefreshBookmarks();
+    }
+
+    protected override void OnDisappearing()
+    {
+        base.OnDisappearing();
+        _bookmarkService.BookmarksChanged -= OnBookmarksChanged;
+    }
+
+    private void OnBookmarksChanged(object? sender, EventArgs e) => RefreshBookmarks();
 
     private void RefreshBookmarks()
     {
-        _bookmarks.Clear();
+        var bookmarks = _bookmarkService.GetBookmarks();
 
-        var cached = Preferences.Get("bookmarks", string.Empty);
-        if (!string.IsNullOrWhiteSpace(cached))
-        {
-            try
-            {
-                var items = JsonSerializer.Deserialize<List<BriefingItem>>(cached, JsonOptions);
-                if (items != null)
-                    _bookmarks.AddRange(items);
-            }
-            catch (JsonException) { /* ignore corrupt cache */ }
-        }
-
-        BookmarksView.ItemsSource = _bookmarks.ToList();
-        BookmarkCountLabel.Text = _bookmarks.Count == 1
+        BookmarksView.ItemsSource = bookmarks.ToList();
+        BookmarkCountLabel.Text = bookmarks.Count == 1
             ? "1 saved story"
-            : $"{_bookmarks.Count} saved stories";
-        ClearAllBtn.IsVisible = _bookmarks.Count > 0;
+            : $"{bookmarks.Count} saved stories";
+        ClearAllBtn.IsVisible = bookmarks.Count > 0;
     }
 
     private async void OnBookmarkTapped(object? sender, TappedEventArgs e)
@@ -61,7 +63,11 @@ public partial class BookmarksPage : ContentPage
 
         if (confirm)
         {
-            Preferences.Remove("bookmarks");
+            var bookmarks = _bookmarkService.GetBookmarks().ToList();
+            foreach (var b in bookmarks)
+            {
+                _bookmarkService.RemoveBookmark(b.Id);
+            }
             RefreshBookmarks();
         }
     }

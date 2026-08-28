@@ -78,6 +78,9 @@ public partial class SettingsPage : ContentPage
         SwitchKeywordAlerts.IsToggled = NotificationPreferences.KeywordAlertsEnabled;
         KeywordAlertsContainer.IsVisible = NotificationPreferences.KeywordAlertsEnabled;
 
+        // Analytics opt-in (default true — permitted by design)
+        SwitchAnalytics.IsToggled = Preferences.Get("analytics_enabled", defaultValue: true);
+
         RenderActiveKeywordChips();
         RenderPresetSuggestions();
 
@@ -285,5 +288,15 @@ public partial class SettingsPage : ContentPage
         }
 
         return new SolidColorBrush(fallbackColor);
+    }
+
+    // ──────────────────────────────────────────────────────────
+    // Privacy & Analytics
+    // ──────────────────────────────────────────────────────────
+
+    private void OnAnalyticsToggled(object? sender, ToggledEventArgs e)
+    {
+        if (_isInitializing) return;
+        Preferences.Set("analytics_enabled", e.Value);
     }
 }

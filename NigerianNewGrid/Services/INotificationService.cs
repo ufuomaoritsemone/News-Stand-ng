@@ -28,5 +28,5 @@ public interface INotificationService
     /// <summary>
     /// Immediately dispatches a high-priority keyword alert notification.
     /// </summary>
-    void ShowKeywordAlertNotification(string keyword, string articleTitle, string articleId);
+    void ShowKeywordAlertNotification(string keyword, string articleTitle, string articleId, string? articleUrl = null, string? category = null);
 }

@@ -48,6 +48,12 @@ namespace NigerianNewGrid
                 client.Timeout = TimeSpan.FromSeconds(5);
             });
 
+            // Register Core Architecture Services (TTS, Bookmarks, Caching)
+            builder.Services.AddSingleton<NigerianNewGrid.Services.ITextToSpeechService, NigerianNewGrid.Services.MauiTextToSpeechService>();
+            builder.Services.AddSingleton<NigerianNewGrid.Services.IBookmarkService, NigerianNewGrid.Services.BookmarkService>();
+            builder.Services.AddSingleton<NigerianNewGrid.Services.IBriefingCacheService, NigerianNewGrid.Services.BriefingCacheService>();
+            builder.Services.AddSingleton<NigerianNewGrid.Services.IAnalyticsService, NigerianNewGrid.Services.AnalyticsService>();
+
             // Register On-Device Notification and Keyword Matching Services
             builder.Services.AddSingleton<NigerianNewGrid.Services.IKeywordMatchingService, NigerianNewGrid.Services.KeywordMatchingService>();
 #if ANDROID

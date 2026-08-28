@@ -16,6 +16,7 @@ public class ScraperWorker : BackgroundService
     private readonly MlCategorizerEngine _categorizer;
     private readonly ArticleContentExtractor _extractor;
     private readonly UrlFrontierManager _frontier;
+    private readonly IHostApplicationLifetime _appLifetime;
 
     public ScraperWorker(
         ILogger<ScraperWorker> logger, 
@@ -23,7 +24,8 @@ public class ScraperWorker : BackgroundService
         IConfiguration configuration,
         MlCategorizerEngine categorizer,
         ArticleContentExtractor extractor,
-        UrlFrontierManager frontier)
+        UrlFrontierManager frontier,
+        IHostApplicationLifetime appLifetime)
     {
         _logger = logger;
         _httpFactory = httpFactory;
@@ -31,6 +33,7 @@ public class ScraperWorker : BackgroundService
         _categorizer = categorizer;
         _extractor = extractor;
         _frontier = frontier;
+        _appLifetime = appLifetime;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -118,7 +121,17 @@ public class ScraperWorker : BackgroundService
                 _logger.LogWarning(ex, "Failed to trigger media syndication sync in ScraperWorker.");
             }
 
-            // Run every 15 minutes for comprehensive coverage
+            var runOnce = _configuration.GetValue("Scraper:RunOnce", false) 
+                || string.Equals(Environment.GetEnvironmentVariable("SCRAPER_RUN_ONCE"), "true", StringComparison.OrdinalIgnoreCase);
+
+            if (runOnce)
+            {
+                _logger.LogInformation("ScraperWorker completed single run cycle (Cloud Run Job mode). Terminating application.");
+                _appLifetime.StopApplication();
+                return;
+            }
+
+            // Run every 15 minutes for continuous coverage
             var delayMinutes = _configuration.GetValue("Scraper:IntervalMinutes", 15);
             _logger.LogInformation("Scraping cycle completed. Next run in {Minutes} minutes.", delayMinutes);
             await Task.Delay(TimeSpan.FromMinutes(delayMinutes), stoppingToken);
@@ -169,7 +182,8 @@ public class ScraperWorker : BackgroundService
             scrapers.Add(new TheCableSitemapScraper(client, _extractor, _frontier));
             scrapers.Add(new DailyPostSitemapScraper(client, _extractor, _frontier));
             scrapers.Add(new DailyTrustSitemapScraper(client, _extractor, _frontier));
-            scrapers.Add(new GuardianScraper(client));
+            scrapers.Add(new NairametricsSitemapScraper(client, _extractor, _frontier));
+            scrapers.Add(new GuardianSitemapScraper(client, _extractor, _frontier));
         }
 
         return scrapers;

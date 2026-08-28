@@ -10,9 +10,22 @@
             lead picture, full distilled story text, and multi-source related coverage.
             </summary>
         </member>
+        <member name="F:NigerianNewGrid.ArticleWebPage.AppShareTagline">
+            <summary>
+            Tagline appended to every share so recipients know where to follow Nigerian news.
+            Update this string once the app store listing is live.
+            </summary>
+        </member>
         <member name="T:NigerianNewGrid.DiscoverPage">
             <summary>
-            Discover tab — search + category filter over articles and trending YouTube video stories.
+            Discover tab — search + category filter over articles and trending YouTube video stories,
+            including a dedicated 🔔 Keyword Alerts tab matching user monitored topics.
+            </summary>
+        </member>
+        <member name="F:NigerianNewGrid.MainPage.AppShareTagline">
+            <summary>
+            Tagline appended to every share so recipients know where to follow Nigerian news.
+            Update this string once the app store listing is live.
             </summary>
         </member>
         <member name="M:NigerianNewGrid.MainPage.TimeAgo(System.DateTime)">
@@ -20,9 +33,33 @@
             Returns a human-readable "X ago" string for a given UTC datetime.
             </summary>
         </member>
+        <member name="T:NigerianNewGrid.Services.AnalyticsService">
+            <summary>
+            Anonymised user behaviour event batching service.
+            
+            - Reads the "analytics_enabled" Preference (default true).
+            - Maintains an in-memory queue; flushes when queue reaches 10 or on explicit FlushAsync().
+            - Identifies the device with a stable random UUID (no PII).
+            - All HTTP calls are fire-and-forget — failures are swallowed silently.
+            </summary>
+        </member>
+        <member name="M:NigerianNewGrid.Services.AnalyticsService.TrackAsync(System.String,System.String,System.String,System.String)">
+            <inheritdoc />
+        </member>
+        <member name="M:NigerianNewGrid.Services.AnalyticsService.FlushAsync">
+            <inheritdoc />
+        </member>
+        <member name="T:NigerianNewGrid.Services.AnalyticsEventPayload">
+            <summary>Payload DTO sent to POST /api/v1/analytics</summary>
+        </member>
         <member name="M:NigerianNewGrid.Services.ArticleDistillerService.IdentifyPublisher(System.String)">
             <summary>
             Identifies publisher branding and logos for Nigerian and international news outlets.
+            </summary>
+        </member>
+        <member name="M:NigerianNewGrid.Services.ArticleDistillerService.CalculateReadingTime(System.String,System.Int32)">
+            <summary>
+            Calculates estimated reading time in minutes based on average reading speed (200 WPM).
             </summary>
         </member>
         <member name="M:NigerianNewGrid.Services.ArticleDistillerService.GenerateChromeReaderDistillerScript(System.String,System.String,System.String,System.String,System.String,System.String,System.Boolean,System.String)">
@@ -40,6 +77,24 @@
         <member name="M:NigerianNewGrid.Services.ArticleDistillerService.GetSetFontSizeScript(System.String)">
             <summary>
             JavaScript snippet to change font size in Reader Mode instantly.
+            </summary>
+        </member>
+        <member name="T:NigerianNewGrid.Services.IAnalyticsService">
+            <summary>
+            Records anonymous in-app user behaviour events and batches them to the server.
+            All tracking is subject to the user's opt-in preference (analytics_enabled).
+            </summary>
+        </member>
+        <member name="M:NigerianNewGrid.Services.IAnalyticsService.TrackAsync(System.String,System.String,System.String,System.String)">
+            <summary>
+            Queues a single event. The service will batch and send events automatically.
+            Safe to call from any thread; never throws.
+            </summary>
+        </member>
+        <member name="M:NigerianNewGrid.Services.IAnalyticsService.FlushAsync">
+            <summary>
+            Immediately attempts to flush all pending events to the server.
+            Call on app pause / background.
             </summary>
         </member>
         <member name="M:NigerianNewGrid.Services.IKeywordMatchingService.EvaluateFreshArticles(System.Collections.Generic.IEnumerable{NigerianNewsGrid.Client.Models.BriefingItem},System.Collections.Generic.IReadOnlyList{System.String},System.Nullable{System.DateTime},System.Collections.Generic.IReadOnlySet{System.String})">
@@ -78,7 +133,7 @@
             Immediately dispatches a morning briefing notification.
             </summary>
         </member>
-        <member name="M:NigerianNewGrid.Services.INotificationService.ShowKeywordAlertNotification(System.String,System.String,System.String)">
+        <member name="M:NigerianNewGrid.Services.INotificationService.ShowKeywordAlertNotification(System.String,System.String,System.String,System.String,System.String)">
             <summary>
             Immediately dispatches a high-priority keyword alert notification.
             </summary>

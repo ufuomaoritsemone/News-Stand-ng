@@ -11,6 +11,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddControllers();
+builder.Services.AddMemoryCache();
 builder.Services.AddHttpClient();
 builder.Services.AddScoped<YouTubeFeedService>();
 builder.Services.AddScoped<SocialFeedService>();
@@ -205,6 +206,49 @@ using (var scope = app.Services.CreateScope())
         }
         catch { }
 
+        try
+        {
+            db.Database.ExecuteSqlRaw(@"
+                CREATE TABLE IF NOT EXISTS ""CategoryCorrections"" (
+                    ""Id"" TEXT NOT NULL CONSTRAINT ""PK_CategoryCorrections"" PRIMARY KEY,
+                    ""ArticleId"" TEXT NOT NULL,
+                    ""Title"" TEXT NOT NULL,
+                    ""Summary"" TEXT NULL,
+                    ""OldCategory"" TEXT NOT NULL,
+                    ""NewCategory"" TEXT NOT NULL,
+                    ""Source"" TEXT NULL,
+                    ""Url"" TEXT NULL,
+                    ""CreatedAt"" TEXT NOT NULL
+                );
+            ");
+            db.Database.ExecuteSqlRaw(@"CREATE INDEX IF NOT EXISTS ""IX_CategoryCorrections_CreatedAt"" ON ""CategoryCorrections"" (""CreatedAt"");");
+            db.Database.ExecuteSqlRaw(@"CREATE INDEX IF NOT EXISTS ""IX_CategoryCorrections_ArticleId"" ON ""CategoryCorrections"" (""ArticleId"");");
+        }
+        catch { }
+
+        // Analytics: User behaviour events (app_open, article_read, article_share, article_bookmark)
+        try
+        {
+            db.Database.ExecuteSqlRaw(@"
+                CREATE TABLE IF NOT EXISTS ""UserEvents"" (
+                    ""Id"" TEXT NOT NULL CONSTRAINT ""PK_UserEvents"" PRIMARY KEY,
+                    ""DeviceId"" TEXT NOT NULL,
+                    ""EventType"" TEXT NOT NULL,
+                    ""ArticleId"" TEXT NULL,
+                    ""ArticleTitle"" TEXT NULL,
+                    ""Category"" TEXT NULL,
+                    ""Platform"" TEXT NULL,
+                    ""AppVersion"" TEXT NULL,
+                    ""OccurredAt"" TEXT NOT NULL,
+                    ""ReceivedAt"" TEXT NOT NULL
+                );
+            ");
+            db.Database.ExecuteSqlRaw(@"CREATE INDEX IF NOT EXISTS ""IX_UserEvents_OccurredAt"" ON ""UserEvents"" (""OccurredAt"");");
+            db.Database.ExecuteSqlRaw(@"CREATE INDEX IF NOT EXISTS ""IX_UserEvents_EventType"" ON ""UserEvents"" (""EventType"");");
+            db.Database.ExecuteSqlRaw(@"CREATE INDEX IF NOT EXISTS ""IX_UserEvents_DeviceId"" ON ""UserEvents"" (""DeviceId"");");
+        }
+        catch { }
+
         logger.LogInformation("Database verified and schema initialized.");
 
         // Seed initial sources if empty
@@ -212,11 +256,36 @@ using (var scope = app.Services.CreateScope())
         {
             db.Sources.AddRange(
                 new Source { Id = "punch", Name = "Punch Newspaper", RssUrl = "https://punchng.com/feed/" },
-                new Source { Id = "guardian", Name = "The Guardian Nigeria", RssUrl = "https://guardian.ng/feed/" },
-                new Source { Id = "premiumtimes", Name = "Premium Times", RssUrl = "https://www.premiumtimesng.com/feed" }
+                new Source { Id = "guardian", Name = "The Guardian Nigeria", SitemapUrl = "https://guardian.ng/sitemap.xml", RssUrl = "https://guardian.ng/feed/", ScraperType = "Hybrid" },
+                new Source { Id = "premiumtimes", Name = "Premium Times", RssUrl = "https://www.premiumtimesng.com/feed" },
+                new Source { Id = "nairametrics", Name = "Nairametrics", SitemapUrl = "https://nairametrics.com/news-sitemap.xml", RssUrl = "https://nairametrics.com/feed/", ScraperType = "Hybrid" }
             );
             db.SaveChanges();
             logger.LogInformation("Default news sources seeded.");
+        }
+        else if (!db.Sources.Any(s => s.Id == "nairametrics"))
+        {
+            // Upsert Nairametrics into existing databases
+            db.Sources.Add(new Source
+            {
+                Id = "nairametrics",
+                Name = "Nairametrics",
+                SitemapUrl = "https://nairametrics.com/news-sitemap.xml",
+                RssUrl = "https://nairametrics.com/feed/",
+                ScraperType = "Hybrid"
+            });
+            db.SaveChanges();
+            logger.LogInformation("Nairametrics source added to existing database.");
+        }
+
+        // Upgrade guardian from RSS-only to hybrid sitemap scraper for existing databases
+        var guardianSource = db.Sources.Find("guardian");
+        if (guardianSource != null && string.IsNullOrEmpty(guardianSource.SitemapUrl))
+        {
+            guardianSource.SitemapUrl = "https://guardian.ng/sitemap.xml";
+            guardianSource.ScraperType = "Hybrid";
+            db.SaveChanges();
+            logger.LogInformation("Guardian Nigeria source upgraded to hybrid sitemap scraper.");
         }
 
         // Seed initial articles if empty

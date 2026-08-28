@@ -57,16 +57,16 @@ public class NotificationService : INotificationService
 
     public void ShowBriefingNotification(string title, string message)
     {
-        PostImmediateNotification("morning_briefing_immediate", title, message, null);
+        PostImmediateNotification("morning_briefing_immediate", title, message, null, null, null);
     }
 
-    public void ShowKeywordAlertNotification(string keyword, string articleTitle, string articleId)
+    public void ShowKeywordAlertNotification(string keyword, string articleTitle, string articleId, string? articleUrl = null, string? category = null)
     {
         var title = $"🔔 {keyword} — Breaking News";
-        PostImmediateNotification($"keyword_{Guid.NewGuid():N}", title, articleTitle, articleId);
+        PostImmediateNotification($"keyword_{Guid.NewGuid():N}", title, articleTitle, articleId, articleUrl, category);
     }
 
-    private static void PostImmediateNotification(string requestId, string title, string message, string? articleId)
+    private static void PostImmediateNotification(string requestId, string title, string message, string? articleId, string? articleUrl = null, string? category = null)
     {
         var content = new UNMutableNotificationContent
         {
@@ -75,10 +75,12 @@ public class NotificationService : INotificationService
             Sound = UNNotificationSound.Default
         };
 
-        if (!string.IsNullOrEmpty(articleId))
-        {
-            content.UserInfo = new NSDictionary("article_id", articleId);
-        }
+        var dict = new NSMutableDictionary();
+        if (!string.IsNullOrEmpty(articleId)) dict.SetValueForKey(new NSString(articleId), new NSString("article_id"));
+        if (!string.IsNullOrEmpty(articleUrl)) dict.SetValueForKey(new NSString(articleUrl), new NSString("article_url"));
+        if (!string.IsNullOrEmpty(title)) dict.SetValueForKey(new NSString(title), new NSString("article_title"));
+        if (!string.IsNullOrEmpty(category)) dict.SetValueForKey(new NSString(category), new NSString("article_category"));
+        content.UserInfo = dict;
 
         // Trigger in 1 second
         var trigger = UNTimeIntervalNotificationTrigger.CreateTrigger(1, repeats: false);

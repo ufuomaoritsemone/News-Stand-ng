@@ -25,8 +25,8 @@ public class NotificationService : INotificationService
         Debug.WriteLine($"[Windows NotificationService] Briefing Notification: {title} | {message}");
     }
 
-    public void ShowKeywordAlertNotification(string keyword, string articleTitle, string articleId)
+    public void ShowKeywordAlertNotification(string keyword, string articleTitle, string articleId, string? articleUrl = null, string? category = null)
     {
-        Debug.WriteLine($"[Windows NotificationService] Keyword Alert [{keyword}]: {articleTitle} (ID: {articleId})");
+        Debug.WriteLine($"[Windows NotificationService] Keyword Alert [{keyword}]: {articleTitle} (ID: {articleId}, URL: {articleUrl})");
     }
 }

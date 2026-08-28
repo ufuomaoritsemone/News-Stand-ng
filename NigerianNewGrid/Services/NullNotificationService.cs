@@ -28,8 +28,8 @@ public sealed class NullNotificationService : INotificationService
         Debug.WriteLine($"[NullNotificationService] ShowBriefingNotification: {title} - {message}");
     }
 
-    public void ShowKeywordAlertNotification(string keyword, string articleTitle, string articleId)
+    public void ShowKeywordAlertNotification(string keyword, string articleTitle, string articleId, string? articleUrl = null, string? category = null)
     {
-        Debug.WriteLine($"[NullNotificationService] ShowKeywordAlertNotification: [{keyword}] {articleTitle} ({articleId})");
+        Debug.WriteLine($"[NullNotificationService] ShowKeywordAlertNotification: [{keyword}] {articleTitle} ({articleId}) URL: {articleUrl}");
     }
 }

@@ -97,6 +97,21 @@ public class ArticleDistillerService
     }
 
     /// <summary>
+    /// Calculates estimated reading time in minutes based on average reading speed (200 WPM).
+    /// </summary>
+    public static (int Minutes, string Label) CalculateReadingTime(string? text, int wordsPerMinute = 200)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return (2, "2 min read");
+        }
+
+        var words = text.Split([' ', '\r', '\n', '\t'], StringSplitOptions.RemoveEmptyEntries);
+        var minutes = Math.Max(1, (int)Math.Ceiling((double)words.Length / Math.Max(1, wordsPerMinute)));
+        return (minutes, $"{minutes} min read");
+    }
+
+    /// <summary>
     /// Generates the Chromium / Chrome Reader Mode DOM Distiller script.
     /// Runs directly inside the live rendered WebView DOM to harvest ALL body text,
     /// headlines, and images while stripping all advertisements and bloat.

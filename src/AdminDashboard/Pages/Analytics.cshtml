@@ -1,0 +1,280 @@
+@page
+@model AdminDashboard.Pages.AnalyticsModel
+@{
+    ViewData["Title"] = "User Analytics | Nigerian News Grid";
+    var s = Model.Summary;
+}
+
+<div class="container-fluid px-4 py-3">
+
+    <!-- Header -->
+    <div class="dashboard-header d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
+        <div>
+            <div class="d-flex align-items-center gap-3">
+                <h1 class="h2 mb-0 text-white brand-font">🇳🇬 Nigerian News Grid</h1>
+                <span class="badge-live">USER ANALYTICS</span>
+            </div>
+            <p class="text-muted mb-0 mt-1">Anonymised in-app behaviour — no PII collected</p>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <a href="/" class="btn btn-outline-light btn-sm"><i class="bi bi-newspaper me-1"></i> Articles</a>
+            <a href="/Videos" class="btn btn-outline-danger btn-sm"><i class="bi bi-youtube me-1"></i> Videos</a>
+            <a href="/Socials" class="btn btn-outline-info btn-sm"><i class="bi bi-twitter-x me-1"></i> Socials</a>
+            <!-- Period filter -->
+            <form method="get" class="d-flex gap-2">
+                <select name="days" class="form-select form-control-glass form-select-sm" onchange="this.form.submit()" style="width:160px;">
+                    <option value="7" selected="@(Model.Days == 7)">Last 7 days</option>
+                    <option value="30" selected="@(Model.Days == 30)">Last 30 days</option>
+                    <option value="90" selected="@(Model.Days == 90)">Last 90 days</option>
+                </select>
+            </form>
+        </div>
+    </div>
+
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show glass-card border-danger text-white mb-4" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i> @TempData["Error"]
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <!-- ── Summary Cards ── -->
+    <div class="row g-3 mb-4 mt-1">
+        <div class="col-6 col-md-2">
+            <div class="glass-card stat-card text-center">
+                <div class="text-muted small text-uppercase">Total Events</div>
+                <div class="stat-value">@(s?.TotalEvents ?? 0)</div>
+                <div class="small text-info mt-1"><i class="bi bi-activity me-1"></i> @Model.Days-day window</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-2">
+            <div class="glass-card stat-card text-center">
+                <div class="text-muted small text-uppercase">Unique Devices</div>
+                <div class="stat-value">@(s?.UniqueDevices ?? 0)</div>
+                <div class="small text-warning mt-1"><i class="bi bi-phone me-1"></i> Anonymous</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-2">
+            <div class="glass-card stat-card text-center">
+                <div class="text-muted small text-uppercase">App Opens</div>
+                <div class="stat-value text-success">@(s?.AppOpens ?? 0)</div>
+                <div class="small text-muted mt-1"><i class="bi bi-box-arrow-in-right me-1"></i> Sessions</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-2">
+            <div class="glass-card stat-card text-center">
+                <div class="text-muted small text-uppercase">Articles Read</div>
+                <div class="stat-value text-info">@(s?.ArticleReads ?? 0)</div>
+                <div class="small text-muted mt-1"><i class="bi bi-book me-1"></i> Reads</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-2">
+            <div class="glass-card stat-card text-center">
+                <div class="text-muted small text-uppercase">Shares Clicked</div>
+                <div class="stat-value text-warning">@(s?.SharesClicked ?? 0)</div>
+                <div class="small text-muted mt-1"><i class="bi bi-share-fill me-1"></i> Virality</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-2">
+            <div class="glass-card stat-card text-center">
+                <div class="text-muted small text-uppercase">Bookmarks</div>
+                <div class="stat-value text-danger">@(s?.BookmarksAdded ?? 0)</div>
+                <div class="small text-muted mt-1"><i class="bi bi-bookmark-fill me-1"></i> Saved</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Charts + Top Articles ── -->
+    <div class="row g-4 mb-4">
+
+        <!-- Daily Sparkline -->
+        <div class="col-lg-6">
+            <div class="glass-card p-4 h-100">
+                <h5 class="text-white brand-font mb-3"><i class="bi bi-bar-chart-fill text-info me-2"></i> Daily Event Volume (7 days)</h5>
+                <canvas id="dailyChart" height="200"></canvas>
+            </div>
+        </div>
+
+        <!-- Event Type Breakdown -->
+        <div class="col-lg-3">
+            <div class="glass-card p-4 h-100">
+                <h5 class="text-white brand-font mb-3"><i class="bi bi-pie-chart-fill text-warning me-2"></i> Event Types</h5>
+                <canvas id="typeChart" height="200"></canvas>
+            </div>
+        </div>
+
+        <!-- Engagement Rate -->
+        <div class="col-lg-3">
+            <div class="glass-card p-4 h-100">
+                <h5 class="text-white brand-font mb-3"><i class="bi bi-lightning-charge-fill text-success me-2"></i> Engagement</h5>
+                @{
+                    var opens = s?.AppOpens ?? 0;
+                    var reads = s?.ArticleReads ?? 0;
+                    var rateVal = opens > 0 ? (reads * 100.0 / opens) : 0;
+                }
+                <div class="text-center mt-3">
+                    <div class="display-4 text-success fw-bold">@rateVal.ToString("F0")<span class="fs-3">%</span></div>
+                    <div class="text-muted small mt-2">Read-through rate<br />(articles read per session)</div>
+                </div>
+                <hr class="border-secondary border-opacity-25 my-3" />
+                <div class="d-flex justify-content-between small text-muted">
+                    <span>Share Rate</span>
+                    <span class="text-warning fw-bold">
+                        @(reads > 0 ? ((s?.SharesClicked ?? 0) * 100.0 / reads).ToString("F1") : "0.0")%
+                    </span>
+                </div>
+                <div class="d-flex justify-content-between small text-muted mt-1">
+                    <span>Bookmark Rate</span>
+                    <span class="text-danger fw-bold">
+                        @(reads > 0 ? ((s?.BookmarksAdded ?? 0) * 100.0 / reads).ToString("F1") : "0.0")%
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Top Articles ── -->
+    <div class="row g-4 mb-4">
+        <div class="col-lg-7">
+            <div class="glass-card p-4">
+                <h5 class="text-white brand-font mb-3"><i class="bi bi-trophy-fill text-warning me-2"></i> Top 10 Most-Read Articles</h5>
+                @if (s?.TopArticles?.Any() == true)
+                {
+                    <div class="table-responsive">
+                        <table class="table table-dark table-hover table-sm mb-0" style="font-size:0.82rem;">
+                            <thead class="text-muted text-uppercase" style="font-size:0.72rem;">
+                                <tr>
+                                    <th>#</th>
+                                    <th>Article</th>
+                                    <th>Category</th>
+                                    <th class="text-end">Reads</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @{int rank = 1;}
+                                @foreach (var a in s.TopArticles)
+                                {
+                                    <tr>
+                                        <td class="text-muted">@rank</td>
+                                        <td>
+                                            <span title="@a.Title" class="text-white d-block" style="max-width:320px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+                                                @a.Title
+                                            </span>
+                                        </td>
+                                        <td><span class="badge bg-secondary rounded-pill" style="font-size:0.68rem;">@a.Category</span></td>
+                                        <td class="text-end text-info fw-bold">@a.ReadCount</td>
+                                    </tr>
+                                    rank++;
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+                else
+                {
+                    <div class="text-center text-muted py-4">
+                        <i class="bi bi-inbox display-6 d-block mb-2"></i>
+                        No article reads recorded yet for this period.
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- Recent Events Log -->
+        <div class="col-lg-5">
+            <div class="glass-card p-4">
+                <h5 class="text-white brand-font mb-3"><i class="bi bi-clock-history text-info me-2"></i> Recent Events (last 30)</h5>
+                @if (Model.RecentEvents?.Any() == true)
+                {
+                    <div style="max-height:380px;overflow-y:auto;">
+                        @foreach (var ev in Model.RecentEvents)
+                        {
+                            var icon = ev.EventType switch
+                            {
+                                "app_open" => "bi-box-arrow-in-right text-success",
+                                "article_read" => "bi-book text-info",
+                                "article_share" => "bi-share-fill text-warning",
+                                "article_bookmark" => "bi-bookmark-fill text-danger",
+                                _ => "bi-dot text-muted"
+                            };
+                            <div class="d-flex align-items-start gap-2 py-2 border-bottom border-secondary border-opacity-10">
+                                <i class="bi @icon mt-1 flex-shrink-0" style="font-size:0.9rem;"></i>
+                                <div class="flex-grow-1 overflow-hidden">
+                                    <div class="text-white small text-truncate">@(ev.ArticleTitle ?? ev.EventType.Replace("_", " "))</div>
+                                    <div class="text-muted" style="font-size:0.7rem;">@ev.DeviceId · @ev.Platform · @ev.OccurredAt.ToString("MMM dd HH:mm")</div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <div class="text-center text-muted py-4">
+                        <i class="bi bi-inbox display-6 d-block mb-2"></i>
+                        No events recorded yet.
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+    <script>
+        // ── Daily sparkline ──
+        const dailyLabels = [@Html.Raw(string.Join(",", (s?.DailyBreakdown ?? []).Select(d => $"'{d.Date[5..]}'")))] ;
+        const dailyCounts = [@Html.Raw(string.Join(",", (s?.DailyBreakdown ?? []).Select(d => d.Count)))];
+
+        new Chart(document.getElementById('dailyChart'), {
+            type: 'bar',
+            data: {
+                labels: dailyLabels,
+                datasets: [{
+                    label: 'Events',
+                    data: dailyCounts,
+                    backgroundColor: 'rgba(56, 189, 248, 0.6)',
+                    borderColor: 'rgba(56, 189, 248, 1)',
+                    borderWidth: 1,
+                    borderRadius: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { ticks: { color: '#94a3b8', font: { size: 11 } }, grid: { color: 'rgba(255,255,255,0.05)' } },
+                    y: { ticks: { color: '#94a3b8', font: { size: 11 } }, grid: { color: 'rgba(255,255,255,0.05)' }, beginAtZero: true }
+                }
+            }
+        });
+
+        // ── Event type doughnut ──
+        new Chart(document.getElementById('typeChart'), {
+            type: 'doughnut',
+            data: {
+                labels: ['App Opens', 'Reads', 'Shares', 'Bookmarks'],
+                datasets: [{
+                    data: [
+                        @(s?.AppOpens ?? 0),
+                        @(s?.ArticleReads ?? 0),
+                        @(s?.SharesClicked ?? 0),
+                        @(s?.BookmarksAdded ?? 0)
+                    ],
+                    backgroundColor: ['#22c55e', '#38bdf8', '#f59e0b', '#ef4444'],
+                    borderWidth: 0,
+                    hoverOffset: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { position: 'bottom', labels: { color: '#94a3b8', font: { size: 11 }, boxWidth: 12 } }
+                },
+                cutout: '65%'
+            }
+        });
+    </script>
+}

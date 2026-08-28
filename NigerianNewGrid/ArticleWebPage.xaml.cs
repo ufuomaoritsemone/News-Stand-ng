@@ -69,8 +69,9 @@ public partial class ArticleWebPage : ContentPage
 
         _publisher = ArticleDistillerService.IdentifyPublisher(_articleUrl);
 
-        // Header info: Display publisher brand cleanly
-        HeaderPublisherLabel.Text = _publisher.Name;
+        // Header info: Display publisher brand cleanly with estimated reading time
+        var (_, readTimeLabel) = ArticleDistillerService.CalculateReadingTime(_title);
+        HeaderPublisherLabel.Text = $"{_publisher.Name} · ⏱️ {readTimeLabel}";
 
         if (!string.IsNullOrWhiteSpace(url) && Uri.TryCreate(url, UriKind.Absolute, out var uri))
         {
@@ -92,6 +93,10 @@ public partial class ArticleWebPage : ContentPage
 
             // Asynchronously fetch related stories (Archive, Videos, Tweets)
             _ = LoadRelatedStoriesAsync(_articleId, _title, _category);
+
+            // Track: article opened / read
+            var analytics = IPlatformApplication.Current?.Services.GetService<NigerianNewGrid.Services.IAnalyticsService>();
+            _ = analytics?.TrackAsync("article_read", _articleId, _title, _category);
         }
         else
         {
@@ -542,21 +547,61 @@ public partial class ArticleWebPage : ContentPage
             await Navigation.PopAsync();
     }
 
+    /// <summary>
+    /// Tagline appended to every share so recipients know where to follow Nigerian news.
+    /// Update this string once the app store listing is live.
+    /// </summary>
+    private const string AppShareTagline =
+        "\n\n📲 Follow Nigerian news as it breaks — download Nigerian News Grid and never miss a story.";
+
     private async void OnShareClicked(object? sender, EventArgs e)
     {
         if (!string.IsNullOrWhiteSpace(_articleUrl))
         {
+            // Track: share clicked before showing the share sheet
+            var analytics = IPlatformApplication.Current?.Services.GetService<NigerianNewGrid.Services.IAnalyticsService>();
+            _ = analytics?.TrackAsync("article_share", _articleId, _title, _category);
+
+            var shareText = $"{_title ?? "Check out this story"}\n\nRead more: {_articleUrl}{AppShareTagline}";
             await Share.Default.RequestAsync(new ShareTextRequest
             {
                 Title = _title ?? "Share Article",
                 Uri = _articleUrl,
-                Text = $"Check out this story: {_articleUrl}"
+                Text = shareText
             });
         }
     }
 
     private async void OnBookmarkClicked(object? sender, EventArgs e)
     {
-        await DisplayAlertAsync("Bookmarked", "Story added to your bookmarks.", "OK");
+        var bookmarkService = IPlatformApplication.Current?.Services.GetService<IBookmarkService>();
+        if (bookmarkService != null && !string.IsNullOrWhiteSpace(_articleUrl))
+        {
+            var item = new BriefingItem
+            {
+                Id = _articleId ?? Guid.NewGuid().ToString("N"),
+                Title = _title ?? _publisher.Name,
+                Url = _articleUrl,
+                ImageUrl = _imageUrl ?? string.Empty,
+                Category = _category ?? "News",
+                Source = _publisher.Name,
+                PublishedAt = DateTime.UtcNow
+            };
+            bool added = bookmarkService.ToggleBookmark(item);
+
+            // Track: bookmark added (only when adding, not removing)
+            if (added)
+            {
+                var analytics = IPlatformApplication.Current?.Services.GetService<NigerianNewGrid.Services.IAnalyticsService>();
+                _ = analytics?.TrackAsync("article_bookmark", _articleId, _title, _category);
+            }
+
+            string message = added ? "Story saved to bookmarks." : "Bookmark removed.";
+            await DisplayAlertAsync("Bookmarks", message, "OK");
+        }
+        else
+        {
+            await DisplayAlertAsync("Bookmarks", "Story saved to bookmarks.", "OK");
+        }
     }
 }

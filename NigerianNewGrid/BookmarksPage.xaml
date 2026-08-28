@@ -4,21 +4,21 @@
              xmlns:models="clr-namespace:NigerianNewsGrid.Client.Models;assembly=NigerianNewsGrid.Client"
              x:Class="NigerianNewGrid.BookmarksPage"
              Title="Bookmarks"
-             BackgroundColor="{StaticResource SecondaryLightBrush}">
+             Background="{StaticResource SecondaryLightBrush}">
 
     <Grid RowDefinitions="Auto,*" Padding="0" RowSpacing="0">
 
         <!-- Header -->
         <Grid Grid.Row="0"
               Padding="20,16,20,12"
-              BackgroundColor="{StaticResource WhiteBrush}"
+              Background="{StaticResource WhiteBrush}"
               ColumnDefinitions="*,Auto">
             <VerticalStackLayout Grid.Column="0" Spacing="2">
                 <Label Text="Bookmarks"
                        FontFamily="LegacySerifBold"
                        FontSize="28"
                        FontAttributes="Bold"
-                       TextColor="{StaticResource Gray900Brush}"
+                       TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource DarkTextPrimary}}"
                        SemanticProperties.HeadingLevel="Level1" />
                 <Label x:Name="BookmarkCountLabel"
                        Text="0 saved stories"
@@ -60,7 +60,7 @@
                                FontSize="22"
                                FontAttributes="Bold"
                                HorizontalTextAlignment="Center"
-                               TextColor="{StaticResource Gray900Brush}" />
+                               TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource DarkTextPrimary}}" />
                         <Label Text="Tap the Bookmark button on any story to save it here for later reading."
                                FontFamily="LegacySansBook"
                                FontSize="14"
@@ -75,23 +75,25 @@
                 <DataTemplate x:DataType="models:BriefingItem">
                     <Border Padding="0"
                             Margin="0,0,0,12"
-                            BackgroundColor="{StaticResource WhiteBrush}"
+                            Background="{StaticResource WhiteBrush}"
                             StrokeShape="RoundRectangle 16"
                             StrokeThickness="1"
                             Stroke="{StaticResource Gray100Brush}">
                         <Border.GestureRecognizers>
                             <TapGestureRecognizer Tapped="OnBookmarkTapped" CommandParameter="{Binding .}" />
                         </Border.GestureRecognizers>
-                        <Grid ColumnDefinitions="132,*" ColumnSpacing="0" HeightRequest="132">
+                        <Grid ColumnDefinitions="130,*" ColumnSpacing="0" MinimumHeightRequest="140">
 
                             <!-- Thumbnail Image -->
                             <Border Grid.Column="0"
                                     StrokeThickness="0"
-                                    StrokeShape="RoundRectangle 16,0,16,0">
+                                    StrokeShape="RoundRectangle 16,0,16,0"
+                                    VerticalOptions="Fill">
                                 <Image Source="{Binding ImageUrl}"
                                        Aspect="AspectFill"
-                                       HeightRequest="132"
-                                       WidthRequest="132" />
+                                       MinimumHeightRequest="140"
+                                       WidthRequest="130"
+                                       VerticalOptions="Fill" />
                             </Border>
 
                             <!-- Content -->
@@ -104,16 +106,16 @@
                                        FontFamily="LegacySansBook"
                                        FontSize="11"
                                        FontAttributes="Bold"
-                                       TextColor="{StaticResource AccentBlueBrush}"
+                                       TextColor="{AppThemeBinding Light={StaticResource AccentBlue}, Dark={StaticResource DarkPrimary}}"
                                        TextTransform="Uppercase" />
                                 <!-- Title -->
                                 <Label Text="{Binding Title}"
                                        FontFamily="LegacySerifBold"
                                        FontSize="15"
                                        FontAttributes="Bold"
-                                       MaxLines="2"
-                                       LineBreakMode="TailTruncation"
-                                       TextColor="{StaticResource Gray900Brush}" />
+                                       MaxLines="4"
+                                       LineBreakMode="WordWrap"
+                                       TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource DarkTextPrimary}}" />
                                 <!-- Source -->
                                 <Label Text="{Binding Source}"
                                        FontFamily="LegacySansBook"

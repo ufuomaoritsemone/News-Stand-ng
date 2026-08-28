@@ -5,7 +5,7 @@
              x:Class="NigerianNewGrid.ArticleWebPage"
              x:DataType="local:ArticleWebPage"
              Title=""
-             BackgroundColor="{StaticResource WhiteBrush}"
+             Background="{StaticResource WhiteBrush}"
              SafeAreaEdges="Container">
 
     <Grid RowDefinitions="Auto,Auto,*" Padding="0" RowSpacing="0">
@@ -15,7 +15,7 @@
         ══════════════════════════════════════════════ -->
         <Border Grid.Row="0"
                 Padding="12,8"
-                BackgroundColor="{StaticResource WhiteBrush}"
+                Background="{StaticResource WhiteBrush}"
                 StrokeShape="RoundRectangle 0"
                 StrokeThickness="0,0,0,1"
                 Stroke="{AppThemeBinding Light={StaticResource Gray200}, Dark={StaticResource DarkSecondary}}">
@@ -130,7 +130,7 @@
                      x:Name="LoadingProgress"
                      IsVisible="True"
                      Progress="0.3"
-                     ProgressColor="{StaticResource AccentBlueBrush}"
+                     ProgressColor="{AppThemeBinding Light={StaticResource AccentBlue}, Dark={StaticResource DarkPrimary}}"
                      HeightRequest="3" />
 
         <!-- WebView & Floating Related Stories Container -->
@@ -191,7 +191,7 @@
                 <Border x:Name="RelatedExpandedSheet"
                         IsVisible="False"
                         HeightRequest="420"
-                        BackgroundColor="{StaticResource WhiteBrush}"
+                        Background="{StaticResource WhiteBrush}"
                         StrokeShape="RoundRectangle 24,24,0,0"
                         StrokeThickness="1"
                         Stroke="{StaticResource Gray300Brush}">
@@ -214,7 +214,7 @@
                                            FontFamily="LegacySerifBold"
                                            FontSize="16"
                                            FontAttributes="Bold"
-                                           TextColor="{StaticResource Gray900Brush}"
+                                           TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource DarkTextPrimary}}"
                                            VerticalOptions="Center" />
                                     <Border x:Name="RelatedTotalBadge"
                                             Padding="8,2"
@@ -226,7 +226,7 @@
                                                Text="0 found"
                                                FontSize="11"
                                                FontAttributes="Bold"
-                                               TextColor="{StaticResource AccentBlueBrush}" />
+                                               TextColor="{AppThemeBinding Light={StaticResource AccentBlue}, Dark={StaticResource DarkPrimary}}" />
                                     </Border>
                                 </HorizontalStackLayout>
 
@@ -258,7 +258,7 @@
                                         CornerRadius="14"
                                         BorderWidth="1.5"
                                         BorderColor="{AppThemeBinding Light=#0052CC, Dark=#60A5FA}"
-                                        BackgroundColor="{StaticResource AccentBlueBrush}"
+                                        BackgroundColor="{StaticResource AccentBlue}"
                                         TextColor="White" />
                                 <Button x:Name="FilterArticlesBtn"
                                         Text="📰 Archive"
@@ -305,7 +305,7 @@
                                             Padding="10"
                                             BackgroundColor="{StaticResource SecondaryLight}"
                                             StrokeShape="RoundRectangle 14"
-                                            Stroke="{StaticResource Gray200}"
+                                            Stroke="{StaticResource Gray200Brush}"
                                             StrokeThickness="1">
                                         <Border.GestureRecognizers>
                                             <TapGestureRecognizer Tapped="OnRelatedItemCardTapped" CommandParameter="{Binding .}" />
@@ -341,12 +341,12 @@
                                                         <Label Text="{Binding Category}"
                                                                 FontSize="9"
                                                                 FontAttributes="Bold"
-                                                                TextColor="{StaticResource AccentBlueBrush}" />
+                                                                TextColor="{AppThemeBinding Light={StaticResource AccentBlue}, Dark={StaticResource DarkPrimary}}" />
                                                     </Border>
                                                     <Label Text="{Binding Source}"
                                                            FontSize="11"
                                                            FontAttributes="Bold"
-                                                           TextColor="{StaticResource Gray900Brush}"
+                                                           TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource DarkTextPrimary}}"
                                                            LineBreakMode="TailTruncation" />
                                                     <Label Text="•" FontSize="10" TextColor="{StaticResource Gray400}" />
                                                     <Label Text="{Binding TimeAgo}"
@@ -357,9 +357,9 @@
                                                 <Label Text="{Binding Title}"
                                                        FontSize="13"
                                                        FontAttributes="Bold"
-                                                       MaxLines="2"
-                                                       LineBreakMode="TailTruncation"
-                                                       TextColor="{StaticResource Gray900Brush}" />
+                                                       MaxLines="4"
+                                                       LineBreakMode="WordWrap"
+                                                       TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource DarkTextPrimary}}" />
 
                                                 <Label Text="{Binding Subtitle}"
                                                        FontSize="11"
@@ -373,7 +373,7 @@
                                                    Text="→"
                                                    FontSize="16"
                                                    FontAttributes="Bold"
-                                                   TextColor="{StaticResource AccentBlueBrush}"
+                                                   TextColor="{AppThemeBinding Light={StaticResource AccentBlue}, Dark={StaticResource DarkPrimary}}"
                                                    VerticalOptions="Center"
                                                    Margin="4,0,0,0" />
                                         </Grid>

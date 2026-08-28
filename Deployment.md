@@ -75,16 +75,13 @@ gcloud builds submit --tag us-central1-docker.pkg.dev/YOUR_PROJECT_ID/newsgrid-r
 # 2. Admin Dashboard
 gcloud builds submit --tag us-central1-docker.pkg.dev/YOUR_PROJECT_ID/newsgrid-repo/admin-dashboard:latest -f src/AdminDashboard/Dockerfile .
 
-# 3. News Scraper Service
+# 3. News Scraper Service (Cloud Run Job Image)
 gcloud builds submit --tag us-central1-docker.pkg.dev/YOUR_PROJECT_ID/newsgrid-repo/news-scraper:latest -f src/NewsScraperService/Dockerfile .
-
-# 4. TTS Worker
-gcloud builds submit --tag us-central1-docker.pkg.dev/YOUR_PROJECT_ID/newsgrid-repo/tts-worker:latest -f src/TtsWorker/Dockerfile .
 ```
 
 ### Step 5: Deploy Services to Cloud Run
 
-1. **Deploy News API:**
+1. **Deploy News API (Serverless — Scales to 0 when idle):**
    ```bash
    gcloud run deploy news-api \
        --image=us-central1-docker.pkg.dev/YOUR_PROJECT_ID/newsgrid-repo/news-api:latest \
@@ -106,27 +103,24 @@ gcloud builds submit --tag us-central1-docker.pkg.dev/YOUR_PROJECT_ID/newsgrid-r
        --set-env-vars="ApiBaseUrl=https://YOUR-NEWS-API-URL,NewsApi__BaseUrl=https://YOUR-NEWS-API-URL,ASPNETCORE_ENVIRONMENT=Production"
    ```
 
-3. **Deploy News Scraper Service:**
+3. **Deploy News Scraper as Cloud Run Job (Cost-Saving — Runs on Demand):**
    ```bash
-   gcloud run deploy news-scraper \
+   # Create the Cloud Run Job (runs in ~30 seconds then terminates with $0 idle cost)
+   gcloud run jobs create news-scraper-job \
        --image=us-central1-docker.pkg.dev/YOUR_PROJECT_ID/newsgrid-repo/news-scraper:latest \
-       --platform=managed \
        --region=us-central1 \
-       --no-cpu-throttling \
-       --min-instances=1 \
-       --set-env-vars="ApiBaseUrl=https://YOUR-NEWS-API-URL,NewsApi__BaseUrl=https://YOUR-NEWS-API-URL,DOTNET_ENVIRONMENT=Production"
+       --set-env-vars="ApiBaseUrl=https://YOUR-NEWS-API-URL,NewsApi__BaseUrl=https://YOUR-NEWS-API-URL,SCRAPER_RUN_ONCE=true,DOTNET_ENVIRONMENT=Production"
+
+   # Schedule periodic scraping every 20 minutes via Cloud Scheduler
+   gcloud scheduler jobs create http news-scraper-cron \
+       --schedule="*/20 * * * *" \
+       --uri="https://us-central1-run.googleapis.com/v2/projects/YOUR_PROJECT_ID/locations/us-central1/jobs/news-scraper-job:run" \
+       --http-method=POST \
+       --oauth-service-account-email="YOUR_SERVICE_ACCOUNT@YOUR_PROJECT_ID.iam.gserviceaccount.com"
    ```
 
-4. **Deploy TTS Worker:**
-   ```bash
-   gcloud run deploy tts-worker \
-       --image=us-central1-docker.pkg.dev/YOUR_PROJECT_ID/newsgrid-repo/tts-worker:latest \
-       --platform=managed \
-       --region=us-central1 \
-       --no-cpu-throttling \
-       --min-instances=1 \
-       --set-env-vars="ApiBaseUrl=https://YOUR-NEWS-API-URL,NewsApi__BaseUrl=https://YOUR-NEWS-API-URL,DOTNET_ENVIRONMENT=Production"
-   ```
+4. **Text-to-Speech (TTS):**
+   TTS is handled natively on-device in the .NET MAUI mobile application via `Microsoft.Maui.Media.TextToSpeech` at **$0 cloud cost** and with zero server latency. No server-side TTS container is required.
 
 ---
 

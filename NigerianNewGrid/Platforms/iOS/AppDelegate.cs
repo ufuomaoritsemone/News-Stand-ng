@@ -1,10 +1,14 @@
-﻿using Foundation;
+using Foundation;
+using UserNotifications;
 
-namespace NigerianNewGrid
+namespace NigerianNewGrid;
+
+[Register("AppDelegate")]
+public class AppDelegate : MauiUIApplicationDelegate
 {
-    [Register("AppDelegate")]
-    public class AppDelegate : MauiUIApplicationDelegate
+    protected override MauiApp CreateMauiApp()
     {
-        protected override MauiApp CreateMauiApp() => MauiProgram.CreateMauiApp();
+        UNUserNotificationCenter.Current.Delegate = new Platforms.iOS.iOSNotificationDelegate();
+        return MauiProgram.CreateMauiApp();
     }
 }

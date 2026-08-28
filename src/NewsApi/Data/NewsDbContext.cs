@@ -18,6 +18,8 @@ public class NewsDbContext : DbContext
     public DbSet<VideoStory> VideoStories { get; set; } = null!;
     public DbSet<SocialPost> SocialPosts { get; set; } = null!;
     public DbSet<FeedbackItem> Feedbacks { get; set; } = null!;
+    public DbSet<CategoryCorrection> CategoryCorrections { get; set; } = null!;
+    public DbSet<UserEvent> UserEvents { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -55,6 +57,19 @@ public class NewsDbContext : DbContext
         {
             entity.HasIndex(f => f.CreatedAt);
             entity.HasIndex(f => f.Category);
+        });
+
+        modelBuilder.Entity<CategoryCorrection>(entity =>
+        {
+            entity.HasIndex(c => c.CreatedAt);
+            entity.HasIndex(c => c.ArticleId);
+        });
+
+        modelBuilder.Entity<UserEvent>(entity =>
+        {
+            entity.HasIndex(e => e.OccurredAt);
+            entity.HasIndex(e => e.EventType);
+            entity.HasIndex(e => e.DeviceId);
         });
     }
 }
