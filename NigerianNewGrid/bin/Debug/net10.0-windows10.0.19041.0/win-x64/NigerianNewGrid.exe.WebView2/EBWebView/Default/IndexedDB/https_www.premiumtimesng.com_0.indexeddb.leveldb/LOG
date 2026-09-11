@@ -1,7 +1,0 @@
-2026/08/18-11:08:07.719 2db4 Reusing MANIFEST C:\Users\ufuom\source\repos\NigerianNewGrid\NigerianNewGrid\bin\Debug\net10.0-windows10.0.19041.0\win-x64\NigerianNewGrid.exe.WebView2\EBWebView\Default\IndexedDB\https_www.premiumtimesng.com_0.indexeddb.leveldb/MANIFEST-000001
-2026/08/18-11:08:07.721 2db4 Recovering log #4
-2026/08/18-11:08:07.722 2db4 Reusing old log C:\Users\ufuom\source\repos\NigerianNewGrid\NigerianNewGrid\bin\Debug\net10.0-windows10.0.19041.0\win-x64\NigerianNewGrid.exe.WebView2\EBWebView\Default\IndexedDB\https_www.premiumtimesng.com_0.indexeddb.leveldb/000004.log 
-2026/08/18-11:08:08.868 7168 Level-0 table #8: started
-2026/08/18-11:08:08.871 7168 Level-0 table #8: 3862 bytes OK
-2026/08/18-11:08:08.874 7168 Delete type=0 #4
-2026/08/18-11:08:08.875 7168 Manual compaction at level-0 from '\x00\x03\x00\x00\x00' @ 72057594037927935 : 1 .. '\x00\x04\x00\x00\x00' @ 0 : 0; will stop at (end)
