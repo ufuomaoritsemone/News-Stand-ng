@@ -12,4 +12,6 @@ public class ArticleModel
     public DateTime? PublishedAt { get; set; }
     public string? Source { get; set; }
     public string? AudioUrl { get; set; }
+    public string? Author { get; set; }
+    public string? ContentType { get; set; } = "News";
 }

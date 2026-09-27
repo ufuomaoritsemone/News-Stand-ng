@@ -42,10 +42,11 @@ This document defines the comprehensive monetization strategy, ad placement arch
 - **Styling**: Rendered using the identical 132px height, green surface borders, and typography as standard news cards, distinguished only by a subtle theme-aware `Sponsored` / `Ad` badge pill.
 - **Behavior**: Clicking opens advertiser landing URL or in-app custom web view.
 
-### B. Sticky Bottom Adaptive Banner Ads
+### B. Sticky Bottom Compact Banner Ads (Standard 320x50)
 - **Target Screen**: [ArticleWebPage.xaml](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/NigerianNewGrid/ArticleWebPage.xaml) (Article reading & web view).
-- **Placement**: Pinned to the bottom viewport with safe-area padding (`320x50` or adaptive banner height `320x100`).
-- **Advantage**: Capitalizes on dwell time (30–90 seconds per story) with steady passive impressions.
+- **Placement & Sizing**: Pinned to the bottom viewport with a compact fixed 50dp height (`AdSize="Banner"`, `320x50`). Reduced from previous dynamic adaptive banners to maximize visible editorial reading space for news stories.
+- **Reader Controls**: Includes a discreet dismiss button (`✕`) enabling readers to collapse the banner bar on demand and reclaim 100% of the viewport.
+- **Advantage**: Balances consistent passive monetization dwell time with a clean, reader-first layout.
 
 ### C. Rewarded Ads for Value-Add Utilities
 - **Target Actions**:
@@ -147,3 +148,23 @@ graph TD
    - Connect rewarded ad callbacks to unlock Text-To-Speech audio player (`TtsWorker`) and AI digest summaries.
 4. **Phase 4 — "News Grid Pro" Subscriptions**
    - Implement `Plugin.InAppBilling` to allow monthly/annual subscriptions that disable all programmatic ads and unlock offline audio caching.
+
+
+
+### Admob Details
+
+ **Android**
+
+App Id: ca-app-pub-0810356418854639~3397453941
+
+Ad unit ID: ca-app-pub-0810356418854639/7601009567 Banner Ad
+Ad unit ID: ca-app-pub-0810356418854639/8492878270 Native Advance  
+
+
+
+**iOS**
+
+app Id: ca-app-pub-0810356418854639~7145127262
+
+Ad unit ID: ca-app-pub-0810356418854639/5209689482 Native Advance 
+Ad unit ID: ca-app-pub-0810356418854639/2200382762 Banner Ad

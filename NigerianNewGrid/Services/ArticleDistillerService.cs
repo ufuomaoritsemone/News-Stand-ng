@@ -65,6 +65,9 @@ public class ArticleDistillerService
         if (u.Contains("bbc.com") || u.Contains("bbc"))
             return new PublisherInfo("BBC News", "https://static.files.bbci.co.uk/ws/simorgh-assets/public/pidgin/images/metadata/poster-1024x576.png", "#BB1919", "#800C0C");
 
+        if (u.Contains("lindaikejisblog.com") || u.Contains("lindaikeji"))
+            return new PublisherInfo("Linda Ikeji's Blog", "https://www.lindaikejisblog.com/favicon.ico", "#E91E63", "#C2185B");
+
         var domain = GetDomainName(url ?? "");
         var capitalized = FormatDomainForDisplay(domain);
         return new PublisherInfo(capitalized, null, "#1B3B6F", "#0A192F");
@@ -350,7 +353,7 @@ public class ArticleDistillerService
                             </div>
 
                             <div class=""nng-reader-footer"">
-                                ✨ Clean Reading View • Nigerian News Grid
+                                ✨ Clean Reading View • Nigerian News
                             </div>
                         </div>
                     `;
@@ -455,7 +458,7 @@ public class ArticleDistillerService
                         }
 
                         .nng-article-title {
-                            font-family: 'LegacySerifBold', 'LegacySerifITCTTBold', 'Georgia', 'Cambria', serif !important;
+                            font-family: 'LegacySerifITCTTBold', 'LegacySerifBold', 'Georgia', 'Cambria', serif !important;
                             font-size: 28px !important;
                             line-height: 1.28 !important;
                             font-weight: 800 !important;
@@ -465,7 +468,7 @@ public class ArticleDistillerService
                         }
 
                         .nng-article-meta {
-                            font-family: 'LegacySansBook', -apple-system, BlinkMacSystemFont, sans-serif !important;
+                            font-family: 'Legacy Sans Book', 'LegacySansBook', -apple-system, BlinkMacSystemFont, sans-serif !important;
                             font-size: 13px !important;
                             color: #718096 !important;
                             margin-bottom: 20px !important;
@@ -488,13 +491,14 @@ public class ArticleDistillerService
                         }
 
                         .nng-article-body {
-                            font-family: 'LegacySansBook', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+                            font-family: 'Legacy Sans Book', 'LegacySansBook', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
                             font-size: var(--nng-font-size) !important;
                             line-height: 1.78 !important;
                             color: inherit !important;
                         }
 
                         .nng-reader-p {
+                            font-family: 'Legacy Sans Book', 'LegacySansBook', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
                             font-size: var(--nng-font-size) !important;
                             line-height: 1.78 !important;
                             margin: 0 0 22px 0 !important;

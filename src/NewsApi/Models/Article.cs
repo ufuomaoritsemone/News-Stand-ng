@@ -16,4 +16,19 @@ public class Article
     public string? Category { get; set; }
     public DateTime? PublishedAt { get; set; }
     public string? AudioUrl { get; set; }
+
+    // Author & Editorial/Opinion Content Classification
+    public string? Author { get; set; }
+    public string? ContentType { get; set; } = "News";
+
+    // Direct In-House Sponsorship Engine Fields
+    public bool IsSponsored { get; set; } = false;
+    public string? SponsorName { get; set; }
+    public string? SponsorUrl { get; set; }
+    public DateTime? CampaignExpiresAt { get; set; }
+    public bool IsPinned { get; set; } = false;
+    public int? TargetPosition { get; set; }
+    public int PriorityWeight { get; set; } = 1;
+    public int ImpressionCount { get; set; } = 0;
+    public int ClickCount { get; set; } = 0;
 }

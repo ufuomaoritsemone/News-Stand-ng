@@ -16,6 +16,7 @@ public class ScraperWorker : BackgroundService
     private readonly MlCategorizerEngine _categorizer;
     private readonly ArticleContentExtractor _extractor;
     private readonly UrlFrontierManager _frontier;
+    private readonly IArticleEnricher _enricher;
     private readonly IHostApplicationLifetime _appLifetime;
 
     public ScraperWorker(
@@ -25,26 +26,31 @@ public class ScraperWorker : BackgroundService
         MlCategorizerEngine categorizer,
         ArticleContentExtractor extractor,
         UrlFrontierManager frontier,
+        IArticleEnricher enricher,
         IHostApplicationLifetime appLifetime)
     {
-        _logger = logger;
-        _httpFactory = httpFactory;
+        _logger        = logger;
+        _httpFactory   = httpFactory;
         _configuration = configuration;
-        _categorizer = categorizer;
-        _extractor = extractor;
-        _frontier = frontier;
-        _appLifetime = appLifetime;
+        _categorizer   = categorizer;
+        _extractor     = extractor;
+        _frontier      = frontier;
+        _enricher      = enricher;
+        _appLifetime   = appLifetime;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         _logger.LogInformation("ScraperWorker starting with Google News Sitemap discovery, JSON-LD/SmartReader extraction, and ML categorization...");
 
-        var client = _httpFactory.CreateClient();
+        var internalApiClient = _httpFactory.CreateClient();
+        ConfigureApiKeyHeader(internalApiClient);
+
+        var externalScraperClient = _httpFactory.CreateClient();
 
         while (!stoppingToken.IsCancellationRequested)
         {
-            var scrapers = await GetScrapersAsync(client, stoppingToken);
+            var scrapers = await GetScrapersAsync(internalApiClient, externalScraperClient, stoppingToken);
             _logger.LogInformation("ScraperWorker running cycle with {Count} sources (Sitemaps & RSS feeds)", scrapers.Count);
 
             var apiBaseUrl = GetApiBaseUrl();
@@ -58,22 +64,28 @@ public class ScraperWorker : BackgroundService
 
                     if (!items.Any()) continue;
 
-                    // Normalize & enrich items
+                    // Normalize & enrich items using IArticleEnricher (Fix #15, #16)
                     foreach (var it in items)
                     {
-                        it.Title = ArticleContentExtractor.SanitizeText(NormalizeTitle(it.Title));
+                        it.Title = ArticleContentExtractor.SanitizeText(_enricher.NormalizeTitle(it.Title));
                         it.Summary = ArticleContentExtractor.SanitizeText(it.Summary ?? string.Empty);
                         if (string.IsNullOrEmpty(it.Category))
                         {
                             it.Category = _categorizer.Categorize(it.Title, it.Summary);
                         }
                         it.Source = s.SourceName;
+
+                        // Editorial and Opinion content classification
+                        if (string.IsNullOrEmpty(it.ContentType) || it.ContentType == "News")
+                        {
+                            it.ContentType = OpinionDetector.Detect(it.Url, it.Title, it.Category, s.SourceName);
+                        }
                     }
 
-                    // Populate missing images using metadata/extractor fallback
-                    await PopulateMissingImageUrlsAsync(client, items, s.SourceName, stoppingToken);
+                    // Populate missing images using metadata/extractor fallback (external client, no X-Api-Key)
+                    await _enricher.PopulateMissingImageUrlsAsync(externalScraperClient, items, s.SourceName, stoppingToken);
 
-                    // Push items directly to NewsApi via REST Ingestion Endpoint
+                    // Push items directly to NewsApi via REST Ingestion Endpoint (internal client with X-Api-Key)
                     var ingestPayload = new
                     {
                         Articles = items.Select(i => new
@@ -86,12 +98,14 @@ public class ScraperWorker : BackgroundService
                             i.Source,
                             i.Category,
                             i.PublishedAt,
-                            i.AudioUrl
+                            i.AudioUrl,
+                            i.Author,
+                            i.ContentType
                         }).ToList()
                     };
 
                     var ingestUrl = $"{apiBaseUrl.TrimEnd('/')}/api/v1/articles/ingest";
-                    var response = await client.PostAsJsonAsync(ingestUrl, ingestPayload, stoppingToken);
+                    var response = await internalApiClient.PostAsJsonAsync(ingestUrl, ingestPayload, stoppingToken);
 
                     if (response.IsSuccessStatusCode)
                     {
@@ -108,12 +122,12 @@ public class ScraperWorker : BackgroundService
                 }
             }
 
-            // Trigger YouTube video stories and trending YouTube sync
+            // Trigger YouTube video stories and trending YouTube sync (internal client with X-Api-Key)
             try
             {
                 _logger.LogInformation("Triggering media syndication sync (YouTube channels and Trending videos)...");
-                await client.PostAsync($"{apiBaseUrl.TrimEnd('/')}/api/v1/video-stories/sync", null, stoppingToken);
-                await client.PostAsync($"{apiBaseUrl.TrimEnd('/')}/api/v1/video-stories/trending/sync", null, stoppingToken);
+                await internalApiClient.PostAsync($"{apiBaseUrl.TrimEnd('/')}/api/v1/video-stories/sync", null, stoppingToken);
+                await internalApiClient.PostAsync($"{apiBaseUrl.TrimEnd('/')}/api/v1/video-stories/trending/sync", null, stoppingToken);
                 _logger.LogInformation("Media syndication sync triggered successfully.");
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
@@ -138,6 +152,19 @@ public class ScraperWorker : BackgroundService
         }
     }
 
+    private void ConfigureApiKeyHeader(HttpClient client)
+    {
+        var apiKey = _configuration["ApiKey"] 
+            ?? _configuration["NewsApi:ApiKey"] 
+            ?? Environment.GetEnvironmentVariable("API_KEY");
+
+        if (!string.IsNullOrWhiteSpace(apiKey))
+        {
+            client.DefaultRequestHeaders.Remove("X-Api-Key");
+            client.DefaultRequestHeaders.Add("X-Api-Key", apiKey);
+        }
+    }
+
     private string GetApiBaseUrl()
     {
         return _configuration["ApiBaseUrl"] 
@@ -145,25 +172,25 @@ public class ScraperWorker : BackgroundService
             ?? "http://localhost:56193";
     }
 
-    private async Task<List<IScraper>> GetScrapersAsync(HttpClient client, CancellationToken cancellationToken)
+    private async Task<List<IScraper>> GetScrapersAsync(HttpClient internalClient, HttpClient externalClient, CancellationToken cancellationToken)
     {
         var scrapers = new List<IScraper>();
         var apiBaseUrl = GetApiBaseUrl();
 
         try
         {
-            var sources = await client.GetFromJsonAsync<List<SourceDto>>($"{apiBaseUrl.TrimEnd('/')}/api/v1/sources", cancellationToken);
+            var sources = await internalClient.GetFromJsonAsync<List<SourceDto>>($"{apiBaseUrl.TrimEnd('/')}/api/v1/sources", cancellationToken);
             if (sources != null && sources.Any())
             {
                 foreach (var src in sources)
                 {
                     if (!string.IsNullOrWhiteSpace(src.SitemapUrl))
                     {
-                        scrapers.Add(new GenericSitemapScraper(client, src.Id ?? src.Name, src.Name, src.SitemapUrl, src.RssUrl, _extractor, _frontier));
+                        scrapers.Add(new GenericSitemapScraper(externalClient, src.Id ?? src.Name, src.Name, src.SitemapUrl, src.RssUrl, _extractor, _frontier));
                     }
                     else if (!string.IsNullOrWhiteSpace(src.RssUrl))
                     {
-                        scrapers.Add(new GenericRssScraper(client, src.Id ?? src.Name, src.Name, src.RssUrl));
+                        scrapers.Add(new GenericRssScraper(externalClient, src.Id ?? src.Name, src.Name, src.RssUrl));
                     }
                 }
             }
@@ -176,85 +203,19 @@ public class ScraperWorker : BackgroundService
         if (!scrapers.Any())
         {
             // Default verified high-yield Nigerian news sources (Google News Sitemaps & RSS)
-            scrapers.Add(new PunchSitemapScraper(client, _extractor, _frontier));
-            scrapers.Add(new VanguardSitemapScraper(client, _extractor, _frontier));
-            scrapers.Add(new PremiumTimesSitemapScraper(client, _extractor, _frontier));
-            scrapers.Add(new TheCableSitemapScraper(client, _extractor, _frontier));
-            scrapers.Add(new DailyPostSitemapScraper(client, _extractor, _frontier));
-            scrapers.Add(new DailyTrustSitemapScraper(client, _extractor, _frontier));
-            scrapers.Add(new NairametricsSitemapScraper(client, _extractor, _frontier));
-            scrapers.Add(new GuardianSitemapScraper(client, _extractor, _frontier));
+            scrapers.Add(new PunchSitemapScraper(externalClient, _extractor, _frontier));
+            scrapers.Add(new VanguardSitemapScraper(externalClient, _extractor, _frontier));
+            scrapers.Add(new PremiumTimesSitemapScraper(externalClient, _extractor, _frontier));
+            scrapers.Add(new TheCableSitemapScraper(externalClient, _extractor, _frontier));
+            scrapers.Add(new DailyPostSitemapScraper(externalClient, _extractor, _frontier));
+            scrapers.Add(new DailyTrustSitemapScraper(externalClient, _extractor, _frontier));
+            scrapers.Add(new NairametricsSitemapScraper(externalClient, _extractor, _frontier));
+            scrapers.Add(new GuardianSitemapScraper(externalClient, _extractor, _frontier));
+            scrapers.Add(new ChannelsTvSitemapScraper(externalClient, _extractor, _frontier));
+            scrapers.Add(new BusinessDayScraper(externalClient));
+            scrapers.Add(new LindaIkejiScraper(externalClient));
         }
 
         return scrapers;
-    }
-
-    private static string NormalizeTitle(string title)
-    {
-        if (string.IsNullOrWhiteSpace(title)) return string.Empty;
-        return System.Text.RegularExpressions.Regex.Replace(title, "\"|'|\\s+", " ").Trim();
-    }
-
-    private static bool IsGenericImage(string? url)
-    {
-        if (string.IsNullOrEmpty(url)) return true;
-        return url.Contains("logo", StringComparison.OrdinalIgnoreCase) 
-            || url.Contains("default", StringComparison.OrdinalIgnoreCase)
-            || url.Contains("fallback", StringComparison.OrdinalIgnoreCase)
-            || url.Contains("header", StringComparison.OrdinalIgnoreCase)
-            || url.Contains("icon", StringComparison.OrdinalIgnoreCase)
-            || url.Contains("avatar", StringComparison.OrdinalIgnoreCase);
-    }
-
-    private async Task PopulateMissingImageUrlsAsync(HttpClient client, List<ArticleModel> items, string sourceName, CancellationToken cancellationToken)
-    {
-        var itemsWithoutImages = items.Where(it => IsGenericImage(it.ImageUrl) && !string.IsNullOrEmpty(it.Url)).ToList();
-        if (!itemsWithoutImages.Any()) return;
-
-        _logger.LogInformation("Resolving missing images and rich metadata for {Count} articles from {Source}...", itemsWithoutImages.Count, sourceName);
-
-        using var semaphore = new SemaphoreSlim(4);
-        var tasks = itemsWithoutImages.Select(async it =>
-        {
-            await semaphore.WaitAsync(cancellationToken);
-            try
-            {
-                var extracted = await _extractor.ExtractFromUrlAsync(client, it.Url!, sourceName, cancellationToken);
-                if (extracted != null)
-                {
-                    if (!string.IsNullOrEmpty(extracted.ImageUrl) && !IsGenericImage(extracted.ImageUrl))
-                    {
-                        it.ImageUrl = extracted.ImageUrl;
-                    }
-                    if (string.IsNullOrEmpty(it.Content) && !string.IsNullOrEmpty(extracted.Content))
-                    {
-                        it.Content = extracted.Content;
-                    }
-                    if (string.IsNullOrEmpty(it.Summary) && !string.IsNullOrEmpty(extracted.Summary))
-                    {
-                        it.Summary = extracted.Summary;
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogDebug(ex, "Failed to resolve metadata for article '{Title}'", it.Title);
-            }
-            finally
-            {
-                semaphore.Release();
-            }
-        });
-
-        await Task.WhenAll(tasks);
-    }
-
-    private class SourceDto
-    {
-        public string Id { get; set; } = string.Empty;
-        public string Name { get; set; } = string.Empty;
-        public string? RssUrl { get; set; }
-        public string? SitemapUrl { get; set; }
-        public string? ScraperType { get; set; }
     }
 }

@@ -1,14 +1,28 @@
 @echo off
 title Launch Nigerian News Grid Services
+cd /d "%~dp0"
+
+REM Leverage PowerShell script for intelligent port collision and Windows exclusion handling
+where powershell >nul 2>&1
+if %ERRORLEVEL% EQU 0 (
+    powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0run-services.ps1" %*
+    exit /b %ERRORLEVEL%
+)
+
 echo ==================================================
 echo  Starting Nigerian News Grid Admin Dashboard ^& Services
 echo ==================================================
 
-cd /d "%~dp0"
-
 echo.
 echo [1/5] Building solution...
-dotnet build NigerianNewGrid.slnx
+set MSBUILDDISABLENODEREUSE=1
+dotnet build NigerianNewGrid.slnx -nodeReuse:false
+if %ERRORLEVEL% NEQ 0 (
+    echo.
+    echo Build encountered an issue (possibly locked files). Shutting down build servers and retrying...
+    dotnet build-server shutdown >nul 2>&1
+    dotnet build NigerianNewGrid.slnx -nodeReuse:false
+)
 if %ERRORLEVEL% NEQ 0 (
     echo.
     echo Build failed! Please fix errors before starting services.

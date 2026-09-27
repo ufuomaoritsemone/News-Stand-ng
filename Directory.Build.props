@@ -1,0 +1,6 @@
+<Project>
+  <PropertyGroup>
+    <!-- Prevent MSBuild worker nodes from remaining resident and locking output/intermediate files -->
+    <NodeReuse>false</NodeReuse>
+  </PropertyGroup>
+</Project>

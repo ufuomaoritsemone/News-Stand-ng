@@ -10,6 +10,8 @@
     <Color x:Key="NigerianGreenMid">#2A8A50</Color>
     <Color x:Key="NigerianGreenLight">#3DAB69</Color>
     <Color x:Key="NigerianGreenGlow">#6FCFA0</Color>
+    <Color x:Key="AccentGreen">#1B6B3A</Color>
+    <Color x:Key="AccentGreenLight">#EAF2EC</Color>
 
     <!-- ── Verified / Accent ───────────────────────────── -->
     <Color x:Key="VerifiedBlue">#1D9BF0</Color>

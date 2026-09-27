@@ -2,7 +2,6 @@ FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 
 COPY ["src/TtsWorker/TtsWorker.csproj", "TtsWorker/"]
-COPY ["src/NewsScraperService/NewsScraperService.csproj", "NewsScraperService/"]
 COPY ["src/NigerianNewsGrid.Client/NigerianNewsGrid.Client.csproj", "NigerianNewsGrid.Client/"]
 RUN dotnet restore "TtsWorker/TtsWorker.csproj"
 

@@ -79,6 +79,75 @@ public class NewsApiClient
         }
     }
 
+    /// <summary>
+    /// Verifies whether curated audio headlines / daily briefing stories are currently available.
+    /// Used by notification receivers and schedulers to avoid dispatching alerts when no headlines exist.
+    /// </summary>
+    public async Task<bool> CheckAudioHeadlinesAvailableAsync(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var normalizedBaseUrl = NormalizeBaseUrl(BaseUrl);
+            var uri = new Uri(new Uri(normalizedBaseUrl), "api/v1/articles/briefings/availability");
+
+            var response = await _httpClient.GetAsync(uri, cancellationToken);
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<BriefingAvailabilityResult>(JsonOptions, cancellationToken);
+                return result?.Available ?? false;
+            }
+
+            // Fallback: probe briefings endpoint directly
+            var categories = await GetDailyBriefingAsync(cancellationToken: cancellationToken);
+            return categories.Any(c => c.Top.Count > 0);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            System.Diagnostics.Debug.WriteLine($"⚠️ [NewsApiClient] Availability check failed: {ex.Message}");
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Fetches metadata and streaming URL for the latest high-definition audio news briefing (morning or evening WAT).
+    /// </summary>
+    public async Task<AudioBriefingMetadata?> GetLatestAudioBriefingAsync(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var normalizedBaseUrl = NormalizeBaseUrl(BaseUrl);
+            var uri = new Uri(new Uri(normalizedBaseUrl), "api/v1/audio/briefings/latest");
+
+            var response = await _httpClient.GetAsync(uri, cancellationToken);
+            if (!response.IsSuccessStatusCode)
+            {
+                return null;
+            }
+
+            return await response.Content.ReadFromJsonAsync<AudioBriefingMetadata>(JsonOptions, cancellationToken);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            System.Diagnostics.Debug.WriteLine($"⚠️ [NewsApiClient] Failed to fetch latest audio briefing: {ex.Message}");
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Resolves a relative stream URL (e.g. /api/v1/audio/briefing_morning.mp3) to an absolute URL against BaseUrl.
+    /// </summary>
+    public string GetAbsoluteAudioUrl(string relativeOrAbsoluteUrl)
+    {
+        if (string.IsNullOrWhiteSpace(relativeOrAbsoluteUrl)) return string.Empty;
+        if (Uri.TryCreate(relativeOrAbsoluteUrl, UriKind.Absolute, out var absUri))
+        {
+            return absUri.ToString();
+        }
+
+        var normalizedBase = NormalizeBaseUrl(BaseUrl);
+        return new Uri(new Uri(normalizedBase), relativeOrAbsoluteUrl.TrimStart('/')).ToString();
+    }
+
     public async Task<List<VideoStoryItem>> GetVideoStoriesAsync(int limit = 20, string? category = null, CancellationToken cancellationToken = default)
     {
         try
@@ -221,8 +290,158 @@ public class NewsApiClient
         }
     }
 
+    public async Task<List<BriefingItem>> GetArticlesAsync(
+        string? category = null,
+        string? search = null,
+        string? contentType = null,
+        int? days = null,
+        int page = 1,
+        int pageSize = 30,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var normalizedBaseUrl = NormalizeBaseUrl(BaseUrl);
+            var builder = new UriBuilder(new Uri(new Uri(normalizedBaseUrl), "api/v1/articles"));
+            var query = System.Web.HttpUtility.ParseQueryString(builder.Query);
+            if (!string.IsNullOrWhiteSpace(category) && !category.Equals("All", StringComparison.OrdinalIgnoreCase))
+            {
+                query["category"] = category;
+            }
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                query["search"] = search;
+            }
+            if (!string.IsNullOrWhiteSpace(contentType))
+            {
+                query["contentType"] = contentType;
+            }
+            if (days.HasValue && days.Value > 0)
+            {
+                query["days"] = days.Value.ToString();
+            }
+            query["page"] = page.ToString();
+            query["pageSize"] = pageSize.ToString();
+            builder.Query = query.ToString();
+
+            var response = await _httpClient.GetAsync(builder.Uri, cancellationToken);
+            if (!response.IsSuccessStatusCode) return new List<BriefingItem>();
+
+            var articles = await response.Content.ReadFromJsonAsync<List<BriefingItem>>(JsonOptions, cancellationToken);
+            return articles ?? new List<BriefingItem>();
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            System.Diagnostics.Debug.WriteLine($"❌ [NewsApiClient] Failed to fetch articles: {ex.Message}");
+            return new List<BriefingItem>();
+        }
+    }
+
+    /// <summary>
+    /// Fetches dedicated editorial and opinion pieces from major Nigerian newspaper outlets.
+    /// </summary>
+    public async Task<List<BriefingItem>> GetOpinionsAsync(
+        string? search = null,
+        int? days = 14,
+        int page = 1,
+        int pageSize = 30,
+        CancellationToken cancellationToken = default)
+    {
+        return await GetArticlesAsync(
+            category: null,
+            search: search,
+            contentType: "Opinion",
+            days: days,
+            page: page,
+            pageSize: pageSize,
+            cancellationToken: cancellationToken);
+    }
+
+    /// <summary>
+    /// Fetches a single article by ID with full long-form content, summary, and metadata.
+    /// </summary>
+    public async Task<BriefingItem?> GetArticleByIdAsync(string articleId, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(articleId)) return null;
+
+        try
+        {
+            var normalizedBaseUrl = NormalizeBaseUrl(BaseUrl);
+            var uri = new Uri(new Uri(normalizedBaseUrl), $"api/v1/articles/{articleId}");
+            var response = await _httpClient.GetAsync(uri, cancellationToken);
+            if (!response.IsSuccessStatusCode) return null;
+
+            return await response.Content.ReadFromJsonAsync<BriefingItem>(JsonOptions, cancellationToken);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            System.Diagnostics.Debug.WriteLine($"❌ [NewsApiClient] Failed to fetch article by ID '{articleId}': {ex.Message}");
+            return null;
+        }
+    }
+
+    public async Task<bool> TrackArticleImpressionAsync(string articleId, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(articleId)) return false;
+        try
+        {
+            var normalizedBaseUrl = NormalizeBaseUrl(BaseUrl);
+            var uri = new Uri(new Uri(normalizedBaseUrl), $"api/v1/articles/{articleId}/track-impression");
+            var response = await _httpClient.PostAsync(uri, null, cancellationToken);
+            return response.IsSuccessStatusCode;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    public async Task<bool> TrackArticleClickAsync(string articleId, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(articleId)) return false;
+        try
+        {
+            var normalizedBaseUrl = NormalizeBaseUrl(BaseUrl);
+            var uri = new Uri(new Uri(normalizedBaseUrl), $"api/v1/articles/{articleId}/track-click");
+            var response = await _httpClient.PostAsync(uri, null, cancellationToken);
+            return response.IsSuccessStatusCode;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Submits user feedback directly to the backend API.
+    /// Stores entry in database and dispatches HTML email notification.
+    /// </summary>
+    public async Task<FeedbackResponseDto> SubmitFeedbackAsync(FeedbackRequestDto request, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        try
+        {
+            var normalizedBaseUrl = NormalizeBaseUrl(BaseUrl);
+            var uri = new Uri(new Uri(normalizedBaseUrl), "api/v1/feedback");
+            var response = await _httpClient.PostAsJsonAsync(uri, request, JsonOptions, cancellationToken);
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<FeedbackResponseDto>(JsonOptions, cancellationToken);
+                return result ?? new FeedbackResponseDto(true, "Thank you for your feedback!");
+            }
+
+            var err = await response.Content.ReadFromJsonAsync<FeedbackResponseDto>(JsonOptions, cancellationToken);
+            return err ?? new FeedbackResponseDto(false, "Failed to submit feedback. Please try again.");
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            return new FeedbackResponseDto(false, $"Error submitting feedback: {ex.Message}");
+        }
+    }
+
     private static string NormalizeBaseUrl(string baseUrl)
     {
         return string.IsNullOrWhiteSpace(baseUrl) ? "http://localhost:56193" : baseUrl.Trim().TrimEnd('/');
     }
 }
+

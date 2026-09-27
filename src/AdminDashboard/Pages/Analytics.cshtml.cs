@@ -23,7 +23,7 @@ public class AnalyticsModel : PageModel
 
     public async Task OnGetAsync()
     {
-        var client = _httpClientFactory.CreateClient();
+        var client = _httpClientFactory.CreateClient("NewsApiClient");
         var apiBase = _configuration["ApiBaseUrl"] ?? "http://localhost:56193";
         var opts = new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true };
 
@@ -65,6 +65,9 @@ public class AnalyticsSummaryDto
     public int ArticleReads { get; set; }
     public int SharesClicked { get; set; }
     public int BookmarksAdded { get; set; }
+    public int AudioListensStarted { get; set; }
+    public int AudioListensCompleted { get; set; }
+    public double AudioCompletionRate { get; set; }
     public int PeriodDays { get; set; }
     public List<TopArticleDto> TopArticles { get; set; } = [];
     public List<DailyCountDto> DailyBreakdown { get; set; } = [];

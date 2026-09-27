@@ -35,7 +35,7 @@ public class SocialsModel : PageModel
             return Page();
         }
 
-        var client = _httpClientFactory.CreateClient();
+        var client = _httpClientFactory.CreateClient("NewsApiClient");
         var apiBaseUrl = _configuration["ApiBaseUrl"] ?? "http://localhost:56193";
         try
         {
@@ -64,7 +64,7 @@ public class SocialsModel : PageModel
 
     public async Task<IActionResult> OnPostSyncSocialsAsync()
     {
-        var client = _httpClientFactory.CreateClient();
+        var client = _httpClientFactory.CreateClient("NewsApiClient");
         var apiBaseUrl = _configuration["ApiBaseUrl"] ?? "http://localhost:56193";
         try
         {
@@ -89,7 +89,7 @@ public class SocialsModel : PageModel
 
     public async Task<IActionResult> OnPostRemoveHandleAsync(string id)
     {
-        var client = _httpClientFactory.CreateClient();
+        var client = _httpClientFactory.CreateClient("NewsApiClient");
         var apiBaseUrl = _configuration["ApiBaseUrl"] ?? "http://localhost:56193";
         try
         {
@@ -109,7 +109,7 @@ public class SocialsModel : PageModel
 
     public async Task<IActionResult> OnPostRemovePostAsync(string id)
     {
-        var client = _httpClientFactory.CreateClient();
+        var client = _httpClientFactory.CreateClient("NewsApiClient");
         var apiBaseUrl = _configuration["ApiBaseUrl"] ?? "http://localhost:56193";
         try
         {
@@ -129,7 +129,7 @@ public class SocialsModel : PageModel
 
     private async Task LoadDataAsync()
     {
-        var client = _httpClientFactory.CreateClient();
+        var client = _httpClientFactory.CreateClient("NewsApiClient");
         var apiBaseUrl = _configuration["ApiBaseUrl"] ?? "http://localhost:56193";
         try
         {

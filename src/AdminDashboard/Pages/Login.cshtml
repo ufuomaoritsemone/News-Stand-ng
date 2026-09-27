@@ -1,0 +1,103 @@
+@page
+@model AdminDashboard.Pages.LoginModel
+@{
+    ViewData["Title"] = "Admin Sign In | Nigerian News Grid";
+}
+
+<div class="container d-flex align-items-center justify-content-center" style="min-height: 85vh;">
+    <div class="row justify-content-center w-100">
+        <div class="col-12 col-sm-10 col-md-8 col-lg-5 col-xl-4">
+            
+            <!-- Brand Badge -->
+            <div class="text-center mb-4">
+                <div class="d-inline-flex align-items-center justify-content-center p-3 rounded-circle mb-3 glass-card" style="width: 72px; height: 72px; box-shadow: 0 0 25px rgba(56, 189, 248, 0.25);">
+                    <i class="bi bi-shield-lock-fill text-gradient" style="font-size: 2.2rem;"></i>
+                </div>
+                <h2 class="h3 fw-bold mb-1 brand-font text-white">Admin Portal</h2>
+                <p class="text-muted small">Nigerian News Grid Central Command</p>
+            </div>
+
+            <!-- Login Card -->
+            <div class="glass-card p-4 p-md-5 rounded-4 shadow-lg border">
+                @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+                {
+                    <div class="alert alert-danger alert-dismissible fade show d-flex align-items-center mb-4 border-danger" role="alert">
+                        <i class="bi bi-exclamation-triangle-fill me-2 fs-5"></i>
+                        <div class="small">@Model.ErrorMessage</div>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                }
+
+                <form method="post" novalidate>
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" asp-for="ReturnUrl" />
+
+                    <!-- Username Field -->
+                    <div class="mb-3">
+                        <label asp-for="Input.Username" class="form-label small fw-semibold text-subtle">
+                            <i class="bi bi-person-fill me-1 text-primary"></i> Administrator Username
+                        </label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-transparent border-glass text-muted">
+                                <i class="bi bi-person"></i>
+                            </span>
+                            <input asp-for="Input.Username" 
+                                   class="form-control form-control-glass @(ModelState.ContainsKey("Input.Username") && ModelState["Input.Username"]?.Errors.Count > 0 ? "is-invalid" : "")" 
+                                   placeholder="e.g. admin" 
+                                   autofocus 
+                                   autocomplete="username" />
+                        </div>
+                        <span asp-validation-for="Input.Username" class="text-danger small d-block mt-1"></span>
+                    </div>
+
+                    <!-- Password Field -->
+                    <div class="mb-4">
+                        <label asp-for="Input.Password" class="form-label small fw-semibold text-subtle">
+                            <i class="bi bi-key-fill me-1 text-primary"></i> Master Password
+                        </label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-transparent border-glass text-muted">
+                                <i class="bi bi-lock"></i>
+                            </span>
+                            <input asp-for="Input.Password" 
+                                   type="password" 
+                                   class="form-control form-control-glass @(ModelState.ContainsKey("Input.Password") && ModelState["Input.Password"]?.Errors.Count > 0 ? "is-invalid" : "")" 
+                                   placeholder="••••••••••••" 
+                                   autocomplete="current-password" />
+                        </div>
+                        <span asp-validation-for="Input.Password" class="text-danger small d-block mt-1"></span>
+                    </div>
+
+                    <!-- Remember Me Checkbox -->
+                    <div class="form-check mb-4">
+                        <input asp-for="Input.RememberMe" class="form-check-input" type="checkbox" id="rememberMeCheck">
+                        <label class="form-check-label small text-muted user-select-none" for="rememberMeCheck">
+                            Remember this session for 14 days
+                        </label>
+                    </div>
+
+                    <!-- Submit Button -->
+                    <button type="submit" class="btn btn-gradient w-100 py-2 fw-semibold d-flex align-items-center justify-content-center gap-2">
+                        <i class="bi bi-box-arrow-in-right"></i> Authenticate & Enter
+                    </button>
+                </form>
+
+                <div class="mt-4 pt-3 border-top border-glass text-center">
+                    <p class="text-muted small mb-0">
+                        <i class="bi bi-shield-check text-success me-1"></i> Protected by Session Cookies & Anti-CSRF
+                    </p>
+                </div>
+            </div>
+
+            <!-- Quick Theme Toggle Affordance -->
+            <div class="text-center mt-3">
+                <button type="button" class="btn btn-sm btn-link text-muted text-decoration-none theme-toggle-btn" onclick="toggleAdminTheme()">
+                    <i class="bi bi-moon-stars-fill theme-icon-dark me-1"></i>
+                    <i class="bi bi-sun-fill theme-icon-light me-1"></i>
+                    <span class="theme-toggle-label">Switch Theme</span>
+                </button>
+            </div>
+
+        </div>
+    </div>
+</div>

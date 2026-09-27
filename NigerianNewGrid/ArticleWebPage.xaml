@@ -2,13 +2,15 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:local="clr-namespace:NigerianNewGrid"
+             xmlns:admob="clr-namespace:Plugin.AdMob;assembly=Plugin.AdMob"
+             xmlns:constants="clr-namespace:NigerianNewGrid.Constants"
              x:Class="NigerianNewGrid.ArticleWebPage"
              x:DataType="local:ArticleWebPage"
              Title=""
              Background="{StaticResource WhiteBrush}"
              SafeAreaEdges="Container">
 
-    <Grid RowDefinitions="Auto,Auto,*" Padding="0" RowSpacing="0">
+    <Grid RowDefinitions="Auto,Auto,Auto,*,Auto" Padding="0" RowSpacing="0">
 
         <!-- ══════════════════════════════════════════════
              TOP NAVIGATION & READER CONTROLS TOOLBAR
@@ -125,8 +127,41 @@
             </Grid>
         </Border>
 
+        <!-- ══════════════════════════════════════════════
+             SPONSORED ARTICLE DISCLOSURE BAR
+        ══════════════════════════════════════════════ -->
+        <Border Grid.Row="1"
+                x:Name="SponsoredDisclosureBanner"
+                IsVisible="False"
+                Padding="12,6"
+                BackgroundColor="{AppThemeBinding Light=#FFF8E1, Dark=#2A2300}"
+                StrokeShape="RoundRectangle 0"
+                StrokeThickness="0,0,0,1"
+                Stroke="{AppThemeBinding Light=#FFE082, Dark=#FFE082}">
+            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8" VerticalOptions="Center">
+                <Label Grid.Column="0" Text="✨" FontSize="12" VerticalOptions="Center" />
+                <Label Grid.Column="1"
+                       x:Name="SponsoredDisclosureLabel"
+                       Text="SPONSORED CONTENT • Presented by Partner"
+                       FontSize="11"
+                       FontAttributes="Bold"
+                       TextColor="{AppThemeBinding Light=#B78103, Dark=#FFE082}"
+                       VerticalOptions="Center" />
+                <Border Grid.Column="2"
+                        Padding="6,2"
+                        BackgroundColor="{AppThemeBinding Light=#B78103, Dark=#FFE082}"
+                        StrokeShape="RoundRectangle 4"
+                        StrokeThickness="0">
+                    <Label Text="PARTNER"
+                           FontSize="9"
+                           FontAttributes="Bold"
+                           TextColor="{AppThemeBinding Light=White, Dark=Black}" />
+                </Border>
+            </Grid>
+        </Border>
+
         <!-- Loading Progress Bar -->
-        <ProgressBar Grid.Row="1"
+        <ProgressBar Grid.Row="2"
                      x:Name="LoadingProgress"
                      IsVisible="True"
                      Progress="0.3"
@@ -134,9 +169,203 @@
                      HeightRequest="3" />
 
         <!-- WebView & Floating Related Stories Container -->
-        <Grid Grid.Row="2">
-            <!-- WebView: Renders either the clean Reader Mode HTML or Web Page -->
+        <Grid Grid.Row="3">
+            <!-- 1. INSTANT NATIVE READER VIEW (ScrollView) -->
+            <ScrollView x:Name="NativeReaderScrollView"
+                        IsVisible="True"
+                        HorizontalOptions="Fill"
+                        VerticalOptions="Fill"
+                        Padding="0">
+                <VerticalStackLayout Spacing="0" Padding="0">
+
+                    <!-- Hero Image with subtle rounded bottom corners and overlay -->
+                    <Grid x:Name="HeroImageContainer"
+                          HeightRequest="230"
+                          IsVisible="False"
+                          HorizontalOptions="Fill">
+                        <Image x:Name="HeroImage"
+                               Aspect="AspectFill"
+                               HorizontalOptions="Fill"
+                               VerticalOptions="Fill" />
+                        <BoxView VerticalOptions="End"
+                                 HeightRequest="50"
+                                 Color="#50000000" />
+                    </Grid>
+
+                    <!-- Main Editorial Container -->
+                    <VerticalStackLayout Spacing="14" Padding="18,16,18,48">
+
+                        <!-- Meta Header: Category Badge + Reading Time + Date -->
+                        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8" VerticalOptions="Center">
+                            <Border x:Name="CategoryBadge"
+                                    Grid.Column="0"
+                                    Padding="8,3"
+                                    BackgroundColor="{AppThemeBinding Light={StaticResource AccentBlueLight}, Dark={StaticResource DarkSecondary}}"
+                                    StrokeShape="RoundRectangle 6"
+                                    StrokeThickness="0"
+                                    VerticalOptions="Center">
+                                <Label x:Name="CategoryLabel"
+                                       Text="NEWS"
+                                       FontSize="10"
+                                       FontAttributes="Bold"
+                                       TextColor="{AppThemeBinding Light={StaticResource AccentBlue}, Dark={StaticResource DarkPrimary}}" />
+                            </Border>
+
+                            <Label x:Name="ReadTimeLabel"
+                                   Grid.Column="1"
+                                   Text="⏱️ 3 min read"
+                                   FontSize="11"
+                                   FontAttributes="Bold"
+                                   TextColor="{StaticResource Gray500}"
+                                   VerticalOptions="Center" />
+
+                            <Label x:Name="PublishedTimeLabel"
+                                   Grid.Column="2"
+                                   Text="2h ago"
+                                   FontSize="11"
+                                   TextColor="{StaticResource Gray500}"
+                                   VerticalOptions="Center" />
+                        </Grid>
+
+                        <!-- Main Editorial Headline -->
+                        <Label x:Name="ArticleTitleLabel"
+                               Text="Headline"
+                               FontFamily="LegacySerifITCTTBold"
+                               FontSize="22"
+                               FontAttributes="Bold"
+                               LineHeight="1.25"
+                               TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource DarkTextPrimary}}" />
+
+                        <!-- Publisher Attribution & Brand Card -->
+                        <Border Padding="12,8"
+                                BackgroundColor="{AppThemeBinding Light={StaticResource SecondaryLight}, Dark={StaticResource DarkSurface}}"
+                                StrokeShape="RoundRectangle 10"
+                                Stroke="{AppThemeBinding Light={StaticResource Gray200Brush}, Dark={StaticResource Gray700Brush}}"
+                                StrokeThickness="1">
+                            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10" VerticalOptions="Center">
+                                <Label Text="📰" FontSize="16" VerticalOptions="Center" />
+                                <VerticalStackLayout Grid.Column="1" Spacing="1" VerticalOptions="Center">
+                                    <Label x:Name="PublisherNameLabel"
+                                           Text="The Punch"
+                                           FontSize="12"
+                                           FontAttributes="Bold"
+                                           TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource DarkTextPrimary}}" />
+                                    <Label x:Name="PublisherDomainLabel"
+                                           Text="punchng.com"
+                                           FontSize="10"
+                                           TextColor="{StaticResource Gray500}" />
+                                </VerticalStackLayout>
+                                <Button Grid.Column="2"
+                                        Text="Original ↗"
+                                        Clicked="OnOpenOriginalWebClicked"
+                                        Padding="10,0"
+                                        HeightRequest="28"
+                                        MinimumHeightRequest="28"
+                                        FontSize="11"
+                                        FontAttributes="Bold"
+                                        CornerRadius="6"
+                                        BackgroundColor="Transparent"
+                                        TextColor="{AppThemeBinding Light={StaticResource AccentBlue}, Dark={StaticResource DarkPrimary}}"
+                                        BorderWidth="1"
+                                        BorderColor="{AppThemeBinding Light={StaticResource AccentBlueLight}, Dark={StaticResource DarkSecondary}}" />
+                            </Grid>
+                        </Border>
+
+                        <!-- Fallback notice when full body text is missing and only summary is cached -->
+                        <Border x:Name="NoContentFallbackBanner"
+                                IsVisible="False"
+                                Padding="12,10"
+                                BackgroundColor="{AppThemeBinding Light=#EFF6FF, Dark=#1E293B}"
+                                StrokeShape="RoundRectangle 8"
+                                Stroke="{AppThemeBinding Light=#BFDBFE, Dark=#3B82F6}"
+                                StrokeThickness="1">
+                            <VerticalStackLayout Spacing="6">
+                                <Label Text="ℹ️ Showing story summary. Tap below to load the live web story."
+                                       FontSize="11"
+                                       TextColor="{AppThemeBinding Light=#1D4ED8, Dark=#93C5FD}" />
+                                <Button Text="🌐 Load Full Article via Web"
+                                        Clicked="OnOpenOriginalWebClicked"
+                                        HeightRequest="34"
+                                        MinimumHeightRequest="34"
+                                        FontSize="11"
+                                        FontAttributes="Bold"
+                                        CornerRadius="6"
+                                        BackgroundColor="{StaticResource AccentBlue}"
+                                        TextColor="White" />
+                            </VerticalStackLayout>
+                        </Border>
+
+                        <!-- Lead Summary / Excerpt (styled italic serif) -->
+                        <Label x:Name="ArticleSummaryLabel"
+                               Text="Summary"
+                               FontFamily="LegacySansBook"
+                               FontSize="15"
+                               FontAttributes="Italic"
+                               LineHeight="1.35"
+                               TextColor="{AppThemeBinding Light={StaticResource Gray700}, Dark={StaticResource DarkTextSecondary}}" />
+
+                        <BoxView HeightRequest="1"
+                                 Color="{AppThemeBinding Light={StaticResource Gray200}, Dark={StaticResource Gray700}}" />
+
+                        <!-- Formatted Body Paragraphs Container (populated dynamically) -->
+                        <VerticalStackLayout x:Name="ArticleContentStack"
+                                             Spacing="14" />
+
+                        <!-- Footer Actions Card -->
+                        <Border Margin="0,16,0,0"
+                                Padding="16"
+                                BackgroundColor="{AppThemeBinding Light={StaticResource SecondaryLight}, Dark={StaticResource DarkSurface}}"
+                                StrokeShape="RoundRectangle 12"
+                                StrokeThickness="0">
+                            <VerticalStackLayout Spacing="10" HorizontalOptions="Center">
+                                <Label Text="Share this story"
+                                       FontSize="13"
+                                       FontAttributes="Bold"
+                                       HorizontalOptions="Center"
+                                       TextColor="{AppThemeBinding Light={StaticResource Gray800}, Dark={StaticResource DarkTextPrimary}}" />
+                                <HorizontalStackLayout Spacing="10" HorizontalOptions="Center">
+                                    <Button Text="🔖 Save"
+                                            Clicked="OnBookmarkClicked"
+                                            HeightRequest="36"
+                                            MinimumHeightRequest="36"
+                                            Padding="14,0"
+                                            FontSize="12"
+                                            CornerRadius="8"
+                                            BackgroundColor="{AppThemeBinding Light={StaticResource ButtonBgLight}, Dark={StaticResource ButtonSecondaryBgDark}}"
+                                            TextColor="{AppThemeBinding Light={StaticResource ButtonTextLight}, Dark={StaticResource ButtonTextDark}}"
+                                            BorderWidth="1"
+                                            BorderColor="{AppThemeBinding Light={StaticResource ButtonBorderLight}, Dark={StaticResource ButtonBorderDark}}" />
+                                    <Button Text="↗ Share"
+                                            Clicked="OnShareClicked"
+                                            HeightRequest="36"
+                                            MinimumHeightRequest="36"
+                                            Padding="14,0"
+                                            FontSize="12"
+                                            CornerRadius="8"
+                                            BackgroundColor="{AppThemeBinding Light={StaticResource ButtonBgLight}, Dark={StaticResource ButtonSecondaryBgDark}}"
+                                            TextColor="{AppThemeBinding Light={StaticResource ButtonTextLight}, Dark={StaticResource ButtonTextDark}}"
+                                            BorderWidth="1"
+                                            BorderColor="{AppThemeBinding Light={StaticResource ButtonBorderLight}, Dark={StaticResource ButtonBorderDark}}" />
+                                    <Button Text="🌐 View on Web"
+                                            Clicked="OnOpenOriginalWebClicked"
+                                            HeightRequest="36"
+                                            MinimumHeightRequest="36"
+                                            Padding="14,0"
+                                            FontSize="12"
+                                            CornerRadius="8"
+                                            BackgroundColor="{StaticResource AccentBlue}"
+                                            TextColor="White" />
+                                </HorizontalStackLayout>
+                            </VerticalStackLayout>
+                        </Border>
+
+                    </VerticalStackLayout>
+                </VerticalStackLayout>
+            </ScrollView>
+
+            <!-- 2. FALLBACK / LIVE WEB VIEW -->
             <WebView x:Name="ArticleWebView"
+                     IsVisible="False"
                      Navigating="OnNavigating"
                      Navigated="OnNavigated"
                      HorizontalOptions="Fill"
@@ -289,6 +518,7 @@
                         <CollectionView Grid.Row="2"
                                         x:Name="RelatedItemsList"
                                         SelectionMode="None"
+                                        ItemSizingStrategy="MeasureFirstItem"
                                         Margin="16,0,16,8">
                             <CollectionView.EmptyView>
                                 <VerticalStackLayout HorizontalOptions="Center" VerticalOptions="Center" Spacing="8" Padding="24">
@@ -385,5 +615,49 @@
                 </Border>
             </Grid>
         </Grid>
+
+        <!-- ══════════════════════════════════════════════
+             STICKY BOTTOM COMPACT BANNER AD (320x50)
+        ══════════════════════════════════════════════ -->
+        <Border Grid.Row="4"
+                x:Name="BottomBannerAdContainer"
+                Padding="0"
+                HeightRequest="50"
+                MaximumHeightRequest="50"
+                StrokeThickness="0,1,0,0"
+                Stroke="{AppThemeBinding Light={StaticResource Gray200Brush}, Dark={StaticResource Gray700Brush}}"
+                Background="{AppThemeBinding Light={StaticResource WhiteBrush}, Dark={StaticResource Gray800Brush}}"
+                HorizontalOptions="Fill"
+                VerticalOptions="End">
+            <Grid HeightRequest="50" HorizontalOptions="Fill">
+                <admob:BannerAd x:Name="ArticleBannerAd"
+                                AdUnitId="{x:Static constants:AdConstants.BannerAdUnitId}"
+                                AdSize="Banner"
+                                HeightRequest="50"
+                                WidthRequest="320"
+                                HorizontalOptions="Center"
+                                VerticalOptions="Center" />
+                <!-- Dismiss button allowing reader to reclaim 100% of the screen space -->
+                <Button x:Name="DismissBannerBtn"
+                        Text="✕"
+                        Clicked="OnDismissBannerClicked"
+                        HorizontalOptions="End"
+                        VerticalOptions="Center"
+                        Margin="0,0,8,0"
+                        WidthRequest="22"
+                        HeightRequest="22"
+                        MinimumWidthRequest="22"
+                        MinimumHeightRequest="22"
+                        Padding="0"
+                        FontSize="11"
+                        FontAttributes="Bold"
+                        CornerRadius="11"
+                        BackgroundColor="{AppThemeBinding Light=#14000000, Dark=#2EFFFFFF}"
+                        TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray400}}"
+                        BorderWidth="0"
+                        ToolTipProperties.Text="Dismiss ad"
+                        SemanticProperties.Description="Dismiss banner ad" />
+            </Grid>
+        </Border>
     </Grid>
 </ContentPage>

@@ -1,8 +1,8 @@
+using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using NewsApi.Data;
 using NewsApi.Models;
-
 using NewsApi.Services;
 
 namespace NewsApi.Controllers;
@@ -12,9 +12,9 @@ namespace NewsApi.Controllers;
 public class SocialHandlesController : ControllerBase
 {
     private readonly NewsDbContext _db;
-    private readonly SocialFeedService _socialService;
+    private readonly ISocialFeedService _socialService;
 
-    public SocialHandlesController(NewsDbContext db, SocialFeedService socialService)
+    public SocialHandlesController(NewsDbContext db, ISocialFeedService socialService)
     {
         _db = db;
         _socialService = socialService;
@@ -27,6 +27,7 @@ public class SocialHandlesController : ControllerBase
             .AsNoTracking()
             .OrderBy(h => h.Category)
             .ThenBy(h => h.DisplayName)
+            .Select(h => ToDto(h))
             .ToListAsync();
         return Ok(handles);
     }
@@ -35,7 +36,7 @@ public class SocialHandlesController : ControllerBase
     public async Task<IActionResult> GetById(string id)
     {
         var handle = await _db.SocialHandles.AsNoTracking().FirstOrDefaultAsync(h => h.Id == id);
-        return handle is null ? NotFound() : Ok(handle);
+        return handle is null ? NotFound() : Ok(ToDto(handle));
     }
 
     [HttpPost]
@@ -69,7 +70,8 @@ public class SocialHandlesController : ControllerBase
             // Non-fatal if sync fails immediately
         }
 
-        return CreatedAtAction(nameof(GetById), new { id = handle.Id }, handle);
+        var dto = ToDto(handle);
+        return CreatedAtAction(nameof(GetById), new { id = handle.Id }, dto);
     }
 
     [HttpDelete("{id}")]
@@ -83,14 +85,40 @@ public class SocialHandlesController : ControllerBase
         }
         return NoContent();
     }
+
+    private static SocialHandleDto ToDto(SocialHandle h) => new()
+    {
+        Id = h.Id,
+        Handle = h.Handle,
+        DisplayName = h.DisplayName,
+        ProfileUrl = h.ProfileUrl,
+        AvatarUrl = h.AvatarUrl,
+        Bio = h.Bio,
+        Category = h.Category,
+        CreatedAt = h.CreatedAt
+    };
 }
 
 public class SocialHandleInput
 {
+    [Required(ErrorMessage = "Twitter/X handle is required.")]
+    [StringLength(100, MinimumLength = 1, ErrorMessage = "Handle must be between 1 and 100 characters.")]
     public string Handle { get; set; } = string.Empty;
+
+    [StringLength(150, ErrorMessage = "DisplayName cannot exceed 150 characters.")]
     public string? DisplayName { get; set; }
+
+    [Url(ErrorMessage = "ProfileUrl must be a valid URL.")]
+    [StringLength(500, ErrorMessage = "ProfileUrl cannot exceed 500 characters.")]
     public string? ProfileUrl { get; set; }
+
+    [Url(ErrorMessage = "AvatarUrl must be a valid URL.")]
+    [StringLength(500, ErrorMessage = "AvatarUrl cannot exceed 500 characters.")]
     public string? AvatarUrl { get; set; }
+
+    [StringLength(500, ErrorMessage = "Bio cannot exceed 500 characters.")]
     public string? Bio { get; set; }
+
+    [StringLength(100, ErrorMessage = "Category cannot exceed 100 characters.")]
     public string? Category { get; set; }
 }

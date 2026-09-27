@@ -7,7 +7,7 @@ using NewsApi.Models;
 
 namespace NewsApi.Services;
 
-public class SocialFeedService
+public class SocialFeedService : ISocialFeedService
 {
     private readonly NewsDbContext _db;
     private readonly HttpClient _httpClient;

@@ -149,27 +149,36 @@ public class UrlFrontierManager
 
     private void PruneIfNecessary()
     {
-        if (_seenUrls.Count > _maxCapacity)
+        PruneDictionary(_seenUrls);
+        PruneDictionary(_seenTitleFingerprints);
+    }
+
+    private void PruneDictionary<TKey>(ConcurrentDictionary<TKey, DateTime> dict) where TKey : notnull
+    {
+        if (dict.Count <= _maxCapacity) return;
+
+        var cutoff = DateTime.UtcNow - _retentionPeriod;
+        foreach (var kvp in dict)
         {
-            var cutoff = DateTime.UtcNow - _retentionPeriod;
-            foreach (var kvp in _seenUrls)
+            if (kvp.Value < cutoff)
             {
-                if (kvp.Value < cutoff)
-                {
-                    _seenUrls.TryRemove(kvp.Key, out _);
-                }
+                dict.TryRemove(kvp.Key, out _);
             }
         }
 
-        if (_seenTitleFingerprints.Count > _maxCapacity)
+        // If still exceeding capacity after retention prune, enforce hard capacity limit by evicting oldest entries
+        if (dict.Count > _maxCapacity)
         {
-            var cutoff = DateTime.UtcNow - _retentionPeriod;
-            foreach (var kvp in _seenTitleFingerprints)
+            int targetRemoveCount = dict.Count - (int)(_maxCapacity * 0.8);
+            var oldestKeys = dict
+                .OrderBy(kvp => kvp.Value)
+                .Take(targetRemoveCount)
+                .Select(kvp => kvp.Key)
+                .ToList();
+
+            foreach (var key in oldestKeys)
             {
-                if (kvp.Value < cutoff)
-                {
-                    _seenTitleFingerprints.TryRemove(kvp.Key, out _);
-                }
+                dict.TryRemove(key, out _);
             }
         }
     }

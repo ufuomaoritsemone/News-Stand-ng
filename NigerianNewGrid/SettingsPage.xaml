@@ -23,119 +23,6 @@
                    TextColor="{StaticResource Gray500}"
                    Margin="0,0,0,24" />
 
-            <!-- Briefing Language Section -->
-            <Label Text="BRIEFING LANGUAGE"
-                   FontFamily="LegacySansBook"
-                   FontSize="11"
-                   FontAttributes="Bold"
-                   TextColor="{StaticResource Gray500}"
-                   Margin="0,0,0,8" />
-
-            <Border Padding="0"
-                    Background="{StaticResource WhiteBrush}"
-                    StrokeShape="RoundRectangle 16"
-                    StrokeThickness="1"
-                    Stroke="{StaticResource Gray100Brush}"
-                    Margin="0,0,0,12">
-                <VerticalStackLayout Spacing="0">
-
-                    <!-- English row -->
-                    <Grid Padding="16,14" ColumnDefinitions="*,Auto">
-                        <Grid.GestureRecognizers>
-                            <TapGestureRecognizer Tapped="OnLanguageTapped" CommandParameter="English" />
-                        </Grid.GestureRecognizers>
-                        <Label Grid.Column="0"
-                               x:Name="LblEnglish"
-                               Text="🇬🇧  English"
-                               FontFamily="LegacySansBook"
-                               FontSize="15"
-                               TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource DarkTextPrimary}}"
-                               VerticalOptions="Center" />
-                        <Label Grid.Column="1"
-                               x:Name="CheckEnglish"
-                               Text="✓"
-                               FontSize="16"
-                               TextColor="{AppThemeBinding Light={StaticResource AccentBlue}, Dark={StaticResource DarkPrimary}}"
-                               IsVisible="True"
-                               VerticalOptions="Center" />
-                    </Grid>
-                    <BoxView HeightRequest="1" Color="{AppThemeBinding Light={StaticResource Gray100}, Dark={StaticResource DarkSurfaceCard}}" Margin="16,0" />
-
-                    <!-- Yoruba row -->
-                    <Grid Padding="16,14" ColumnDefinitions="*,Auto">
-                        <Grid.GestureRecognizers>
-                            <TapGestureRecognizer Tapped="OnLanguageTapped" CommandParameter="Yoruba" />
-                        </Grid.GestureRecognizers>
-                        <Label Grid.Column="0"
-                               x:Name="LblYoruba"
-                               Text="🇳🇬  Yoruba"
-                               FontFamily="LegacySansBook"
-                               FontSize="15"
-                               TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource DarkTextPrimary}}"
-                               VerticalOptions="Center" />
-                        <Label Grid.Column="1"
-                               x:Name="CheckYoruba"
-                               Text="✓"
-                               FontSize="16"
-                               TextColor="{AppThemeBinding Light={StaticResource AccentBlue}, Dark={StaticResource DarkPrimary}}"
-                               IsVisible="False"
-                               VerticalOptions="Center" />
-                    </Grid>
-                    <BoxView HeightRequest="1" Color="{AppThemeBinding Light={StaticResource Gray100}, Dark={StaticResource DarkSurfaceCard}}" Margin="16,0" />
-
-                    <!-- Igbo row -->
-                    <Grid Padding="16,14" ColumnDefinitions="*,Auto">
-                        <Grid.GestureRecognizers>
-                            <TapGestureRecognizer Tapped="OnLanguageTapped" CommandParameter="Igbo" />
-                        </Grid.GestureRecognizers>
-                        <Label Grid.Column="0"
-                               x:Name="LblIgbo"
-                               Text="🇳🇬  Igbo"
-                               FontFamily="LegacySansBook"
-                               FontSize="15"
-                               TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource DarkTextPrimary}}"
-                               VerticalOptions="Center" />
-                        <Label Grid.Column="1"
-                               x:Name="CheckIgbo"
-                               Text="✓"
-                               FontSize="16"
-                               TextColor="{AppThemeBinding Light={StaticResource AccentBlue}, Dark={StaticResource DarkPrimary}}"
-                               IsVisible="False"
-                               VerticalOptions="Center" />
-                    </Grid>
-                    <BoxView HeightRequest="1" Color="{AppThemeBinding Light={StaticResource Gray100}, Dark={StaticResource DarkSurfaceCard}}" Margin="16,0" />
-
-                    <!-- Hausa row -->
-                    <Grid Padding="16,14" ColumnDefinitions="*,Auto">
-                        <Grid.GestureRecognizers>
-                            <TapGestureRecognizer Tapped="OnLanguageTapped" CommandParameter="Hausa" />
-                        </Grid.GestureRecognizers>
-                        <Label Grid.Column="0"
-                               x:Name="LblHausa"
-                               Text="🇳🇬  Hausa"
-                               FontFamily="LegacySansBook"
-                               FontSize="15"
-                               TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource DarkTextPrimary}}"
-                               VerticalOptions="Center" />
-                        <Label Grid.Column="1"
-                               x:Name="CheckHausa"
-                               Text="✓"
-                               FontSize="16"
-                               TextColor="{AppThemeBinding Light={StaticResource AccentBlue}, Dark={StaticResource DarkPrimary}}"
-                               IsVisible="False"
-                               VerticalOptions="Center" />
-                    </Grid>
-                </VerticalStackLayout>
-            </Border>
-
-            <!-- Current Language Status -->
-            <Label x:Name="CurrentLanguageLabel"
-                   Text="Currently: English"
-                   FontFamily="LegacySansBook"
-                   FontSize="13"
-                   TextColor="{AppThemeBinding Light={StaticResource AccentBlue}, Dark={StaticResource DarkPrimary}}"
-                   Margin="0,0,0,24" />
-
             <!-- Notifications & Alerts Section -->
             <Label Text="NOTIFICATIONS &amp; TOPIC ALERTS"
                    FontFamily="LegacySansBook"
@@ -191,6 +78,57 @@
                                         TextColor="{AppThemeBinding Light={StaticResource AccentBlue}, Dark={StaticResource DarkPrimary}}"
                                         PropertyChanged="OnMorningTimeChanged"
                                         VerticalOptions="Center" />
+                        </Grid>
+                    </VerticalStackLayout>
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Audio Briefings Card -->
+            <Border Padding="16"
+                    Background="{StaticResource WhiteBrush}"
+                    StrokeShape="RoundRectangle 16"
+                    StrokeThickness="1"
+                    Stroke="{StaticResource Gray100Brush}"
+                    Margin="0,0,0,14">
+                <VerticalStackLayout Spacing="12">
+                    <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto">
+                        <HorizontalStackLayout Grid.Column="0" Grid.Row="0" Spacing="8">
+                            <Label Text="🎧" FontSize="18" VerticalOptions="Center" />
+                            <Label Text="Audio Briefing Alerts"
+                                   FontFamily="LegacySerifBold"
+                                   FontSize="15"
+                                   FontAttributes="Bold"
+                                   TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource DarkTextPrimary}}"
+                                   VerticalOptions="Center" />
+                        </HorizontalStackLayout>
+                        <Switch Grid.Column="1" Grid.Row="0" Grid.RowSpan="2"
+                                x:Name="SwitchAudioBriefings"
+                                Toggled="OnAudioBriefingsToggled"
+                                VerticalOptions="Center" />
+                        <Label Grid.Column="0" Grid.Row="1"
+                               Text="Notify when new Morning (8:00 AM) &amp; Evening (6:00 PM) audio digests are ready"
+                               FontFamily="LegacySansBook"
+                               FontSize="12"
+                               TextColor="{StaticResource Gray500}"
+                               Margin="26,2,0,0" />
+                    </Grid>
+
+                    <VerticalStackLayout x:Name="AudioBriefingsScheduleContainer" Spacing="8">
+                        <BoxView HeightRequest="1" Color="{AppThemeBinding Light={StaticResource Gray100}, Dark={StaticResource DarkSurfaceCard}}" />
+                        <Grid ColumnDefinitions="*,Auto" Padding="4,4,4,0">
+                            <Label Grid.Column="0"
+                                   Text="Update Schedule"
+                                   FontFamily="LegacySansBook"
+                                   FontSize="14"
+                                   TextColor="{AppThemeBinding Light={StaticResource Gray700}, Dark={StaticResource DarkTextSecondary}}"
+                                   VerticalOptions="Center" />
+                            <Label Grid.Column="1"
+                                   Text="8:00 AM &amp; 6:00 PM (WAT)"
+                                   FontFamily="LegacySansBook"
+                                   FontSize="13"
+                                   FontAttributes="Bold"
+                                   TextColor="{AppThemeBinding Light={StaticResource AccentGreen}, Dark={StaticResource DarkPrimary}}"
+                                   VerticalOptions="Center" />
                         </Grid>
                     </VerticalStackLayout>
                 </VerticalStackLayout>
@@ -309,7 +247,7 @@
                     StrokeThickness="1"
                     Stroke="{StaticResource Gray100Brush}">
                 <VerticalStackLayout Spacing="6">
-                    <Label Text="Nigerian News Grid"
+                    <Label Text="Nigerian News"
                            FontFamily="LegacySerifBold"
                            FontSize="17"
                            FontAttributes="Bold"
@@ -319,7 +257,7 @@
                            FontSize="13"
                            TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource DarkTextSecondary}}"
                            LineBreakMode="WordWrap" />
-                    <Label Text="Version 1.0 · Nigerian News Grid"
+                    <Label Text="Version 1.0 · Nigerian News"
                            FontFamily="LegacySansBook"
                            FontSize="11"
                            TextColor="{StaticResource Gray500}"
@@ -370,6 +308,103 @@
                            FontSize="11"
                            TextColor="{StaticResource Gray400}"
                            LineBreakMode="WordWrap" />
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Feedback & Support Section -->
+            <Label Text="SEND FEEDBACK &amp; REPORT ISSUES"
+                   FontFamily="LegacySansBook"
+                   FontSize="11"
+                   FontAttributes="Bold"
+                   TextColor="{StaticResource Gray500}"
+                   Margin="0,24,0,8" />
+
+            <Border Padding="16"
+                    Background="{StaticResource WhiteBrush}"
+                    StrokeShape="RoundRectangle 16"
+                    StrokeThickness="1"
+                    Stroke="{StaticResource Gray100Brush}">
+                <VerticalStackLayout Spacing="12">
+                    <HorizontalStackLayout Spacing="8">
+                        <Label Text="💬" FontSize="18" VerticalOptions="Center" />
+                        <Label Text="Share Your Feedback"
+                               FontFamily="LegacySerifBold"
+                               FontSize="15"
+                               FontAttributes="Bold"
+                               TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource DarkTextPrimary}}"
+                               VerticalOptions="Center" />
+                    </HorizontalStackLayout>
+
+                    <Label Text="We love hearing from you! Rate your experience or report an issue directly to our team."
+                           FontFamily="LegacySansBook"
+                           FontSize="12"
+                           TextColor="{StaticResource Gray500}" />
+
+                    <!-- Star Rating Picker -->
+                    <VerticalStackLayout Spacing="4" Margin="0,4,0,0">
+                        <Label Text="RATING" FontFamily="LegacySansBook" FontSize="10" FontAttributes="Bold" TextColor="{StaticResource Gray500}" />
+                        <HorizontalStackLayout Spacing="6">
+                            <Button x:Name="Star1" Text="⭐ 1" Clicked="OnStarClicked" CommandParameter="1" Padding="8,4" FontSize="12" CornerRadius="10" BackgroundColor="{AppThemeBinding Light={StaticResource Gray100}, Dark={StaticResource DarkSurfaceCard}}" TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource DarkTextPrimary}}" />
+                            <Button x:Name="Star2" Text="⭐ 2" Clicked="OnStarClicked" CommandParameter="2" Padding="8,4" FontSize="12" CornerRadius="10" BackgroundColor="{AppThemeBinding Light={StaticResource Gray100}, Dark={StaticResource DarkSurfaceCard}}" TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource DarkTextPrimary}}" />
+                            <Button x:Name="Star3" Text="⭐ 3" Clicked="OnStarClicked" CommandParameter="3" Padding="8,4" FontSize="12" CornerRadius="10" BackgroundColor="{AppThemeBinding Light={StaticResource Gray100}, Dark={StaticResource DarkSurfaceCard}}" TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource DarkTextPrimary}}" />
+                            <Button x:Name="Star4" Text="⭐ 4" Clicked="OnStarClicked" CommandParameter="4" Padding="8,4" FontSize="12" CornerRadius="10" BackgroundColor="{AppThemeBinding Light={StaticResource Gray100}, Dark={StaticResource DarkSurfaceCard}}" TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource DarkTextPrimary}}" />
+                            <Button x:Name="Star5" Text="⭐ 5" Clicked="OnStarClicked" CommandParameter="5" Padding="8,4" FontSize="12" CornerRadius="10" BackgroundColor="{StaticResource AccentBlue}" TextColor="White" FontAttributes="Bold" />
+                        </HorizontalStackLayout>
+                    </VerticalStackLayout>
+
+                    <!-- Category Selector Pills -->
+                    <VerticalStackLayout Spacing="4" Margin="0,4,0,0">
+                        <Label Text="TOPIC CATEGORY" FontFamily="LegacySansBook" FontSize="10" FontAttributes="Bold" TextColor="{StaticResource Gray500}" />
+                        <FlexLayout Wrap="Wrap" Direction="Row" AlignItems="Start">
+                            <Button x:Name="CatGeneral" Text="General" Clicked="OnFeedbackCategoryClicked" CommandParameter="General" Padding="10,4" Margin="0,0,6,6" FontSize="12" CornerRadius="12" BackgroundColor="{StaticResource AccentBlue}" TextColor="White" FontAttributes="Bold" />
+                            <Button x:Name="CatBug" Text="Bug Report" Clicked="OnFeedbackCategoryClicked" CommandParameter="Bug Report" Padding="10,4" Margin="0,0,6,6" FontSize="12" CornerRadius="12" BackgroundColor="{AppThemeBinding Light={StaticResource Gray100}, Dark={StaticResource DarkSurfaceCard}}" TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource DarkTextPrimary}}" />
+                            <Button x:Name="CatFeature" Text="Feature Request" Clicked="OnFeedbackCategoryClicked" CommandParameter="Feature Request" Padding="10,4" Margin="0,0,6,6" FontSize="12" CornerRadius="12" BackgroundColor="{AppThemeBinding Light={StaticResource Gray100}, Dark={StaticResource DarkSurfaceCard}}" TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource DarkTextPrimary}}" />
+                            <Button x:Name="CatContent" Text="Content Issue" Clicked="OnFeedbackCategoryClicked" CommandParameter="Content Issue" Padding="10,4" Margin="0,0,6,6" FontSize="12" CornerRadius="12" BackgroundColor="{AppThemeBinding Light={StaticResource Gray100}, Dark={StaticResource DarkSurfaceCard}}" TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource DarkTextPrimary}}" />
+                        </FlexLayout>
+                    </VerticalStackLayout>
+
+                    <!-- Feedback Message Editor -->
+                    <VerticalStackLayout Spacing="4">
+                        <Label Text="YOUR MESSAGE" FontFamily="LegacySansBook" FontSize="10" FontAttributes="Bold" TextColor="{StaticResource Gray500}" />
+                        <Border Padding="8" Background="{StaticResource SecondaryLightBrush}" StrokeShape="RoundRectangle 10" Stroke="{StaticResource Gray200Brush}" StrokeThickness="1">
+                            <Editor x:Name="TxtFeedbackMessage"
+                                    Placeholder="Tell us what you like or what we should improve..."
+                                    HeightRequest="85"
+                                    FontFamily="LegacySansBook"
+                                    FontSize="13"
+                                    TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource DarkTextPrimary}}"
+                                    PlaceholderColor="{StaticResource Gray400}" />
+                        </Border>
+                    </VerticalStackLayout>
+
+                    <!-- Optional Contact Email Entry -->
+                    <VerticalStackLayout Spacing="4">
+                        <Label Text="YOUR EMAIL (OPTIONAL FOR REPLIES)" FontFamily="LegacySansBook" FontSize="10" FontAttributes="Bold" TextColor="{StaticResource Gray500}" />
+                        <Border Padding="10,0" Background="{StaticResource SecondaryLightBrush}" StrokeShape="RoundRectangle 10" Stroke="{StaticResource Gray200Brush}" StrokeThickness="1" HeightRequest="40">
+                            <Entry x:Name="TxtFeedbackEmail"
+                                   Placeholder="name@example.com"
+                                   Keyboard="Email"
+                                   FontFamily="LegacySansBook"
+                                   FontSize="13"
+                                   TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource DarkTextPrimary}}"
+                                   PlaceholderColor="{StaticResource Gray400}"
+                                   VerticalOptions="Center" />
+                        </Border>
+                    </VerticalStackLayout>
+
+                    <!-- Submit Button & Status -->
+                    <Button x:Name="BtnSubmitFeedback"
+                            Text="Submit Feedback 🚀"
+                            Clicked="OnSubmitFeedbackClicked"
+                            HeightRequest="44"
+                            CornerRadius="14"
+                            FontAttributes="Bold"
+                            BackgroundColor="{StaticResource AccentBlue}"
+                            TextColor="White"
+                            Margin="0,6,0,0" />
+
+                    <ActivityIndicator x:Name="FeedbackSpinner" IsRunning="False" IsVisible="False" Color="{StaticResource AccentBlue}" HorizontalOptions="Center" />
+                    <Label x:Name="LblFeedbackStatus" IsVisible="False" FontFamily="LegacySansBook" FontSize="12" HorizontalTextAlignment="Center" />
                 </VerticalStackLayout>
             </Border>
 

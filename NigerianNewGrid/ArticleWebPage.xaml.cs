@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Text.Json;
+using NigerianNewGrid.Constants;
 using NigerianNewGrid.Services;
 using NigerianNewsGrid.Client;
 using NigerianNewsGrid.Client.Models;
@@ -16,6 +17,8 @@ public class RelatedStoryDisplayItem
     public string ImageUrl { get; set; } = string.Empty;
     public string Type { get; set; } = "Article"; // Article, Video, Social
     public string Url { get; set; } = string.Empty;
+    public string? Content { get; set; }
+    public string? Summary { get; set; }
     public bool IsVideo => Type == "Video";
     public bool IsSocial => Type == "Social";
     public string TimeAgo { get; set; } = "recently";
@@ -29,9 +32,13 @@ public partial class ArticleWebPage : ContentPage
     private string? _imageUrl;
     private string? _category;
     private string? _articleId;
+    private string? _content;
+    private string? _summary;
+    private string? _author;
+    private string? _contentType;
     private bool _isReaderMode = true;
     private bool _isVideoStory;
-    private int _fontSizeLevel = 1; // 0 = 16px, 1 = 18px, 2 = 22px, 3 = 26px
+    private int _fontSizeLevel = 1; // 0 = 15pt, 1 = 17pt, 2 = 20pt, 3 = 24pt
     private ArticleDistillerService.PublisherInfo _publisher = new("News", null, "#1B3B6F", "#0A192F");
 
     private bool _isRelatedExpanded;
@@ -52,10 +59,21 @@ public partial class ArticleWebPage : ContentPage
     }
 
     /// <summary>
-    /// Full constructor initializing Chrome-style Reader Mode with newspaper branding,
-    /// lead picture, full distilled story text, and multi-source related coverage.
+    /// Full constructor initializing Data-Saver Instant Native Reader Mode with local XAML rendering,
+    /// typography controls, editorial lead image, and lazy-loaded web view fallback.
     /// </summary>
-    public ArticleWebPage(string url, string? title = null, string? imageUrl = null, string? category = null, string? articleId = null)
+    public ArticleWebPage(
+        string url,
+        string? title = null,
+        string? imageUrl = null,
+        string? category = null,
+        string? articleId = null,
+        bool isSponsored = false,
+        string? sponsorName = null,
+        string? content = null,
+        string? summary = null,
+        string? author = null,
+        string? contentType = null)
         : this()
     {
         _articleUrl = url ?? string.Empty;
@@ -63,40 +81,64 @@ public partial class ArticleWebPage : ContentPage
         _imageUrl = imageUrl;
         _category = category;
         _articleId = articleId;
+        _content = content;
+        _summary = summary;
+        _author = author;
+        _contentType = contentType;
 
         _isVideoStory = string.Equals(category, "Video", StringComparison.OrdinalIgnoreCase) ||
                         (!string.IsNullOrWhiteSpace(url) && (url.Contains("youtube.com") || url.Contains("youtu.be")));
 
         _publisher = ArticleDistillerService.IdentifyPublisher(_articleUrl);
 
-        // Header info: Display publisher brand cleanly with estimated reading time
-        var (_, readTimeLabel) = ArticleDistillerService.CalculateReadingTime(_title);
-        HeaderPublisherLabel.Text = $"{_publisher.Name} · ⏱️ {readTimeLabel}";
+        if (isSponsored)
+        {
+            SponsoredDisclosureBanner.IsVisible = true;
+            var displaySponsor = !string.IsNullOrWhiteSpace(sponsorName) ? sponsorName : _publisher.Name;
+            SponsoredDisclosureLabel.Text = $"SPONSORED CONTENT • Presented by {displaySponsor}";
+            HeaderPublisherLabel.Text = $"✨ {displaySponsor} · Sponsored";
+        }
+        else
+        {
+            SponsoredDisclosureBanner.IsVisible = false;
+            var (_, readTimeLabel) = ArticleDistillerService.CalculateReadingTime(!string.IsNullOrWhiteSpace(_content) ? _content : _title);
+            HeaderPublisherLabel.Text = $"{_publisher.Name} · ⏱️ {readTimeLabel}";
+        }
 
         if (!string.IsNullOrWhiteSpace(url) && Uri.TryCreate(url, UriKind.Absolute, out var uri))
         {
             if (_isVideoStory)
             {
-                // For videos: open directly in video webview
                 _isReaderMode = false;
+                NativeReaderScrollView.IsVisible = false;
+                ArticleWebView.IsVisible = true;
                 ModeToggleBtn.IsVisible = false;
                 FontSizeBtn.IsVisible = false;
+                LoadingProgress.IsVisible = true;
                 ArticleWebView.Source = url;
             }
             else
             {
-                // Default: Clean Google Chrome-style Reader Mode (full story text + logo + lead image, 0 ads)
+                // Instant Native Reader Mode: 0 KB data, sub-10ms render
                 _isReaderMode = true;
+                NativeReaderScrollView.IsVisible = true;
+                ArticleWebView.IsVisible = false;
+                LoadingProgress.IsVisible = false;
                 ModeToggleBtn.Text = "📖 Reader";
-                ArticleWebView.Source = url;
+                FontSizeBtn.IsVisible = true;
+
+                InitializeNativeReaderContent();
             }
 
-            // Asynchronously fetch related stories (Archive, Videos, Tweets)
+            // Asynchronously fetch related stories (Archive, Videos)
             _ = LoadRelatedStoriesAsync(_articleId, _title, _category);
 
             // Track: article opened / read
             var analytics = IPlatformApplication.Current?.Services.GetService<NigerianNewGrid.Services.IAnalyticsService>();
             _ = analytics?.TrackAsync("article_read", _articleId, _title, _category);
+
+            var recentlyRead = IPlatformApplication.Current?.Services.GetService<NigerianNewGrid.Services.IRecentlyReadService>();
+            recentlyRead?.RecordRead(_articleUrl, _title, _imageUrl, _category, _articleId);
         }
         else
         {
@@ -104,49 +146,253 @@ public partial class ArticleWebPage : ContentPage
         }
     }
 
+    /// <summary>
+    /// Overload initializing reader directly from a strongly-typed BriefingItem.
+    /// </summary>
+    public ArticleWebPage(BriefingItem item, bool isSponsored = false, string? sponsorName = null)
+        : this(
+            item.Url ?? string.Empty,
+            item.Title,
+            item.ImageUrl,
+            item.Category,
+            item.Id,
+            isSponsored: isSponsored || item.IsSponsored,
+            sponsorName: sponsorName ?? item.SponsorName,
+            content: item.Content,
+            summary: item.Summary,
+            author: item.Author,
+            contentType: item.ContentType)
+    {
+    }
+
+    // ──────────────────────────────────────────────────────────
+    // Native Reader Rendering & Hydration
+    // ──────────────────────────────────────────────────────────
+
+    private void InitializeNativeReaderContent()
+    {
+        ArticleTitleLabel.Text = _title ?? "News Article";
+        bool isOpinion = string.Equals(_contentType, "Opinion", StringComparison.OrdinalIgnoreCase) ||
+                         string.Equals(_category, "Opinion", StringComparison.OrdinalIgnoreCase);
+        CategoryLabel.Text = isOpinion ? "✍️ OPINION / EDITORIAL" : (_category ?? "NEWS").ToUpperInvariant();
+        PublishedTimeLabel.Text = "Recently";
+
+        var (_, readTimeLabel) = ArticleDistillerService.CalculateReadingTime(!string.IsNullOrWhiteSpace(_content) ? _content : _title);
+        ReadTimeLabel.Text = $"⏱️ {readTimeLabel}";
+
+        PublisherNameLabel.Text = !string.IsNullOrWhiteSpace(_author)
+            ? $"By {_author} • {_publisher.Name}"
+            : _publisher.Name;
+        PublisherDomainLabel.Text = GetPublisherDomain(_articleUrl);
+
+        if (!string.IsNullOrWhiteSpace(_imageUrl))
+        {
+            HeroImage.Source = _imageUrl;
+            HeroImageContainer.IsVisible = true;
+        }
+        else
+        {
+            HeroImageContainer.IsVisible = false;
+        }
+
+        if (!string.IsNullOrWhiteSpace(_summary))
+        {
+            ArticleSummaryLabel.Text = _summary;
+            ArticleSummaryLabel.IsVisible = true;
+        }
+        else
+        {
+            ArticleSummaryLabel.IsVisible = false;
+        }
+
+        if (!string.IsNullOrWhiteSpace(_content))
+        {
+            NoContentFallbackBanner.IsVisible = false;
+            RenderNativeArticleContent();
+        }
+        else
+        {
+            NoContentFallbackBanner.IsVisible = true;
+            // Asynchronously hydrate content from server if article ID is present
+            _ = HydrateContentIfMissingAsync(_articleId);
+        }
+    }
+
+    private static string GetPublisherDomain(string url)
+    {
+        try
+        {
+            if (Uri.TryCreate(url, UriKind.Absolute, out var uri))
+            {
+                var host = uri.Host.ToLowerInvariant();
+                return host.StartsWith("www.") ? host[4..] : host;
+            }
+        }
+        catch { }
+        return "news";
+    }
+
+    private void RenderNativeArticleContent()
+    {
+        ArticleContentStack.Children.Clear();
+        if (string.IsNullOrWhiteSpace(_content)) return;
+
+        var isDark = Application.Current?.RequestedTheme == AppTheme.Dark;
+        var textColor = isDark 
+            ? (Color)Application.Current!.Resources["DarkTextPrimary"] 
+            : (Color)Application.Current!.Resources["Gray900"];
+
+        var paragraphs = _content.Split(["\r\n\r\n", "\n\n", "\r\r"], StringSplitOptions.RemoveEmptyEntries);
+        var sz = GetCurrentFontSize();
+        var lh = GetCurrentLineHeight();
+
+        foreach (var para in paragraphs)
+        {
+            var trimmed = para.Trim();
+            if (trimmed.Length == 0) continue;
+
+            var label = new Label
+            {
+                Text = trimmed,
+                FontFamily = "LegacySansBook",
+                FontSize = sz,
+                LineHeight = lh,
+                LineBreakMode = LineBreakMode.WordWrap,
+                TextColor = textColor
+            };
+            label.SetAppThemeColor(Label.TextColorProperty,
+                (Color)Application.Current!.Resources["Gray900"],
+                (Color)Application.Current!.Resources["DarkTextPrimary"]);
+
+            ArticleContentStack.Children.Add(label);
+        }
+    }
+
+    private async Task HydrateContentIfMissingAsync(string? articleId)
+    {
+        if (string.IsNullOrWhiteSpace(articleId)) return;
+        try
+        {
+            var client = IPlatformApplication.Current?.Services.GetService<NewsApiClient>();
+            if (client == null)
+            {
+                var factory = IPlatformApplication.Current?.Services.GetService<IHttpClientFactory>();
+                var http = factory?.CreateClient() ?? new HttpClient { Timeout = TimeSpan.FromSeconds(6) };
+                var baseUrl = Preferences.Get(AppPreferenceKeys.ApiBaseUrl, "http://localhost:56193");
+                client = new NewsApiClient(http) { BaseUrl = baseUrl };
+            }
+
+            var article = await client.GetArticleByIdAsync(articleId);
+            if (article != null && !string.IsNullOrWhiteSpace(article.Content))
+            {
+                _content = article.Content;
+                if (string.IsNullOrWhiteSpace(_summary)) _summary = article.Summary;
+
+                MainThread.BeginInvokeOnMainThread(() =>
+                {
+                    NoContentFallbackBanner.IsVisible = false;
+                    RenderNativeArticleContent();
+                    var (_, readTimeLabel) = ArticleDistillerService.CalculateReadingTime(_content);
+                    ReadTimeLabel.Text = $"⏱️ {readTimeLabel}";
+                    HeaderPublisherLabel.Text = $"{_publisher.Name} · ⏱️ {readTimeLabel}";
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[ArticleWebPage] Hydrate content failed: {ex.Message}");
+        }
+    }
+
+    private double GetCurrentFontSize() => _fontSizeLevel switch
+    {
+        0 => 15.0,
+        1 => 17.0,
+        2 => 20.0,
+        3 => 24.0,
+        _ => 17.0
+    };
+
+    private double GetCurrentLineHeight() => _fontSizeLevel switch
+    {
+        0 => 1.35,
+        1 => 1.4,
+        2 => 1.45,
+        3 => 1.5,
+        _ => 1.4
+    };
+
+    private void UpdateParagraphFontSizes()
+    {
+        var sz = GetCurrentFontSize();
+        var lh = GetCurrentLineHeight();
+        foreach (var child in ArticleContentStack.Children)
+        {
+            if (child is Label lbl)
+            {
+                lbl.FontSize = sz;
+                lbl.LineHeight = lh;
+            }
+        }
+    }
+
     // ──────────────────────────────────────────────────────────
     // Reader Mode & Navigation
     // ──────────────────────────────────────────────────────────
+
+    private void OnOpenOriginalWebClicked(object? sender, EventArgs e)
+    {
+        SwitchToWebView();
+    }
 
     private void OnToggleReaderModeClicked(object? sender, EventArgs e)
     {
         if (_isVideoStory) return;
 
         _isReaderMode = !_isReaderMode;
-
         if (_isReaderMode)
         {
-            ModeToggleBtn.Text = "📖 Reader";
-            ModeToggleBtn.BackgroundColor = (Color)Application.Current!.Resources["AccentBlue"];
-            ModeToggleBtn.TextColor = Colors.White;
-            ModeToggleBtn.BorderColor = Color.FromArgb("#0052CC");
-            FontSizeBtn.IsVisible = true;
+            SwitchToReaderView();
         }
         else
         {
-            ModeToggleBtn.Text = "🌐 Web";
-            var isDark = Application.Current!.RequestedTheme == AppTheme.Dark;
-            ModeToggleBtn.BackgroundColor = isDark ? (Color)Application.Current!.Resources["ButtonSecondaryBgDark"] : (Color)Application.Current!.Resources["ButtonBgLight"];
-            ModeToggleBtn.TextColor = isDark ? (Color)Application.Current!.Resources["ButtonTextDark"] : (Color)Application.Current!.Resources["ButtonTextLight"];
-            ModeToggleBtn.BorderColor = isDark ? (Color)Application.Current!.Resources["ButtonBorderDark"] : (Color)Application.Current!.Resources["ButtonBorderLight"];
-            FontSizeBtn.IsVisible = false;
+            SwitchToWebView();
         }
-
-        // Toggle Reader Mode directly in the WebView DOM with zero reload
-        _ = ToggleReaderModeInWebViewAsync(_isReaderMode);
     }
 
-    private async Task ToggleReaderModeInWebViewAsync(bool active)
+    private void SwitchToReaderView()
     {
-        try
+        _isReaderMode = true;
+        NativeReaderScrollView.IsVisible = true;
+        ArticleWebView.IsVisible = false;
+        LoadingProgress.IsVisible = false;
+
+        ModeToggleBtn.Text = "📖 Reader";
+        ModeToggleBtn.BackgroundColor = (Color)Application.Current!.Resources["AccentBlue"];
+        ModeToggleBtn.TextColor = Colors.White;
+        ModeToggleBtn.BorderColor = Color.FromArgb("#0052CC");
+        FontSizeBtn.IsVisible = true;
+    }
+
+    private void SwitchToWebView()
+    {
+        _isReaderMode = false;
+        NativeReaderScrollView.IsVisible = false;
+        ArticleWebView.IsVisible = true;
+
+        if (ArticleWebView.Source == null || (ArticleWebView.Source is UrlWebViewSource u && string.IsNullOrEmpty(u.Url)))
         {
-            var script = ArticleDistillerService.GetToggleReaderScript(active);
-            await ArticleWebView.EvaluateJavaScriptAsync(script);
+            LoadingProgress.IsVisible = true;
+            LoadingProgress.Progress = 0.3;
+            ArticleWebView.Source = _articleUrl;
         }
-        catch (Exception ex)
-        {
-            Debug.WriteLine($"[ArticleWebPage] Toggle reader error: {ex.Message}");
-        }
+
+        ModeToggleBtn.Text = "🌐 Web";
+        var isDark = Application.Current!.RequestedTheme == AppTheme.Dark;
+        ModeToggleBtn.BackgroundColor = isDark ? (Color)Application.Current!.Resources["ButtonSecondaryBgDark"] : (Color)Application.Current!.Resources["ButtonBgLight"];
+        ModeToggleBtn.TextColor = isDark ? (Color)Application.Current!.Resources["ButtonTextDark"] : (Color)Application.Current!.Resources["ButtonTextLight"];
+        ModeToggleBtn.BorderColor = isDark ? (Color)Application.Current!.Resources["ButtonBorderDark"] : (Color)Application.Current!.Resources["ButtonBorderLight"];
+        FontSizeBtn.IsVisible = false;
     }
 
     private async void OnAdjustFontSizeClicked(object? sender, EventArgs e)
@@ -158,22 +404,26 @@ public partial class ArticleWebPage : ContentPage
         var (fontSize, label) = _fontSizeLevel switch
         {
             0 => ("15px", "A-"),
-            1 => ("18px", "A"),
-            2 => ("22px", "A+"),
-            3 => ("26px", "A++"),
-            _ => ("18px", "A")
+            1 => ("17px", "A"),
+            2 => ("20px", "A+"),
+            3 => ("24px", "A++"),
+            _ => ("17px", "A")
         };
 
         FontSizeBtn.Text = label;
+        UpdateParagraphFontSizes();
 
-        try
+        if (ArticleWebView.IsVisible)
         {
-            var script = ArticleDistillerService.GetSetFontSizeScript(fontSize);
-            await ArticleWebView.EvaluateJavaScriptAsync(script);
-        }
-        catch (Exception ex)
-        {
-            Debug.WriteLine($"[ArticleWebPage] Font size adjustment error: {ex.Message}");
+            try
+            {
+                var script = ArticleDistillerService.GetSetFontSizeScript(fontSize);
+                await ArticleWebView.EvaluateJavaScriptAsync(script);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[ArticleWebPage] Font size adjustment error: {ex.Message}");
+            }
         }
     }
 
@@ -182,10 +432,10 @@ public partial class ArticleWebPage : ContentPage
         return _fontSizeLevel switch
         {
             0 => "15px",
-            1 => "18px",
-            2 => "22px",
-            3 => "26px",
-            _ => "18px"
+            1 => "17px",
+            2 => "20px",
+            3 => "24px",
+            _ => "17px"
         };
     }
 
@@ -206,7 +456,7 @@ public partial class ArticleWebPage : ContentPage
         {
             try
             {
-                // Inject the Google Chrome-style DOM Distiller reader engine
+                // Inject the Google Chrome-style DOM Distiller reader engine if WebView runs
                 var script = ArticleDistillerService.GenerateChromeReaderDistillerScript(
                     publisherName: _publisher.Name,
                     publisherLogoUrl: _publisher.LogoUrl,
@@ -219,7 +469,6 @@ public partial class ArticleWebPage : ContentPage
 
                 await ArticleWebView.EvaluateJavaScriptAsync(script);
 
-                // Run a second pass after 400ms to catch any lazy-loaded DOM elements or images
                 await Task.Delay(400);
                 await ArticleWebView.EvaluateJavaScriptAsync(script);
             }
@@ -241,8 +490,9 @@ public partial class ArticleWebPage : ContentPage
             var apiClient = IPlatformApplication.Current?.Services.GetService<NewsApiClient>();
             if (apiClient == null)
             {
-                var baseUrl = Preferences.Get("api_base_url", "http://localhost:56193");
-                var http = new HttpClient { Timeout = TimeSpan.FromSeconds(8) };
+                var factory = IPlatformApplication.Current?.Services.GetService<IHttpClientFactory>();
+                var http = factory?.CreateClient() ?? new HttpClient { Timeout = TimeSpan.FromSeconds(8) };
+                var baseUrl = Preferences.Get(AppPreferenceKeys.ApiBaseUrl, "http://localhost:56193");
                 apiClient = new NewsApiClient(http) { BaseUrl = baseUrl };
             }
 
@@ -266,6 +516,8 @@ public partial class ArticleWebPage : ContentPage
                         ImageUrl = art.ImageUrl ?? GetFallbackImage(art.Category),
                         Type = "Article",
                         Url = art.Url ?? string.Empty,
+                        Content = art.Content,
+                        Summary = art.Summary,
                         PublishedAt = art.PublishedAt ?? DateTime.UtcNow,
                         TimeAgo = FormatTimeAgo(art.PublishedAt ?? DateTime.UtcNow)
                     });
@@ -415,26 +667,40 @@ public partial class ArticleWebPage : ContentPage
 
     private async void OnRelatedItemCardTapped(object? sender, EventArgs e)
     {
-        RelatedStoryDisplayItem? item = null;
-        if (sender is BindableObject bindable && bindable.BindingContext is RelatedStoryDisplayItem contextItem)
+        try
         {
-            item = contextItem;
-        }
-        else if (e is TappedEventArgs tapped && tapped.Parameter is RelatedStoryDisplayItem paramItem)
-        {
-            item = paramItem;
-        }
+            RelatedStoryDisplayItem? item = null;
+            if (sender is BindableObject bindable && bindable.BindingContext is RelatedStoryDisplayItem contextItem)
+            {
+                item = contextItem;
+            }
+            else if (e is TappedEventArgs tapped && tapped.Parameter is RelatedStoryDisplayItem paramItem)
+            {
+                item = paramItem;
+            }
 
-        if (item != null && !string.IsNullOrWhiteSpace(item.Url))
-        {
-            // Close drawer first
-            _isRelatedExpanded = false;
-            RelatedExpandedSheet.IsVisible = false;
-            RelatedCollapsedBar.IsVisible = true;
+            if (item != null && !string.IsNullOrWhiteSpace(item.Url))
+            {
+                // Close drawer first
+                _isRelatedExpanded = false;
+                RelatedExpandedSheet.IsVisible = false;
+                RelatedCollapsedBar.IsVisible = true;
 
-            // Push the related story into a new ArticleWebPage
-            var targetCategory = item.IsVideo ? "Video" : (item.IsSocial ? "Socials" : item.Category);
-            await Navigation.PushAsync(new ArticleWebPage(item.Url, item.Title, item.ImageUrl, targetCategory, item.Id));
+                // Push the related story into a new ArticleWebPage
+                var targetCategory = item.IsVideo ? "Video" : (item.IsSocial ? "Socials" : item.Category);
+                await Navigation.PushAsync(new ArticleWebPage(
+                    item.Url, 
+                    item.Title, 
+                    item.ImageUrl, 
+                    targetCategory, 
+                    item.Id,
+                    content: item.Content,
+                    summary: item.Subtitle));
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[ArticleWebPage] Related story navigation error: {ex.Message}");
         }
     }
 
@@ -447,7 +713,7 @@ public partial class ArticleWebPage : ContentPage
         var list = new List<RelatedStoryDisplayItem>();
         try
         {
-            var cached = Preferences.Get("last_briefing", string.Empty);
+            var cached = Preferences.Get(AppPreferenceKeys.LastBriefing, string.Empty);
             if (!string.IsNullOrWhiteSpace(cached))
             {
                 var categories = JsonSerializer.Deserialize<List<BriefingCategory>>(cached, JsonOptions);
@@ -466,12 +732,14 @@ public partial class ArticleWebPage : ContentPage
                     {
                         Id = art.Id,
                         Title = art.Title,
-                        Subtitle = art.Source ?? "News Archive",
+                        Subtitle = !string.IsNullOrWhiteSpace(art.Summary) ? art.Summary : (art.Source ?? "News Archive"),
                         Source = art.Source ?? "News Archive",
                         Category = art.Category ?? "News",
                         ImageUrl = art.ImageUrl ?? GetFallbackImage(art.Category),
                         Type = "Article",
                         Url = art.Url ?? string.Empty,
+                        Content = art.Content,
+                        Summary = art.Summary,
                         PublishedAt = art.PublishedAt ?? DateTime.UtcNow,
                         TimeAgo = FormatTimeAgo(art.PublishedAt ?? DateTime.UtcNow)
                     });
@@ -541,10 +809,17 @@ public partial class ArticleWebPage : ContentPage
 
     private async void OnBackClicked(object? sender, EventArgs e)
     {
-        if (!_isReaderMode && ArticleWebView.CanGoBack)
-            ArticleWebView.GoBack();
-        else
-            await Navigation.PopAsync();
+        try
+        {
+            if (!_isReaderMode && ArticleWebView.CanGoBack)
+                ArticleWebView.GoBack();
+            else
+                await Navigation.PopAsync();
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[ArticleWebPage] Navigation back error: {ex.Message}");
+        }
     }
 
     /// <summary>
@@ -552,11 +827,12 @@ public partial class ArticleWebPage : ContentPage
     /// Update this string once the app store listing is live.
     /// </summary>
     private const string AppShareTagline =
-        "\n\n📲 Follow Nigerian news as it breaks — download Nigerian News Grid and never miss a story.";
+        "\n\n📲 Follow Nigerian news as it breaks — download Nigerian News and never miss a story.";
 
     private async void OnShareClicked(object? sender, EventArgs e)
     {
-        if (!string.IsNullOrWhiteSpace(_articleUrl))
+        if (string.IsNullOrWhiteSpace(_articleUrl)) return;
+        try
         {
             // Track: share clicked before showing the share sheet
             var analytics = IPlatformApplication.Current?.Services.GetService<NigerianNewGrid.Services.IAnalyticsService>();
@@ -570,38 +846,59 @@ public partial class ArticleWebPage : ContentPage
                 Text = shareText
             });
         }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[ArticleWebPage] Share error: {ex.Message}");
+        }
     }
 
     private async void OnBookmarkClicked(object? sender, EventArgs e)
     {
-        var bookmarkService = IPlatformApplication.Current?.Services.GetService<IBookmarkService>();
-        if (bookmarkService != null && !string.IsNullOrWhiteSpace(_articleUrl))
+        try
         {
-            var item = new BriefingItem
+            var bookmarkService = IPlatformApplication.Current?.Services.GetService<IBookmarkService>();
+            if (bookmarkService != null && !string.IsNullOrWhiteSpace(_articleUrl))
             {
-                Id = _articleId ?? Guid.NewGuid().ToString("N"),
-                Title = _title ?? _publisher.Name,
-                Url = _articleUrl,
-                ImageUrl = _imageUrl ?? string.Empty,
-                Category = _category ?? "News",
-                Source = _publisher.Name,
-                PublishedAt = DateTime.UtcNow
-            };
-            bool added = bookmarkService.ToggleBookmark(item);
+                var item = new BriefingItem
+                {
+                    Id = _articleId ?? Guid.NewGuid().ToString("N"),
+                    Title = _title ?? _publisher.Name,
+                    Url = _articleUrl,
+                    ImageUrl = _imageUrl ?? string.Empty,
+                    Category = _category ?? "News",
+                    Source = _publisher.Name,
+                    PublishedAt = DateTime.UtcNow,
+                    Content = _content,
+                    Summary = _summary
+                };
+                bool added = bookmarkService.ToggleBookmark(item);
 
-            // Track: bookmark added (only when adding, not removing)
-            if (added)
-            {
-                var analytics = IPlatformApplication.Current?.Services.GetService<NigerianNewGrid.Services.IAnalyticsService>();
-                _ = analytics?.TrackAsync("article_bookmark", _articleId, _title, _category);
+                // Track: bookmark added (only when adding, not removing)
+                if (added)
+                {
+                    var analytics = IPlatformApplication.Current?.Services.GetService<NigerianNewGrid.Services.IAnalyticsService>();
+                    _ = analytics?.TrackAsync("article_bookmark", _articleId, _title, _category);
+                }
+
+                string message = added ? "Story saved to bookmarks." : "Bookmark removed.";
+                await DisplayAlertAsync("Bookmarks", message, "OK");
             }
-
-            string message = added ? "Story saved to bookmarks." : "Bookmark removed.";
-            await DisplayAlertAsync("Bookmarks", message, "OK");
+            else
+            {
+                await DisplayAlertAsync("Bookmarks", "Story saved to bookmarks.", "OK");
+            }
         }
-        else
+        catch (Exception ex)
         {
-            await DisplayAlertAsync("Bookmarks", "Story saved to bookmarks.", "OK");
+            Debug.WriteLine($"[ArticleWebPage] Bookmark error: {ex.Message}");
         }
+    }
+
+    /// <summary>
+    /// Dismisses the sticky banner ad bar, collapsing its row and reclaiming full screen real estate for the article.
+    /// </summary>
+    private void OnDismissBannerClicked(object? sender, EventArgs e)
+    {
+        BottomBannerAdContainer.IsVisible = false;
     }
 }

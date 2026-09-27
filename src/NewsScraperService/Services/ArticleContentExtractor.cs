@@ -109,6 +109,11 @@ public class ArticleContentExtractor
                 {
                     model.PublishedAt = readerArticle.PublicationDate.Value.ToUniversalTime();
                 }
+
+                if (string.IsNullOrWhiteSpace(model.Author) && !string.IsNullOrWhiteSpace(readerArticle.Byline))
+                {
+                    model.Author = readerArticle.Byline;
+                }
             }
         }
         catch (Exception ex)
@@ -123,6 +128,13 @@ public class ArticleContentExtractor
         model.Title = SanitizeText(model.Title);
         model.Summary = SanitizeText(model.Summary ?? string.Empty);
         model.Content = SanitizeContentBody(model.Content);
+        if (!string.IsNullOrWhiteSpace(model.Author))
+        {
+            var cleanAuthor = SanitizeText(model.Author);
+            if (cleanAuthor.StartsWith("by ", StringComparison.OrdinalIgnoreCase))
+                cleanAuthor = cleanAuthor[3..].Trim();
+            model.Author = string.IsNullOrWhiteSpace(cleanAuthor) ? null : cleanAuthor;
+        }
 
         if (string.IsNullOrWhiteSpace(model.Summary) && !string.IsNullOrWhiteSpace(model.Content))
         {
@@ -266,6 +278,31 @@ public class ArticleContentExtractor
             }
         }
 
+        // Author
+        if (string.IsNullOrWhiteSpace(model.Author) && el.TryGetProperty("author", out var authorProp))
+        {
+            if (authorProp.ValueKind == JsonValueKind.String)
+            {
+                model.Author = authorProp.GetString();
+            }
+            else if (authorProp.ValueKind == JsonValueKind.Object && authorProp.TryGetProperty("name", out var authorNameProp))
+            {
+                model.Author = authorNameProp.GetString();
+            }
+            else if (authorProp.ValueKind == JsonValueKind.Array && authorProp.GetArrayLength() > 0)
+            {
+                var firstAuthor = authorProp[0];
+                if (firstAuthor.ValueKind == JsonValueKind.String)
+                {
+                    model.Author = firstAuthor.GetString();
+                }
+                else if (firstAuthor.ValueKind == JsonValueKind.Object && firstAuthor.TryGetProperty("name", out var nameProp))
+                {
+                    model.Author = nameProp.GetString();
+                }
+            }
+        }
+
         // Category / Section
         if (el.TryGetProperty("articleSection", out var sectionProp))
         {
@@ -280,6 +317,17 @@ public class ArticleContentExtractor
 
     private static void ExtractMetaFallback(HtmlDocument doc, ArticleModel model)
     {
+        // Author fallback
+        if (string.IsNullOrWhiteSpace(model.Author))
+        {
+            var author = GetMetaContent(doc, "author")
+                ?? GetMetaContent(doc, "article:author")
+                ?? GetMetaContent(doc, "twitter:creator")
+                ?? GetMetaContent(doc, "sailthru.author")
+                ?? GetMetaContent(doc, "byl");
+            if (!string.IsNullOrWhiteSpace(author)) model.Author = author;
+        }
+
         // OpenGraph Title fallback
         if (string.IsNullOrWhiteSpace(model.Title))
         {

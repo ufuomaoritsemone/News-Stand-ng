@@ -32,4 +32,19 @@ public sealed class NullNotificationService : INotificationService
     {
         Debug.WriteLine($"[NullNotificationService] ShowKeywordAlertNotification: [{keyword}] {articleTitle} ({articleId}) URL: {articleUrl}");
     }
+
+    public void ScheduleAudioBriefings()
+    {
+        Debug.WriteLine("[NullNotificationService] ScheduleAudioBriefings called.");
+    }
+
+    public void CancelAudioBriefings()
+    {
+        Debug.WriteLine("[NullNotificationService] CancelAudioBriefings called.");
+    }
+
+    public void ShowAudioBriefingNotification(string timeOfDay, string formattedDate)
+    {
+        Debug.WriteLine($"[NullNotificationService] ShowAudioBriefingNotification: {timeOfDay} for {formattedDate}");
+    }
 }

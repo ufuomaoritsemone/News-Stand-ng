@@ -1,15 +1,18 @@
 using System.Text.Json;
+using NigerianNewsGrid.Client.Helpers;
 
 namespace NigerianNewGrid.Services;
 
 /// <summary>
-/// Manages on-device preferences for morning briefings, monitored keywords, and alert state.
+/// Manages on-device preferences for morning briefings, monitored keywords, audio briefings, and alert state.
 /// All data remains strictly local to the device for privacy preservation.
 /// </summary>
 public static class NotificationPreferences
 {
     private const string MorningEnabledKey = "morning_briefing_enabled";
     private const string MorningTimeKey = "morning_briefing_time_mins";
+    private const string AudioBriefingsEnabledKey = "audio_briefings_enabled";
+    private const string LastAudioBriefingCycleKey = "last_audio_briefing_cycle_notified";
     private const string KeywordAlertsEnabledKey = "keyword_alerts_enabled";
     private const string MonitoredKeywordsKey = "monitored_keywords";
     private const string NotifiedArticleIdsKey = "notified_article_ids";
@@ -32,6 +35,31 @@ public static class NotificationPreferences
         get => TimeSpan.FromMinutes(Preferences.Get(MorningTimeKey, 450)); // 7:30 AM default (450 minutes)
         set => Preferences.Set(MorningTimeKey, (int)value.TotalMinutes);
     }
+
+    public static bool AudioBriefingsEnabled
+    {
+        get => Preferences.Get(AudioBriefingsEnabledKey, true);
+        set => Preferences.Set(AudioBriefingsEnabledKey, value);
+    }
+
+    public static string LastAudioBriefingCycleNotified
+    {
+        get => Preferences.Get(LastAudioBriefingCycleKey, string.Empty);
+        set => Preferences.Set(LastAudioBriefingCycleKey, value);
+    }
+
+    /// <summary>
+    /// Gets the current audio briefing cycle identifier, e.g. "2026-09-01_morning" or "2026-09-01_Evening"
+    /// based on Nigerian Standard Time (WAT).
+    /// </summary>
+    public static string GetCurrentAudioBriefingCycle(DateTime? utcNow = null)
+        => TtsBriefingFormatter.GetCurrentAudioBriefingCycle(utcNow);
+
+    /// <summary>
+    /// Calculates the next scheduled audio briefing time (8:00 AM or 6:00 PM WAT) in UTC.
+    /// </summary>
+    public static DateTime GetNextAudioBriefingUtc(DateTime? utcNow = null)
+        => TtsBriefingFormatter.GetNextAudioBriefingUtc(utcNow);
 
     public static bool KeywordAlertsEnabled
     {

@@ -7,11 +7,12 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using NewsApi.Data;
+using NewsApi.Infrastructure;
 using NewsApi.Models;
 
 namespace NewsApi.Services;
 
-public class YouTubeFeedService
+public class YouTubeFeedService : IYouTubeFeedService
 {
     private readonly NewsDbContext _db;
     private readonly HttpClient _httpClient;
@@ -151,9 +152,8 @@ public class YouTubeFeedService
             var rawSummary = snippet?.Description?.Trim() ?? string.Empty;
             var summary = rawSummary.Length > 250 ? rawSummary[..247] + "..." : rawSummary;
             var publishedAt = snippet?.PublishedAt?.ToUniversalTime() ?? DateTime.UtcNow;
-            var thumbnail = snippet?.Thumbnails?.High?.Url
-                            ?? snippet?.Thumbnails?.Medium?.Url
-                            ?? $"https://i.ytimg.com/vi/{videoId}/hqdefault.jpg";
+            var category = DetermineCategory(title, rawSummary);
+            var thumbnail = ResolveBestThumbnail(snippet?.Thumbnails, videoId, category);
 
             var duration = "HD";
             long viewCount = 0;
@@ -291,8 +291,9 @@ public class YouTubeFeedService
             var summary = mediaGroup?.Element(MediaNs + "description")?.Value?.Trim() ?? string.Empty;
             if (summary.Length > 250) summary = summary[..247] + "...";
 
-            var thumbnail = mediaGroup?.Element(MediaNs + "thumbnail")?.Attribute("url")?.Value?.Trim()
-                            ?? $"https://i.ytimg.com/vi/{videoId}/hqdefault.jpg";
+            var rawThumbnail = mediaGroup?.Element(MediaNs + "thumbnail")?.Attribute("url")?.Value?.Trim();
+            var category = DetermineCategory(title, summary);
+            var thumbnail = ResolveBestThumbnail(rawThumbnail, null, videoId, category);
 
             // Parse view count from <media:community><media:statistics views="1234"/>
             long views = 0;
@@ -423,9 +424,8 @@ public class YouTubeFeedService
             var rawSummary = snippet?.Description?.Trim() ?? string.Empty;
             var summary = rawSummary.Length > 250 ? rawSummary[..247] + "..." : rawSummary;
             var videoUrl = $"https://www.youtube.com/watch?v={videoId}";
-            var thumbnail = snippet?.Thumbnails?.High?.Url
-                            ?? snippet?.Thumbnails?.Medium?.Url
-                            ?? $"https://i.ytimg.com/vi/{videoId}/hqdefault.jpg";
+            var category = DetermineCategory(title, rawSummary);
+            var thumbnail = ResolveBestThumbnail(snippet?.Thumbnails, videoId, category);
             var channelName = snippet?.ChannelTitle?.Trim() ?? "YouTube News";
             var channelId = snippet?.ChannelId?.Trim() ?? string.Empty;
             var duration = FormatDuration(contentDetails?.Duration);
@@ -619,6 +619,63 @@ public class YouTubeFeedService
 
         return "General";
     }
+
+    /// <summary>
+    /// Resolves the optimal thumbnail URL according to YouTube quality tiers:
+    /// MaxRes (1280x720) -> Standard (640x480) -> High (480x360) -> Medium (320x180) -> Default (120x90).
+    /// If no API thumbnail is present or valid, falls back to deterministic YouTube CDN (hqdefault.jpg),
+    /// then CategoryImageMap fallback, and finally the global fallback.
+    /// </summary>
+    public static string ResolveBestThumbnail(YouTubeVideoThumbnails? thumbnails, string videoId, string? category = null)
+        => ResolveBestThumbnail(null, thumbnails, videoId, category);
+
+    /// <summary>
+    /// Resolves the optimal thumbnail URL with an optional direct URL override:
+    /// 1. directThumbnailUrl (if valid http/https)
+    /// 2. YouTube API thumbnail tiers: MaxRes -> Standard -> High -> Medium -> Default
+    /// 3. Deterministic YouTube CDN: https://i.ytimg.com/vi/{videoId}/hqdefault.jpg
+    /// 4. CategoryImageMap fallback based on category
+    /// 5. Global fallback image
+    /// </summary>
+    public static string ResolveBestThumbnail(string? directThumbnailUrl, YouTubeVideoThumbnails? thumbnails, string videoId, string? category = null)
+    {
+        if (!string.IsNullOrWhiteSpace(directThumbnailUrl) &&
+            (directThumbnailUrl.StartsWith("https://", StringComparison.OrdinalIgnoreCase) ||
+             directThumbnailUrl.StartsWith("http://", StringComparison.OrdinalIgnoreCase)))
+        {
+            var url = directThumbnailUrl.Trim();
+            if (url.StartsWith("http://", StringComparison.OrdinalIgnoreCase))
+            {
+                url = "https://" + url["http://".Length..];
+            }
+            return url;
+        }
+
+        var candidate = thumbnails?.MaxRes?.Url
+                        ?? thumbnails?.Standard?.Url
+                        ?? thumbnails?.High?.Url
+                        ?? thumbnails?.Medium?.Url
+                        ?? thumbnails?.Default?.Url;
+
+        if (!string.IsNullOrWhiteSpace(candidate) &&
+            (candidate.StartsWith("https://", StringComparison.OrdinalIgnoreCase) ||
+             candidate.StartsWith("http://", StringComparison.OrdinalIgnoreCase)))
+        {
+            var url = candidate.Trim();
+            if (url.StartsWith("http://", StringComparison.OrdinalIgnoreCase))
+            {
+                url = "https://" + url["http://".Length..];
+            }
+            return url;
+        }
+
+        if (!string.IsNullOrWhiteSpace(videoId))
+        {
+            return $"https://i.ytimg.com/vi/{videoId.Trim()}/hqdefault.jpg";
+        }
+
+        return CategoryImageMap.Resolve(null, category);
+    }
 }
 
 // ──────────────────────────────────────────────────────────
@@ -690,11 +747,17 @@ public class YouTubeVideoSnippet
 
 public class YouTubeVideoThumbnails
 {
+    [JsonPropertyName("default")]
+    public YouTubeThumbnailInfo? Default { get; set; }
+
     [JsonPropertyName("medium")]
     public YouTubeThumbnailInfo? Medium { get; set; }
 
     [JsonPropertyName("high")]
     public YouTubeThumbnailInfo? High { get; set; }
+
+    [JsonPropertyName("standard")]
+    public YouTubeThumbnailInfo? Standard { get; set; }
 
     [JsonPropertyName("maxres")]
     public YouTubeThumbnailInfo? MaxRes { get; set; }

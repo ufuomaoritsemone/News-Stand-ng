@@ -29,4 +29,19 @@ public class NotificationService : INotificationService
     {
         Debug.WriteLine($"[Windows NotificationService] Keyword Alert [{keyword}]: {articleTitle} (ID: {articleId}, URL: {articleUrl})");
     }
+
+    public void ScheduleAudioBriefings()
+    {
+        Debug.WriteLine("[Windows NotificationService] ScheduleAudioBriefings called.");
+    }
+
+    public void CancelAudioBriefings()
+    {
+        Debug.WriteLine("[Windows NotificationService] CancelAudioBriefings called.");
+    }
+
+    public void ShowAudioBriefingNotification(string timeOfDay, string formattedDate)
+    {
+        Debug.WriteLine($"[Windows NotificationService] Audio Briefing Notification: {timeOfDay} for {formattedDate}");
+    }
 }

@@ -11,10 +11,10 @@ namespace NewsApi.Controllers;
 public class SocialPostsController : ControllerBase
 {
     private readonly NewsDbContext _db;
-    private readonly SocialFeedService _socialService;
+    private readonly ISocialFeedService _socialService;
     private readonly ILogger<SocialPostsController> _logger;
 
-    public SocialPostsController(NewsDbContext db, SocialFeedService socialService, ILogger<SocialPostsController> logger)
+    public SocialPostsController(NewsDbContext db, ISocialFeedService socialService, ILogger<SocialPostsController> logger)
     {
         _db = db;
         _socialService = socialService;
@@ -61,8 +61,25 @@ public class SocialPostsController : ControllerBase
             .Take(Math.Clamp(limit, 1, 50))
             .ToListAsync();
 
-        return Ok(posts);
+        var dtos = posts.Select(ToDto).ToList();
+        return Ok(dtos);
     }
+
+    private static SocialPostDto ToDto(SocialPost p) => new()
+    {
+        Id = p.Id,
+        AuthorName = p.AuthorName,
+        AuthorHandle = p.AuthorHandle,
+        AuthorAvatarUrl = p.AuthorAvatarUrl,
+        Content = p.Content,
+        PostUrl = p.PostUrl,
+        MediaUrl = p.MediaUrl,
+        Category = p.Category,
+        LikesCount = p.LikesCount,
+        RetweetsCount = p.RetweetsCount,
+        PublishedAt = p.PublishedAt,
+        CreatedAt = p.CreatedAt
+    };
 
     /// <summary>
     /// Triggers an immediate refresh of tweets from monitored handles.
@@ -78,7 +95,7 @@ public class SocialPostsController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error syncing social posts");
-            return StatusCode(500, new { message = $"Sync failed: {ex.Message}" });
+            return StatusCode(500, new { message = "Sync failed. An error occurred while synchronizing social posts." });
         }
     }
 

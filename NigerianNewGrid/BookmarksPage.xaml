@@ -45,6 +45,7 @@
         <CollectionView Grid.Row="1"
                         x:Name="BookmarksView"
                         SelectionMode="None"
+                        ItemSizingStrategy="MeasureFirstItem"
                         Margin="16,12,16,0">
 
             <!-- Empty State -->
@@ -88,10 +89,12 @@
                             <Border Grid.Column="0"
                                     StrokeThickness="0"
                                     StrokeShape="RoundRectangle 16,0,16,0"
+                                    HeightRequest="140"
+                                    WidthRequest="130"
                                     VerticalOptions="Fill">
                                 <Image Source="{Binding ImageUrl}"
                                        Aspect="AspectFill"
-                                       MinimumHeightRequest="140"
+                                       HeightRequest="140"
                                        WidthRequest="130"
                                        VerticalOptions="Fill" />
                             </Border>

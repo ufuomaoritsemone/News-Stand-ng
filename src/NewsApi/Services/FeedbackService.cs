@@ -42,16 +42,12 @@ public class FeedbackService : IFeedbackService
             IsEmailSent = false
         };
 
-        _db.Feedbacks.Add(feedback);
-        await _db.SaveChangesAsync(cancellationToken);
-
-        // Attempt sending email notification
+        // Attempt sending email notification; set flag before the single save
         var emailSent = await TrySendFeedbackEmailAsync(feedback, cancellationToken);
-        if (emailSent)
-        {
-            feedback.IsEmailSent = true;
-            await _db.SaveChangesAsync(cancellationToken);
-        }
+        feedback.IsEmailSent = emailSent;
+
+        _db.Feedbacks.Add(feedback);
+        await _db.SaveChangesAsync(cancellationToken); // Fix #12 — single DB round-trip
 
         _logger.LogInformation("Feedback {FeedbackId} recorded successfully (Rating: {Rating}, EmailSent: {EmailSent})",
             feedback.Id, feedback.Rating, feedback.IsEmailSent);
@@ -66,11 +62,14 @@ public class FeedbackService : IFeedbackService
     public async Task<List<FeedbackItem>> GetRecentFeedbacksAsync(int limit = 50, CancellationToken cancellationToken = default)
     {
         var effectiveLimit = Math.Clamp(limit, 1, 200);
-        return await _db.Feedbacks
-            .OrderByDescending(f => f.CreatedAt)
-            .Take(effectiveLimit)
+        var items = await _db.Feedbacks
             .AsNoTracking()
             .ToListAsync(cancellationToken);
+
+        return items
+            .OrderByDescending(f => f.CreatedAt)
+            .Take(effectiveLimit)
+            .ToList();
     }
 
     private async Task<bool> TrySendFeedbackEmailAsync(FeedbackItem feedback, CancellationToken cancellationToken)

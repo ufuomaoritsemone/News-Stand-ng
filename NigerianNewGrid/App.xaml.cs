@@ -1,3 +1,4 @@
+using NigerianNewGrid.Constants;
 using NigerianNewGrid.Services;
 
 namespace NigerianNewGrid;
@@ -16,8 +17,12 @@ public partial class App : Application
 
     protected override Window CreateWindow(IActivationState? activationState)
     {
-        var shell = _serviceProvider.GetRequiredService<AppShell>();
-        var window = new Window(shell);
+        var hasSeenOnboarding = Preferences.Get(AppPreferenceKeys.HasSeenOnboarding, false);
+        Page rootPage = hasSeenOnboarding
+            ? _serviceProvider.GetRequiredService<AppShell>()
+            : _serviceProvider.GetRequiredService<OnboardingPage>();
+
+        var window = new Window(rootPage);
 
         // Track app opens on resume (foreground)
         window.Resumed += (_, _) => _ = _analytics.TrackAsync("app_open");

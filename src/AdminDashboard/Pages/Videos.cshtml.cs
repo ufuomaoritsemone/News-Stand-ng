@@ -36,7 +36,7 @@ public class VideosModel : PageModel
             return Page();
         }
 
-        var client = _httpClientFactory.CreateClient();
+        var client = _httpClientFactory.CreateClient("NewsApiClient");
         var apiBaseUrl = _configuration["ApiBaseUrl"] ?? "http://localhost:56193";
         try
         {
@@ -64,7 +64,7 @@ public class VideosModel : PageModel
 
     public async Task<IActionResult> OnPostSyncVideosAsync()
     {
-        var client = _httpClientFactory.CreateClient();
+        var client = _httpClientFactory.CreateClient("NewsApiClient");
         var apiBaseUrl = _configuration["ApiBaseUrl"] ?? "http://localhost:56193";
         try
         {
@@ -89,7 +89,7 @@ public class VideosModel : PageModel
 
     public async Task<IActionResult> OnPostSyncTrendingAsync()
     {
-        var client = _httpClientFactory.CreateClient();
+        var client = _httpClientFactory.CreateClient("NewsApiClient");
         var apiBaseUrl = _configuration["ApiBaseUrl"] ?? "http://localhost:56193";
         try
         {
@@ -114,7 +114,7 @@ public class VideosModel : PageModel
 
     public async Task<IActionResult> OnPostRemoveChannelAsync(string id)
     {
-        var client = _httpClientFactory.CreateClient();
+        var client = _httpClientFactory.CreateClient("NewsApiClient");
         var apiBaseUrl = _configuration["ApiBaseUrl"] ?? "http://localhost:56193";
         try
         {
@@ -134,7 +134,7 @@ public class VideosModel : PageModel
 
     public async Task<IActionResult> OnPostRemoveStoryAsync(string id)
     {
-        var client = _httpClientFactory.CreateClient();
+        var client = _httpClientFactory.CreateClient("NewsApiClient");
         var apiBaseUrl = _configuration["ApiBaseUrl"] ?? "http://localhost:56193";
         try
         {
@@ -154,7 +154,7 @@ public class VideosModel : PageModel
 
     private async Task LoadDataAsync()
     {
-        var client = _httpClientFactory.CreateClient();
+        var client = _httpClientFactory.CreateClient("NewsApiClient");
         var apiBaseUrl = _configuration["ApiBaseUrl"] ?? "http://localhost:56193";
         try
         {

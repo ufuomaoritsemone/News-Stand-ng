@@ -15,10 +15,16 @@
             </div>
             <p class="text-muted mb-0 mt-1">Latest breaking tweets and news updates from monitored Nigerian commentators & media handles</p>
         </div>
-        <div class="d-flex align-items-center gap-2">
+        <div class="d-flex align-items-center gap-2 flex-wrap">
             <a href="/Index" class="btn btn-outline-light btn-sm"><i class="bi bi-arrow-left"></i> Dashboard</a>
             <a href="/Videos" class="btn btn-outline-danger btn-sm"><i class="bi bi-youtube me-1"></i> Videos</a>
             <a href="/Analytics" class="btn btn-outline-success btn-sm"><i class="bi bi-bar-chart-fill me-1"></i> Analytics</a>
+            <a href="/Sponsors" class="btn btn-outline-warning btn-sm"><i class="bi bi-megaphone me-1"></i> Sponsored</a>
+            <button type="button" class="theme-toggle-btn" onclick="toggleAdminTheme()" title="Toggle Light / Dark Theme">
+                <i class="bi bi-moon-stars-fill theme-icon-dark"></i>
+                <i class="bi bi-sun-fill theme-icon-light"></i>
+                <span class="theme-toggle-label">Dark</span>
+            </button>
             <form method="post" asp-page-handler="SyncSocials" class="d-inline">
                 <button type="submit" class="btn btn-info text-dark btn-sm"><i class="bi bi-arrow-repeat me-1"></i> Sync Socials Now</button>
             </form>

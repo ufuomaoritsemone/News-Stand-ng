@@ -1,8 +1,8 @@
+using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using NewsApi.Data;
 using NewsApi.Models;
-
 using NewsApi.Services;
 
 namespace NewsApi.Controllers;
@@ -12,9 +12,9 @@ namespace NewsApi.Controllers;
 public class VideoChannelsController : ControllerBase
 {
     private readonly NewsDbContext _db;
-    private readonly YouTubeFeedService _ytService;
+    private readonly IYouTubeFeedService _ytService;
 
-    public VideoChannelsController(NewsDbContext db, YouTubeFeedService ytService)
+    public VideoChannelsController(NewsDbContext db, IYouTubeFeedService ytService)
     {
         _db = db;
         _ytService = ytService;
@@ -26,6 +26,7 @@ public class VideoChannelsController : ControllerBase
         var channels = await _db.VideoChannels
             .AsNoTracking()
             .OrderBy(c => c.ChannelName)
+            .Select(c => ToDto(c))
             .ToListAsync();
         return Ok(channels);
     }
@@ -34,7 +35,7 @@ public class VideoChannelsController : ControllerBase
     public async Task<IActionResult> GetById(string id)
     {
         var channel = await _db.VideoChannels.AsNoTracking().FirstOrDefaultAsync(c => c.Id == id);
-        return channel is null ? NotFound() : Ok(channel);
+        return channel is null ? NotFound() : Ok(ToDto(channel));
     }
 
     [HttpPost]
@@ -67,7 +68,8 @@ public class VideoChannelsController : ControllerBase
             // Non-fatal if sync fails immediately
         }
 
-        return CreatedAtAction(nameof(GetById), new { id = channel.Id }, channel);
+        var dto = ToDto(channel);
+        return CreatedAtAction(nameof(GetById), new { id = channel.Id }, dto);
     }
 
     [HttpDelete("{id}")]
@@ -81,13 +83,36 @@ public class VideoChannelsController : ControllerBase
         }
         return NoContent();
     }
+
+    private static VideoChannelDto ToDto(VideoChannel c) => new()
+    {
+        Id = c.Id,
+        ChannelName = c.ChannelName,
+        YoutubeChannelId = c.YoutubeChannelId,
+        ThumbnailUrl = c.ThumbnailUrl,
+        ChannelUrl = c.ChannelUrl,
+        Description = c.Description,
+        CreatedAt = c.CreatedAt
+    };
 }
 
 public class VideoChannelInput
 {
+    [Required(ErrorMessage = "Channel name is required.")]
+    [StringLength(150, MinimumLength = 2, ErrorMessage = "Channel name must be between 2 and 150 characters.")]
     public string ChannelName { get; set; } = string.Empty;
+
+    [StringLength(100, ErrorMessage = "YoutubeChannelId cannot exceed 100 characters.")]
     public string? YoutubeChannelId { get; set; }
+
+    [Url(ErrorMessage = "ThumbnailUrl must be a valid URL.")]
+    [StringLength(500, ErrorMessage = "ThumbnailUrl cannot exceed 500 characters.")]
     public string? ThumbnailUrl { get; set; }
+
+    [Url(ErrorMessage = "ChannelUrl must be a valid URL.")]
+    [StringLength(500, ErrorMessage = "ChannelUrl cannot exceed 500 characters.")]
     public string? ChannelUrl { get; set; }
+
+    [StringLength(1000, ErrorMessage = "Description cannot exceed 1000 characters.")]
     public string? Description { get; set; }
 }

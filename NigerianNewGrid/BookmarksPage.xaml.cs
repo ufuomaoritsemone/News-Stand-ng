@@ -47,28 +47,38 @@ public partial class BookmarksPage : ContentPage
 
     private async void OnBookmarkTapped(object? sender, TappedEventArgs e)
     {
-        if (e.Parameter is BriefingItem item && !string.IsNullOrWhiteSpace(item.Url))
+        try
         {
-            await Navigation.PushAsync(new ArticleWebPage(item.Url, item.Title, item.ImageUrl, item.Category, item.Id));
+            if (e.Parameter is BriefingItem item && !string.IsNullOrWhiteSpace(item.Url))
+            {
+                await Navigation.PushAsync(new ArticleWebPage(item));
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[BookmarksPage] Bookmark tap error: {ex.Message}");
         }
     }
 
     private async void OnClearAllClicked(object? sender, EventArgs e)
     {
-        bool confirm = await DisplayAlertAsync(
-            "Clear All Bookmarks",
-            "Are you sure you want to remove all saved stories?",
-            "Clear All",
-            "Cancel");
-
-        if (confirm)
+        try
         {
-            var bookmarks = _bookmarkService.GetBookmarks().ToList();
-            foreach (var b in bookmarks)
+            bool confirm = await DisplayAlertAsync(
+                "Clear All Bookmarks",
+                "Are you sure you want to remove all saved stories?",
+                "Clear All",
+                "Cancel");
+
+            if (confirm)
             {
-                _bookmarkService.RemoveBookmark(b.Id);
+                _bookmarkService.ClearAllBookmarks();
+                RefreshBookmarks();
             }
-            RefreshBookmarks();
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[BookmarksPage] Clear all error: {ex.Message}");
         }
     }
 }

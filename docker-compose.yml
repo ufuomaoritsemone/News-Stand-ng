@@ -28,6 +28,11 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
       - ConnectionStrings__NewsDb=Host=postgres;Port=5432;Database=newsgrid;Username=newsuser;Password=newspassword123!
+      - DbProvider=postgres
+      - ApiKey=${API_KEY:-AIzaSyAh7soVCbg-JfW-gUKVZIQkbd0sdlE34QI}
+      - YouTube__ApiKey=${YOUTUBE_API_KEY:-}
+    volumes:
+      - audio-data:/app/data/audio
     depends_on:
       postgres:
         condition: service_healthy
@@ -50,6 +55,7 @@ services:
       - ASPNETCORE_ENVIRONMENT=Production
       - ApiBaseUrl=http://news-api:8080
       - NewsApi__BaseUrl=http://news-api:8080
+      - ApiKey=${API_KEY:-AIzaSyAh7soVCbg-JfW-gUKVZIQkbd0sdlE34QI}
     depends_on:
       news-api:
         condition: service_healthy
@@ -65,6 +71,26 @@ services:
       - ApiBaseUrl=http://news-api:8080
       - NewsApi__BaseUrl=http://news-api:8080
       - Scraper__IntervalMinutes=15
+      - ApiKey=${API_KEY:-AIzaSyAh7soVCbg-JfW-gUKVZIQkbd0sdlE34QI}
+    depends_on:
+      news-api:
+        condition: service_healthy
+    restart: unless-stopped
+
+  tts-worker:
+    image: nigeriannewsgrid-ttsworker:latest
+    build:
+      context: .
+      dockerfile: src/TtsWorker/Dockerfile
+    environment:
+      - DOTNET_ENVIRONMENT=Production
+      - ApiBaseUrl=http://news-api:8080
+      - NewsApi__BaseUrl=http://news-api:8080
+      - Tts__AudioStoragePath=/app/data/audio
+      - GoogleCloud__ApiKey=${GCP_TTS_API_KEY:-}
+      - ApiKey=${API_KEY:-AIzaSyAh7soVCbg-JfW-gUKVZIQkbd0sdlE34QI}
+    volumes:
+      - audio-data:/app/data/audio
     depends_on:
       news-api:
         condition: service_healthy
@@ -72,3 +98,5 @@ services:
 
 volumes:
   pgdata:
+  audio-data:
+

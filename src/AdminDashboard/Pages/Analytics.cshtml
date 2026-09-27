@@ -16,10 +16,16 @@
             </div>
             <p class="text-muted mb-0 mt-1">Anonymised in-app behaviour — no PII collected</p>
         </div>
-        <div class="d-flex align-items-center gap-2">
+        <div class="d-flex align-items-center gap-2 flex-wrap">
             <a href="/" class="btn btn-outline-light btn-sm"><i class="bi bi-newspaper me-1"></i> Articles</a>
             <a href="/Videos" class="btn btn-outline-danger btn-sm"><i class="bi bi-youtube me-1"></i> Videos</a>
             <a href="/Socials" class="btn btn-outline-info btn-sm"><i class="bi bi-twitter-x me-1"></i> Socials</a>
+            <a href="/Sponsors" class="btn btn-outline-warning btn-sm"><i class="bi bi-megaphone me-1"></i> Sponsored</a>
+            <button type="button" class="theme-toggle-btn" onclick="toggleAdminTheme()" title="Toggle Light / Dark Theme">
+                <i class="bi bi-moon-stars-fill theme-icon-dark"></i>
+                <i class="bi bi-sun-fill theme-icon-light"></i>
+                <span class="theme-toggle-label">Dark</span>
+            </button>
             <!-- Period filter -->
             <form method="get" class="d-flex gap-2">
                 <select name="days" class="form-select form-control-glass form-select-sm" onchange="this.form.submit()" style="width:160px;">
@@ -41,42 +47,56 @@
 
     <!-- ── Summary Cards ── -->
     <div class="row g-3 mb-4 mt-1">
-        <div class="col-6 col-md-2">
+        <div class="col-6 col-md-3 col-xl">
             <div class="glass-card stat-card text-center">
                 <div class="text-muted small text-uppercase">Total Events</div>
                 <div class="stat-value">@(s?.TotalEvents ?? 0)</div>
                 <div class="small text-info mt-1"><i class="bi bi-activity me-1"></i> @Model.Days-day window</div>
             </div>
         </div>
-        <div class="col-6 col-md-2">
+        <div class="col-6 col-md-3 col-xl">
             <div class="glass-card stat-card text-center">
                 <div class="text-muted small text-uppercase">Unique Devices</div>
                 <div class="stat-value">@(s?.UniqueDevices ?? 0)</div>
                 <div class="small text-warning mt-1"><i class="bi bi-phone me-1"></i> Anonymous</div>
             </div>
         </div>
-        <div class="col-6 col-md-2">
+        <div class="col-6 col-md-3 col-xl">
             <div class="glass-card stat-card text-center">
                 <div class="text-muted small text-uppercase">App Opens</div>
                 <div class="stat-value text-success">@(s?.AppOpens ?? 0)</div>
                 <div class="small text-muted mt-1"><i class="bi bi-box-arrow-in-right me-1"></i> Sessions</div>
             </div>
         </div>
-        <div class="col-6 col-md-2">
+        <div class="col-6 col-md-3 col-xl">
             <div class="glass-card stat-card text-center">
                 <div class="text-muted small text-uppercase">Articles Read</div>
                 <div class="stat-value text-info">@(s?.ArticleReads ?? 0)</div>
                 <div class="small text-muted mt-1"><i class="bi bi-book me-1"></i> Reads</div>
             </div>
         </div>
-        <div class="col-6 col-md-2">
+        <div class="col-6 col-md-3 col-xl">
+            <div class="glass-card stat-card text-center">
+                <div class="text-muted small text-uppercase">Audio Started</div>
+                <div class="stat-value text-primary">@(s?.AudioListensStarted ?? 0)</div>
+                <div class="small text-muted mt-1"><i class="bi bi-headphones me-1"></i> Listens</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3 col-xl">
+            <div class="glass-card stat-card text-center">
+                <div class="text-muted small text-uppercase">Audio Completed</div>
+                <div class="stat-value text-success">@(s?.AudioListensCompleted ?? 0)</div>
+                <div class="small text-success mt-1"><i class="bi bi-check2-circle me-1"></i> @(s?.AudioCompletionRate ?? 0)% rate</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3 col-xl">
             <div class="glass-card stat-card text-center">
                 <div class="text-muted small text-uppercase">Shares Clicked</div>
                 <div class="stat-value text-warning">@(s?.SharesClicked ?? 0)</div>
                 <div class="small text-muted mt-1"><i class="bi bi-share-fill me-1"></i> Virality</div>
             </div>
         </div>
-        <div class="col-6 col-md-2">
+        <div class="col-6 col-md-3 col-xl">
             <div class="glass-card stat-card text-center">
                 <div class="text-muted small text-uppercase">Bookmarks</div>
                 <div class="stat-value text-danger">@(s?.BookmarksAdded ?? 0)</div>
@@ -119,6 +139,12 @@
                 </div>
                 <hr class="border-secondary border-opacity-25 my-3" />
                 <div class="d-flex justify-content-between small text-muted">
+                    <span>Audio Completion Rate</span>
+                    <span class="text-info fw-bold">
+                        @(s?.AudioCompletionRate ?? 0.0)%
+                    </span>
+                </div>
+                <div class="d-flex justify-content-between small text-muted mt-1">
                     <span>Share Rate</span>
                     <span class="text-warning fw-bold">
                         @(reads > 0 ? ((s?.SharesClicked ?? 0) * 100.0 / reads).ToString("F1") : "0.0")%
@@ -196,6 +222,8 @@
                                 "article_read" => "bi-book text-info",
                                 "article_share" => "bi-share-fill text-warning",
                                 "article_bookmark" => "bi-bookmark-fill text-danger",
+                                "audio_listen_start" or "audio_listen" => "bi-headphones text-primary",
+                                "audio_listen_complete" or "audio_complete" => "bi-check-circle-fill text-success",
                                 _ => "bi-dot text-muted"
                             };
                             <div class="d-flex align-items-start gap-2 py-2 border-bottom border-secondary border-opacity-10">
@@ -228,14 +256,18 @@
         const dailyLabels = [@Html.Raw(string.Join(",", (s?.DailyBreakdown ?? []).Select(d => $"'{d.Date[5..]}'")))] ;
         const dailyCounts = [@Html.Raw(string.Join(",", (s?.DailyBreakdown ?? []).Select(d => d.Count)))];
 
-        new Chart(document.getElementById('dailyChart'), {
+        const isDarkInit = document.documentElement.getAttribute('data-bs-theme') !== 'light';
+        const getChartTextColor = (isDark) => isDark ? '#94a3b8' : '#475569';
+        const getChartGridColor = (isDark) => isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
+
+        const dailyChart = new Chart(document.getElementById('dailyChart'), {
             type: 'bar',
             data: {
                 labels: dailyLabels,
                 datasets: [{
                     label: 'Events',
                     data: dailyCounts,
-                    backgroundColor: 'rgba(56, 189, 248, 0.6)',
+                    backgroundColor: 'rgba(56, 189, 248, 0.65)',
                     borderColor: 'rgba(56, 189, 248, 1)',
                     borderWidth: 1,
                     borderRadius: 4
@@ -245,25 +277,27 @@
                 responsive: true,
                 plugins: { legend: { display: false } },
                 scales: {
-                    x: { ticks: { color: '#94a3b8', font: { size: 11 } }, grid: { color: 'rgba(255,255,255,0.05)' } },
-                    y: { ticks: { color: '#94a3b8', font: { size: 11 } }, grid: { color: 'rgba(255,255,255,0.05)' }, beginAtZero: true }
+                    x: { ticks: { color: getChartTextColor(isDarkInit), font: { size: 11 } }, grid: { color: getChartGridColor(isDarkInit) } },
+                    y: { ticks: { color: getChartTextColor(isDarkInit), font: { size: 11 } }, grid: { color: getChartGridColor(isDarkInit) }, beginAtZero: true }
                 }
             }
         });
 
         // ── Event type doughnut ──
-        new Chart(document.getElementById('typeChart'), {
+        const typeChart = new Chart(document.getElementById('typeChart'), {
             type: 'doughnut',
             data: {
-                labels: ['App Opens', 'Reads', 'Shares', 'Bookmarks'],
+                labels: ['App Opens', 'Reads', 'Audio Started', 'Audio Completed', 'Shares', 'Bookmarks'],
                 datasets: [{
                     data: [
                         @(s?.AppOpens ?? 0),
                         @(s?.ArticleReads ?? 0),
+                        @(s?.AudioListensStarted ?? 0),
+                        @(s?.AudioListensCompleted ?? 0),
                         @(s?.SharesClicked ?? 0),
                         @(s?.BookmarksAdded ?? 0)
                     ],
-                    backgroundColor: ['#22c55e', '#38bdf8', '#f59e0b', '#ef4444'],
+                    backgroundColor: ['#22c55e', '#38bdf8', '#6366f1', '#10b981', '#f59e0b', '#ef4444'],
                     borderWidth: 0,
                     hoverOffset: 4
                 }]
@@ -271,9 +305,28 @@
             options: {
                 responsive: true,
                 plugins: {
-                    legend: { position: 'bottom', labels: { color: '#94a3b8', font: { size: 11 }, boxWidth: 12 } }
+                    legend: { position: 'bottom', labels: { color: getChartTextColor(isDarkInit), font: { size: 11 }, boxWidth: 12 } }
                 },
                 cutout: '65%'
+            }
+        });
+
+        window.addEventListener('themeChanged', (e) => {
+            const isDark = e.detail?.isDark ?? true;
+            const textColor = getChartTextColor(isDark);
+            const gridColor = getChartGridColor(isDark);
+
+            if (dailyChart && dailyChart.options && dailyChart.options.scales) {
+                dailyChart.options.scales.x.ticks.color = textColor;
+                dailyChart.options.scales.x.grid.color = gridColor;
+                dailyChart.options.scales.y.ticks.color = textColor;
+                dailyChart.options.scales.y.grid.color = gridColor;
+                dailyChart.update();
+            }
+
+            if (typeChart && typeChart.options && typeChart.options.plugins) {
+                typeChart.options.plugins.legend.labels.color = textColor;
+                typeChart.update();
             }
         });
     </script>

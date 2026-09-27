@@ -21,9 +21,21 @@ public sealed record BriefingItem
     public string? Source { get; init; }
     public string? Category { get; init; }
     public DateTime? PublishedAt { get; init; }
-    public string? Language { get; init; }
-    public string? VoiceName { get; init; }
-    public string? AudioUrl { get; init; }
+    public string? Language { get; set; }
+    public string? VoiceName { get; set; }
+    public string? AudioUrl { get; set; }
+    public string? Author { get; init; }
+    public string? ContentType { get; init; } = "News";
+
+    // Direct In-House Sponsorship Engine Fields
+    public bool IsSponsored { get; init; } = false;
+    public string? SponsorName { get; init; }
+    public string? SponsorUrl { get; init; }
+    public bool IsPinned { get; init; } = false;
+    public int? TargetPosition { get; init; }
+    public int PriorityWeight { get; init; } = 1;
+    public bool IsAdMobPlaceholder { get; init; } = false;
+    public bool IsSpecialPlacement => TargetPosition is >= 1 and <= 3;
 
     [System.Text.Json.Serialization.JsonIgnore]
     public string TimeAgoText => PublishedAt.HasValue
@@ -40,3 +52,26 @@ public sealed record BriefingItem
         return utcTime.ToLocalTime().ToString("MMM d");
     }
 }
+
+public sealed record BriefingAvailabilityResult
+{
+    public bool Available { get; init; }
+    public int ArticleCount { get; init; }
+    public DateTime TimestampUtc { get; init; }
+}
+
+/// <summary>
+/// Discovery DTO returned by GET /api/v1/audio/briefings/latest.
+/// Informs mobile and web clients whether a neural audio broadcast is available for streaming.
+/// </summary>
+public sealed record AudioBriefingMetadata
+{
+    public string Cycle { get; init; } = string.Empty;
+    public string TimeOfDay { get; init; } = string.Empty;
+    public string FileName { get; init; } = string.Empty;
+    public string StreamUrl { get; init; } = string.Empty;
+    public DateTime PublishedAt { get; init; }
+    public string Provider { get; init; } = string.Empty;
+    public bool Available { get; init; }
+}
+

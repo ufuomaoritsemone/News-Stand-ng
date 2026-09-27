@@ -1,0 +1,2488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Nigerian News Grid — Interactive Code Map & Architecture Explorer v3.1</title>
+  <style>
+    :root {
+      --bg-primary: #0b0f19;
+      --bg-secondary: #111827;
+      --bg-card: #1f2937;
+      --bg-card-hover: #283548;
+      --accent-green: #10b981;
+      --accent-green-glow: rgba(16, 185, 129, 0.25);
+      --accent-emerald: #059669;
+      --accent-cyan: #06b6d4;
+      --accent-cyan-glow: rgba(6, 182, 212, 0.25);
+      --accent-purple: #8b5cf6;
+      --accent-purple-glow: rgba(139, 92, 246, 0.25);
+      --accent-amber: #f59e0b;
+      --accent-amber-glow: rgba(245, 158, 11, 0.25);
+      --accent-rose: #f43f5e;
+      --accent-rose-glow: rgba(244, 63, 94, 0.25);
+      --accent-blue: #3b82f6;
+      --accent-blue-glow: rgba(59, 130, 246, 0.25);
+      --text-main: #f3f4f6;
+      --text-muted: #9ca3af;
+      --text-dim: #6b7280;
+      --border-color: #374151;
+      --border-light: #4b5563;
+      --font-sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-primary);
+      color: var(--text-main);
+      font-family: var(--font-sans);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      line-height: 1.5;
+      overflow-x: hidden;
+    }
+
+    /* Top Navbar */
+    header {
+      background: rgba(17, 24, 39, 0.92);
+      backdrop-filter: blur(14px);
+      border-bottom: 1px solid var(--border-color);
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      padding: 0.75rem 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .brand-logo {
+      width: 40px;
+      height: 40px;
+      background: linear-gradient(135deg, var(--accent-green), var(--accent-cyan));
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 1.2rem;
+      color: #0b0f19;
+      box-shadow: 0 0 18px var(--accent-green-glow);
+    }
+
+    .brand-title {
+      font-size: 1.15rem;
+      font-weight: 700;
+      letter-spacing: -0.025em;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .badge-pill {
+      font-size: 0.7rem;
+      font-weight: 600;
+      padding: 0.18rem 0.55rem;
+      border-radius: 9999px;
+      background: rgba(16, 185, 129, 0.15);
+      color: var(--accent-green);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      white-space: nowrap;
+    }
+
+    .badge-pill.badge-cyan {
+      background: rgba(6, 182, 212, 0.15);
+      color: var(--accent-cyan);
+      border-color: rgba(6, 182, 212, 0.3);
+    }
+
+    .badge-pill.badge-purple {
+      background: rgba(139, 92, 246, 0.15);
+      color: var(--accent-purple);
+      border-color: rgba(139, 92, 246, 0.3);
+    }
+
+    .badge-pill.badge-amber {
+      background: rgba(245, 158, 11, 0.15);
+      color: var(--accent-amber);
+      border-color: rgba(245, 158, 11, 0.3);
+    }
+
+    .badge-pill.badge-rose {
+      background: rgba(244, 63, 94, 0.15);
+      color: var(--accent-rose);
+      border-color: rgba(244, 63, 94, 0.3);
+    }
+
+    .badge-pill.badge-blue {
+      background: rgba(59, 130, 246, 0.15);
+      color: var(--accent-blue);
+      border-color: rgba(59, 130, 246, 0.3);
+    }
+
+    /* Navigation Tabs */
+    .nav-tabs {
+      display: flex;
+      gap: 0.35rem;
+      background: var(--bg-primary);
+      padding: 0.25rem;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+      flex-wrap: wrap;
+    }
+
+    .tab-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      padding: 0.45rem 0.8rem;
+      border-radius: 6px;
+      font-size: 0.83rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      transition: all 0.2s ease;
+      white-space: nowrap;
+    }
+
+    .tab-btn:hover {
+      color: var(--text-main);
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .tab-btn.active {
+      background: var(--bg-card);
+      color: var(--accent-green);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+      border: 1px solid var(--border-light);
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.4rem 0.8rem;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      text-decoration: none;
+      cursor: pointer;
+      border: 1px solid var(--border-color);
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+
+    .btn-primary {
+      background: var(--accent-green);
+      color: #0b0f19;
+      border-color: var(--accent-green);
+    }
+    .btn-primary:hover {
+      background: #059669;
+      color: #fff;
+    }
+
+    .btn-secondary {
+      background: var(--bg-card);
+      color: var(--text-main);
+    }
+    .btn-secondary:hover {
+      background: var(--bg-card-hover);
+      border-color: var(--border-light);
+    }
+
+    /* Main Container */
+    main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 1.5rem;
+      max-width: 1650px;
+      width: 100%;
+      margin: 0 auto;
+    }
+
+    .tab-content {
+      display: none;
+      flex-direction: column;
+      gap: 1.5rem;
+      animation: fadeIn 0.3s ease;
+    }
+
+    .tab-content.active {
+      display: flex;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Banner callout */
+    .hero-banner {
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.09) 0%, rgba(6, 182, 212, 0.06) 50%, rgba(139, 92, 246, 0.05) 100%);
+      border: 1px solid rgba(16, 185, 129, 0.25);
+      border-radius: 12px;
+      padding: 1rem 1.25rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .hero-banner-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .hero-banner-subtitle {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      margin-top: 0.2rem;
+    }
+
+    .hero-banner-tags {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    /* Architecture Split Layout */
+    .graph-view-wrapper {
+      display: grid;
+      grid-template-columns: 1fr 400px;
+      gap: 1.5rem;
+      min-height: 680px;
+    }
+
+    @media (max-width: 1200px) {
+      .graph-view-wrapper {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .canvas-panel {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .canvas-toolbar {
+      padding: 0.75rem 1rem;
+      background: rgba(31, 41, 55, 0.6);
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .tier-filters {
+      display: flex;
+      gap: 0.4rem;
+      flex-wrap: wrap;
+    }
+
+    .filter-chip {
+      font-size: 0.75rem;
+      padding: 0.25rem 0.65rem;
+      border-radius: 6px;
+      background: var(--bg-card);
+      color: var(--text-muted);
+      cursor: pointer;
+      border: 1px solid var(--border-color);
+      transition: all 0.2s;
+    }
+
+    .filter-chip:hover {
+      color: var(--text-main);
+      border-color: var(--border-light);
+    }
+
+    .filter-chip.active {
+      background: rgba(16, 185, 129, 0.15);
+      color: var(--accent-green);
+      border-color: rgba(16, 185, 129, 0.4);
+    }
+
+    .search-box {
+      display: flex;
+      align-items: center;
+      background: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 0.25rem 0.6rem;
+      gap: 0.4rem;
+    }
+
+    .search-box input {
+      background: transparent;
+      border: none;
+      color: var(--text-main);
+      font-size: 0.8rem;
+      outline: none;
+      width: 170px;
+    }
+
+    .svg-canvas-container {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+      background: radial-gradient(circle at 50% 50%, rgba(31, 41, 55, 0.3) 0%, rgba(11, 15, 25, 0.8) 100%);
+      overflow: auto;
+    }
+
+    .arch-svg {
+      width: 100%;
+      height: 100%;
+      max-height: 640px;
+    }
+
+    /* SVG Nodes */
+    .arch-node {
+      cursor: pointer;
+      transition: transform 0.2s, filter 0.2s;
+    }
+
+    .arch-node:hover {
+      filter: drop-shadow(0 0 10px rgba(16, 185, 129, 0.35));
+    }
+
+    .arch-node.selected .node-box {
+      stroke: var(--accent-green);
+      stroke-width: 2.5px;
+      filter: drop-shadow(0 0 12px var(--accent-green-glow));
+    }
+
+    .flow-line {
+      stroke: var(--border-light);
+      stroke-width: 1.8;
+      fill: none;
+      stroke-dasharray: 6 4;
+      animation: dash 35s linear infinite;
+    }
+
+    .flow-line.active {
+      stroke: var(--accent-green);
+      stroke-width: 2.2;
+    }
+
+    .flow-line.audio-flow {
+      stroke: var(--accent-rose);
+      stroke-width: 2.2;
+    }
+
+    .flow-line.alarm-flow {
+      stroke: var(--accent-amber);
+      stroke-width: 2;
+    }
+
+    @keyframes dash {
+      to {
+        stroke-dashoffset: -1000;
+      }
+    }
+
+    /* Inspector Drawer Panel */
+    .inspector-panel {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .inspector-header {
+      padding: 1rem;
+      background: var(--bg-card);
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .inspector-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .inspector-body {
+      padding: 1.25rem;
+      overflow-y: auto;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+
+    .info-section {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .section-label {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-dim);
+      font-weight: 700;
+    }
+
+    .code-pill {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      background: rgba(0, 0, 0, 0.4);
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      border: 1px solid var(--border-color);
+      color: var(--accent-green);
+      word-break: break-all;
+    }
+
+    .file-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.45rem;
+    }
+
+    .file-item {
+      font-size: 0.8rem;
+      display: flex;
+      flex-direction: column;
+      background: var(--bg-card);
+      padding: 0.5rem 0.75rem;
+      border-radius: 6px;
+      border: 1px solid var(--border-color);
+    }
+
+    .file-name {
+      font-family: var(--font-mono);
+      color: var(--text-main);
+      font-weight: 600;
+    }
+
+    .file-desc {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 0.15rem;
+    }
+
+    /* Lifecycle Simulator Tab */
+    .sim-card {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+
+    .stepper-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: relative;
+      margin: 1rem 0 1.5rem 0;
+    }
+
+    .stepper-bar::before {
+      content: "";
+      position: absolute;
+      top: 50%;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: var(--border-color);
+      z-index: 1;
+      transform: translateY(-50%);
+    }
+
+    .step-item {
+      position: relative;
+      z-index: 2;
+      background: var(--bg-secondary);
+      padding: 0.5rem 1rem;
+      border-radius: 9999px;
+      border: 2px solid var(--border-color);
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      transition: all 0.2s;
+    }
+
+    .step-item.active {
+      border-color: var(--accent-green);
+      color: var(--accent-green);
+      background: var(--bg-card);
+      box-shadow: 0 0 12px var(--accent-green-glow);
+    }
+
+    .step-item.completed {
+      border-color: var(--accent-emerald);
+      color: var(--text-main);
+    }
+
+    .sim-box {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .code-block {
+      background: #070a11;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 0.85rem;
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      color: #e5e7eb;
+      overflow-x: auto;
+      white-space: pre-wrap;
+      line-height: 1.4;
+    }
+
+    /* API Explorer Tab */
+    .explorer-grid {
+      display: grid;
+      grid-template-columns: 340px 1fr;
+      gap: 1.5rem;
+    }
+
+    @media (max-width: 1024px) {
+      .explorer-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .endpoint-list {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+      max-height: 750px;
+      overflow-y: auto;
+    }
+
+    .endpoint-btn {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 0.6rem 0.8rem;
+      text-align: left;
+      color: var(--text-main);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+      font-size: 0.8rem;
+      transition: all 0.2s;
+    }
+
+    .endpoint-btn:hover {
+      background: var(--bg-card-hover);
+      border-color: var(--border-light);
+    }
+
+    .endpoint-btn.active {
+      border-color: var(--accent-green);
+      background: rgba(16, 185, 129, 0.1);
+    }
+
+    .method-badge {
+      font-size: 0.65rem;
+      font-weight: 800;
+      padding: 0.15rem 0.4rem;
+      border-radius: 4px;
+      text-transform: uppercase;
+      font-family: var(--font-mono);
+    }
+
+    .method-get {
+      background: rgba(16, 185, 129, 0.2);
+      color: var(--accent-green);
+    }
+
+    .method-post {
+      background: rgba(59, 130, 246, 0.2);
+      color: var(--accent-blue);
+    }
+
+    .method-delete {
+      background: rgba(244, 63, 94, 0.2);
+      color: var(--accent-rose);
+    }
+
+    /* MAUI Screen Grid */
+    .maui-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+      gap: 1.25rem;
+    }
+
+    .maui-card {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      transition: transform 0.2s, border-color 0.2s;
+    }
+
+    .maui-card:hover {
+      transform: translateY(-2px);
+      border-color: var(--border-light);
+    }
+
+    .maui-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .maui-page-title {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text-main);
+      font-family: var(--font-mono);
+    }
+
+    /* Security Tab Cards */
+    .security-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+      gap: 1.25rem;
+    }
+
+    .sec-card {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .sec-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    /* Footer */
+    footer {
+      border-top: 1px solid var(--border-color);
+      background: var(--bg-secondary);
+      padding: 1.25rem 2rem;
+      text-align: center;
+      font-size: 0.8rem;
+      color: var(--text-dim);
+      margin-top: auto;
+    }
+
+    /* Custom Scrollbars */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: var(--bg-primary);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: var(--border-light);
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--text-dim);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Navbar -->
+  <header>
+    <div class="brand">
+      <div class="brand-logo">NG</div>
+      <div>
+        <div class="brand-title">
+          NigerianNewsGrid
+          <span class="badge-pill">Code Map v3.1</span>
+        </div>
+        <div style="font-size: 0.75rem; color: var(--text-dim);">
+          Tri-Tier Neural Audio • Hardened API • MVVM .NET MAUI • Multi-Provider PostgreSQL/SQLite • 237 Passing Tests
+        </div>
+      </div>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <nav class="nav-tabs">
+      <button class="tab-btn active" onclick="switchTab('arch')">
+        <span>🗺️</span> System Architecture
+      </button>
+      <button class="tab-btn" onclick="switchTab('sim')">
+        <span>⚡</span> Article Lifecycle
+      </button>
+      <button class="tab-btn" onclick="switchTab('api')">
+        <span>🔌</span> REST API & Schema
+      </button>
+      <button class="tab-btn" onclick="switchTab('maui')">
+        <span>📱</span> MAUI Client Map
+      </button>
+      <button class="tab-btn" onclick="switchTab('security')">
+        <span>🛡️</span> Security & Hardening
+      </button>
+      <button class="tab-btn" onclick="switchTab('quickstart')">
+        <span>🚀</span> Quick Start
+      </button>
+    </nav>
+
+    <div class="header-actions">
+      <button class="btn btn-secondary" onclick="resetCanvas()">🔄 Reset View</button>
+      <a href="../README.md" class="btn btn-primary">📖 Open README</a>
+    </div>
+  </header>
+
+  <!-- Main Content Area -->
+  <main>
+
+    <!-- Highlight Banner -->
+    <div class="hero-banner">
+      <div>
+        <div class="hero-banner-title">
+          <span>🎙️ Production Milestone: Tri-Tier Neural Audio, Enterprise API Hardening & Background Alarms</span>
+        </div>
+        <div class="hero-banner-subtitle">
+          Microsoft Edge Neural Nigerian voices ($0 cost) • HTTP 206 Partial Content Range Seeking • Android AlarmManager (8am & 6pm WAT) • PostgreSQL 16 Auto-Provisioning • 237 Passing Tests
+        </div>
+      </div>
+      <div class="hero-banner-tags">
+        <span class="badge-pill badge-rose">en-NG-EzinneNeural</span>
+        <span class="badge-pill badge-purple">RFC 9457 Problem Details</span>
+        <span class="badge-pill badge-amber">AudioBriefingReceiver</span>
+        <span class="badge-pill badge-cyan">EF Core Multi-Provider</span>
+        <span class="badge-pill">237 Tests (100% Pass)</span>
+      </div>
+    </div>
+
+    <!-- TAB 1: SYSTEM ARCHITECTURE GRAPH -->
+    <section id="tab-arch" class="tab-content active">
+      <div class="graph-view-wrapper">
+        
+        <!-- Interactive Canvas Panel -->
+        <div class="canvas-panel">
+          <div class="canvas-toolbar">
+            <div class="tier-filters">
+              <span class="filter-chip active" onclick="filterTier('all', this)">All Projects (6)</span>
+              <span class="filter-chip" onclick="filterTier('ingestion', this)">Ingestion & ML</span>
+              <span class="filter-chip" onclick="filterTier('core', this)">Core API & DB</span>
+              <span class="filter-chip" onclick="filterTier('workers', this)">Background Workers</span>
+              <span class="filter-chip" onclick="filterTier('clients', this)">Clients & UI</span>
+            </div>
+            <div class="search-box">
+              <span>🔍</span>
+              <input type="text" id="nodeSearch" placeholder="Search class, endpoint, port..." oninput="searchNodes(this.value)" />
+            </div>
+          </div>
+
+          <!-- SVG Visual Node Diagram -->
+          <div class="svg-canvas-container" id="canvasContainer">
+            <svg class="arch-svg" id="archSvg" viewBox="0 0 1000 680">
+              <defs>
+                <linearGradient id="grad-green" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0%" stop-color="#10b981" />
+                  <stop offset="100%" stop-color="#047857" />
+                </linearGradient>
+                <linearGradient id="grad-blue" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0%" stop-color="#3b82f6" />
+                  <stop offset="100%" stop-color="#1d4ed8" />
+                </linearGradient>
+                <linearGradient id="grad-purple" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0%" stop-color="#8b5cf6" />
+                  <stop offset="100%" stop-color="#6d28d9" />
+                </linearGradient>
+                <linearGradient id="grad-amber" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0%" stop-color="#f59e0b" />
+                  <stop offset="100%" stop-color="#b45309" />
+                </linearGradient>
+                <linearGradient id="grad-cyan" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0%" stop-color="#06b6d4" />
+                  <stop offset="100%" stop-color="#0e7490" />
+                </linearGradient>
+                <linearGradient id="grad-rose" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0%" stop-color="#f43f5e" />
+                  <stop offset="100%" stop-color="#be123c" />
+                </linearGradient>
+                <marker id="arrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                  <path d="M 0 0 L 10 5 L 0 10 z" fill="#6b7280" />
+                </marker>
+                <marker id="arrow-active" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                  <path d="M 0 0 L 10 5 L 0 10 z" fill="#10b981" />
+                </marker>
+                <marker id="arrow-rose" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                  <path d="M 0 0 L 10 5 L 0 10 z" fill="#f43f5e" />
+                </marker>
+                <marker id="arrow-amber" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                  <path d="M 0 0 L 10 5 L 0 10 z" fill="#f59e0b" />
+                </marker>
+              </defs>
+
+              <!-- Flow Connection Lines -->
+              <!-- Scraper -> API (Authenticated Ingestion) -->
+              <path d="M 230 145 L 460 270" class="flow-line active" id="line-scraper-api" marker-end="url(#arrow-active)" />
+              <text x="285" y="195" fill="#10b981" font-size="11" font-weight="600" font-family="sans-serif">POST /api/v1/articles (X-Api-Key)</text>
+
+              <!-- Scraper -> ML Categorizer -->
+              <path d="M 230 120 L 460 120" class="flow-line" id="line-scraper-ml" marker-end="url(#arrow)" />
+              <text x="295" y="105" fill="#9ca3af" font-size="11" font-family="sans-serif">Extract, Detect & Classify</text>
+
+              <!-- API -> Database -->
+              <path d="M 570 365 L 570 470" class="flow-line active" id="line-api-db" marker-end="url(#arrow-active)" />
+              <text x="585" y="415" fill="#9ca3af" font-size="11" font-family="sans-serif">EF Core SQLite/PG + FTS5 Auto-Heal</text>
+
+              <!-- TTS Worker -> API (Range Audio Delivery & Sync) -->
+              <path d="M 240 390 L 460 320" class="flow-line audio-flow" id="line-tts-api" marker-end="url(#arrow-rose)" />
+              <text x="250" y="375" fill="#f43f5e" font-size="11" font-weight="600" font-family="sans-serif">audio-data Shared Volume & Sync</text>
+
+              <!-- MAUI App -> NewsApiClient -> API -->
+              <path d="M 770 200 L 690 275" class="flow-line active" id="line-maui-api" marker-end="url(#arrow-active)" />
+              <text x="730" y="240" fill="#9ca3af" font-size="11" font-family="sans-serif">REST, HTTP 206 & Telemetry</text>
+
+              <!-- Background Audio Alarm Flow (8am & 6pm WAT) -->
+              <path d="M 200 450 C 200 620, 870 620, 870 270" class="flow-line alarm-flow" id="line-audio-alarm" marker-end="url(#arrow-amber)" />
+              <text x="500" y="610" fill="#f59e0b" font-size="11" font-weight="600" text-anchor="middle" font-family="sans-serif">⏰ 8:00 AM & 6:00 PM WAT Scheduled Briefing Fetch (AudioBriefingReceiver)</text>
+
+              <!-- Admin Dashboard -> API -->
+              <path d="M 770 410 L 690 335" class="flow-line" id="line-admin-api" marker-end="url(#arrow)" />
+              <text x="730" y="380" fill="#9ca3af" font-size="11" font-family="sans-serif">Cookie Auth & Realtime KPIs</text>
+
+              <!-- NODES -->
+
+              <!-- 1. NewsScraperService -->
+              <g class="arch-node tier-ingestion" id="node-scraper" onclick="selectNode('scraper')" transform="translate(40, 70)">
+                <rect class="node-box" width="195" height="125" rx="10" fill="#1f2937" stroke="#374151" stroke-width="1.5" />
+                <rect width="195" height="6" rx="3" fill="url(#grad-purple)" />
+                <circle cx="28" cy="38" r="14" fill="rgba(139, 92, 246, 0.2)" />
+                <text x="28" y="43" text-anchor="middle" font-size="14">🕷️</text>
+                <text x="50" y="34" fill="#f3f4f6" font-weight="700" font-size="13">NewsScraperService</text>
+                <text x="50" y="50" fill="#9ca3af" font-size="10">Background Ingestion Worker</text>
+                <line x1="15" y1="65" x2="180" y2="65" stroke="#374151" stroke-width="1" />
+                <text x="15" y="82" fill="#d1d5db" font-size="10">📰 18+ Outlets (BusinessDay, Punch)</text>
+                <text x="15" y="98" fill="#d1d5db" font-size="10">✍️ OpinionDetector & Bylines</text>
+                <text x="15" y="114" fill="#d1d5db" font-size="10">⏱️ Interval: 15 min throttle</text>
+              </g>
+
+              <!-- 2. NewsCategorizer.Trainer -->
+              <g class="arch-node tier-ingestion" id="node-ml" onclick="selectNode('ml')" transform="translate(460, 50)">
+                <rect class="node-box" width="220" height="110" rx="10" fill="#1f2937" stroke="#374151" stroke-width="1.5" />
+                <rect width="220" height="6" rx="3" fill="url(#grad-amber)" />
+                <circle cx="28" cy="36" r="14" fill="rgba(245, 158, 11, 0.2)" />
+                <text x="28" y="41" text-anchor="middle" font-size="14">🧠</text>
+                <text x="50" y="32" fill="#f3f4f6" font-weight="700" font-size="13">NewsCategorizer</text>
+                <text x="50" y="48" fill="#9ca3af" font-size="10">ML.NET 5.0 Multiclass Classifier</text>
+                <line x1="15" y1="62" x2="205" y2="62" stroke="#374151" stroke-width="1" />
+                <text x="15" y="78" fill="#d1d5db" font-size="10">🏷️ 7 Core Categories + Op-Eds</text>
+                <text x="15" y="94" fill="#d1d5db" font-size="10">🎯 L-BFGS Maximum Entropy</text>
+              </g>
+
+              <!-- 3. NewsApi (CORE) -->
+              <g class="arch-node tier-core selected" id="node-api" onclick="selectNode('api')" transform="translate(460, 220)">
+                <rect class="node-box" width="230" height="145" rx="12" fill="#1f2937" stroke="#10b981" stroke-width="2" />
+                <rect width="230" height="6" rx="3" fill="url(#grad-green)" />
+                <circle cx="30" cy="38" r="16" fill="rgba(16, 185, 129, 0.25)" />
+                <text x="30" y="44" text-anchor="middle" font-size="16">⚡</text>
+                <text x="55" y="34" fill="#f3f4f6" font-weight="800" font-size="15">NewsApi (Core)</text>
+                <text x="55" y="50" fill="#10b981" font-size="11" font-weight="600">Hardened ASP.NET Core 9 API</text>
+                <line x1="15" y1="68" x2="215" y2="68" stroke="#374151" stroke-width="1" />
+                <text x="15" y="86" fill="#d1d5db" font-size="11">🔒 Fail-Closed ApiKeyMiddleware</text>
+                <text x="15" y="102" fill="#d1d5db" font-size="11">🎵 AudioController (HTTP 206 Range)</text>
+                <text x="15" y="118" fill="#d1d5db" font-size="11">🔍 ArticleSearchService (FTS5/Postgres)</text>
+                <text x="15" y="134" fill="#d1d5db" font-size="11">🛡️ RFC 9457 Problem Details & CSP</text>
+              </g>
+
+              <!-- 4. Database (Postgres / SQLite) -->
+              <g class="arch-node tier-core" id="node-db" onclick="selectNode('db')" transform="translate(470, 480)">
+                <rect class="node-box" width="210" height="110" rx="10" fill="#1f2937" stroke="#374151" stroke-width="1.5" />
+                <rect width="210" height="6" rx="3" fill="url(#grad-blue)" />
+                <circle cx="28" cy="35" r="14" fill="rgba(59, 130, 246, 0.2)" />
+                <text x="28" y="40" text-anchor="middle" font-size="14">🗄️</text>
+                <text x="50" y="32" fill="#f3f4f6" font-weight="700" font-size="13">Database Tier</text>
+                <text x="50" y="48" fill="#9ca3af" font-size="10">SQLite (Dev) / Postgres 16 (Prod)</text>
+                <line x1="15" y1="60" x2="195" y2="60" stroke="#374151" stroke-width="1" />
+                <text x="15" y="75" fill="#d1d5db" font-size="10">📊 Articles, Audio, Feedback, Socials</text>
+                <text x="15" y="90" fill="#d1d5db" font-size="10">⚡ FTS5 Trigger Sync + Author/Type</text>
+                <text x="15" y="105" fill="#d1d5db" font-size="10">🛡️ Auto-healing Schema Migrations</text>
+              </g>
+
+              <!-- 5. TtsWorker (Tri-Tier Speech Engine) -->
+              <g class="arch-node tier-workers" id="node-tts" onclick="selectNode('tts')" transform="translate(40, 330)">
+                <rect class="node-box" width="200" height="120" rx="10" fill="#1f2937" stroke="#374151" stroke-width="1.5" />
+                <rect width="200" height="6" rx="3" fill="url(#grad-rose)" />
+                <circle cx="28" cy="36" r="14" fill="rgba(244, 63, 94, 0.2)" />
+                <text x="28" y="41" text-anchor="middle" font-size="14">🎙️</text>
+                <text x="50" y="32" fill="#f3f4f6" font-weight="700" font-size="13">TtsWorker</text>
+                <text x="50" y="48" fill="#f43f5e" font-size="10" font-weight="600">Tri-Tier Neural Speech Engine</text>
+                <line x1="15" y1="62" x2="185" y2="62" stroke="#374151" stroke-width="1" />
+                <text x="15" y="78" fill="#d1d5db" font-size="10">🇳🇬 en-NG-EzinneNeural & Abeo</text>
+                <text x="15" y="94" fill="#d1d5db" font-size="10">🛡️ Local RIFF Fallback Safety Net</text>
+                <text x="15" y="110" fill="#d1d5db" font-size="10">🔁 Cross-Source Story Deduplication</text>
+              </g>
+
+              <!-- 6. NigerianNewGrid (.NET MAUI Mobile/Desktop) -->
+              <g class="arch-node tier-clients" id="node-maui" onclick="selectNode('maui')" transform="translate(770, 130)">
+                <rect class="node-box" width="210" height="135" rx="10" fill="#1f2937" stroke="#374151" stroke-width="1.5" />
+                <rect width="210" height="6" rx="3" fill="url(#grad-cyan)" />
+                <circle cx="28" cy="36" r="14" fill="rgba(6, 182, 212, 0.2)" />
+                <text x="28" y="41" text-anchor="middle" font-size="14">📱</text>
+                <text x="50" y="32" fill="#f3f4f6" font-weight="700" font-size="13">NigerianNewGrid</text>
+                <text x="50" y="48" fill="#06b6d4" font-size="10" font-weight="600">.NET MAUI (Android, Win, iOS)</text>
+                <line x1="15" y1="62" x2="195" y2="62" stroke="#374151" stroke-width="1" />
+                <text x="15" y="78" fill="#d1d5db" font-size="10">✨ Onboarding Setup Wizard</text>
+                <text x="15" y="94" fill="#d1d5db" font-size="10">📐 MVVM Architecture (ViewModels)</text>
+                <text x="15" y="110" fill="#d1d5db" font-size="10">⏯️ Play / Pause / Resume Audio</text>
+                <text x="15" y="126" fill="#d1d5db" font-size="10">📖 Custom Typography & Reader</text>
+              </g>
+
+              <!-- 7. AdminDashboard (Web Management) -->
+              <g class="arch-node tier-clients" id="node-admin" onclick="selectNode('admin')" transform="translate(770, 340)">
+                <rect class="node-box" width="210" height="120" rx="10" fill="#1f2937" stroke="#374151" stroke-width="1.5" />
+                <rect width="210" height="6" rx="3" fill="url(#grad-purple)" />
+                <circle cx="28" cy="36" r="14" fill="rgba(139, 92, 246, 0.2)" />
+                <text x="28" y="41" text-anchor="middle" font-size="14">📊</text>
+                <text x="50" y="32" fill="#f3f4f6" font-weight="700" font-size="13">AdminDashboard</text>
+                <text x="50" y="48" fill="#9ca3af" font-size="10">ASP.NET Core Razor Portal</text>
+                <line x1="15" y1="62" x2="195" y2="62" stroke="#374151" stroke-width="1" />
+                <text x="15" y="78" fill="#d1d5db" font-size="10">🔐 Cookie Authentication (Login)</text>
+                <text x="15" y="94" fill="#d1d5db" font-size="10">📈 Real-time Analytics & CTR</text>
+                <text x="15" y="110" fill="#d1d5db" font-size="10">💼 Sponsors, Videos & Socials</text>
+              </g>
+            </svg>
+          </div>
+        </div>
+
+        <!-- Slide-out Inspector Drawer -->
+        <div class="inspector-panel" id="inspectorPanel">
+          <div class="inspector-header">
+            <div class="inspector-title" id="inspTitle">
+              <span>⚡</span> NewsApi (Core Service)
+            </div>
+            <span class="badge-pill" id="inspTier">Core Tier</span>
+          </div>
+          <div class="inspector-body" id="inspBody">
+            <!-- Dynamically populated via selectNode() -->
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- TAB 2: ARTICLE LIFECYCLE SIMULATOR -->
+    <section id="tab-sim" class="tab-content">
+      <div class="sim-card">
+        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+          <div>
+            <h2 style="font-size: 1.3rem;">⚡ Step-by-Step Article & Audio Lifecycle Simulator</h2>
+            <p style="color: var(--text-muted); font-size: 0.85rem;">
+              Follow the end-to-end data transformation pipeline from multi-outlet scraping to neural voice synthesis and mobile consumption.
+            </p>
+          </div>
+          <div style="display: flex; gap: 0.5rem;">
+            <button class="btn btn-secondary" onclick="prevStep()">⬅️ Previous</button>
+            <button class="btn btn-primary" onclick="nextStep()">Next Step ➡️</button>
+            <button class="btn btn-secondary" id="autoPlayBtn" onclick="toggleAutoPlay()">▶️ Auto-Play</button>
+          </div>
+        </div>
+
+        <!-- Stepper Navigation -->
+        <div class="stepper-bar">
+          <div class="step-item active" id="simStep-0" onclick="goToStep(0)">
+            <span>1</span> Scrape & Detect
+          </div>
+          <div class="step-item" id="simStep-1" onclick="goToStep(1)">
+            <span>2</span> ML Categorize
+          </div>
+          <div class="step-item" id="simStep-2" onclick="goToStep(2)">
+            <span>3</span> Ingest & FTS5
+          </div>
+          <div class="step-item" id="simStep-3" onclick="goToStep(3)">
+            <span>4</span> Dedup & Neural TTS
+          </div>
+          <div class="step-item" id="simStep-4" onclick="goToStep(4)">
+            <span>5</span> HTTP 206 Streaming
+          </div>
+          <div class="step-item" id="simStep-5" onclick="goToStep(5)">
+            <span>6</span> Mobile & Alarm
+          </div>
+        </div>
+
+        <!-- Simulator Content Window -->
+        <div style="display: flex; flex-direction: column; gap: 1rem;">
+          <div style="font-size: 0.85rem; color: var(--text-dim);" id="stepStatusText">
+            Step 1 of 6: Fetching RSS/Sitemaps & extracting author bylines
+          </div>
+
+          <div class="sim-box">
+            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
+              <h3 style="font-size: 1rem;" id="simBoxTitle">🕷️ NewsScraperService In Action</h3>
+              <span class="code-pill" id="simBoxComponent">src/NewsScraperService</span>
+            </div>
+            <p style="font-size: 0.85rem; color: var(--text-muted);" id="simBoxDesc">
+              The scraper loop queries 18+ publications (BusinessDay, Punch, Vanguard, The Guardian, etc.). OpinionDetector inspects URL paths and headline prefixes; ArticleContentExtractor parses JSON-LD metadata for author bylines.
+            </p>
+            
+            <div class="info-section">
+              <span class="section-label">Active Classes & Components</span>
+              <div id="simClasses">
+                <span class="code-pill">ScraperWorker.cs</span>
+                <span class="code-pill">OpinionDetector.cs</span>
+                <span class="code-pill">ArticleContentExtractor.cs</span>
+              </div>
+            </div>
+
+            <div class="info-section">
+              <span class="section-label">Payload & Execution State</span>
+              <pre class="code-block" id="simPayload">
+{
+  "sourceName": "BusinessDay",
+  "url": "https://businessday.ng/opinion/article/cbn-rate-hikes-and-the-future-of-naira/",
+  "title": "Opinion: CBN Rate Hikes and the Real Sector Outlook",
+  "author": "Dr. Aminu Bello",
+  "contentType": "Opinion",
+  "summary": "While monetary tightening curtails currency volatility, structural credit expansion remains vital...",
+  "publishedAt": "2026-09-18T08:30:00Z",
+  "imageUrl": "https://businessday.ng/wp-content/uploads/cbn_building.jpg"
+}
+              </pre>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- TAB 3: REST API & SCHEMA INSPECTOR -->
+    <section id="tab-api" class="tab-content">
+      <div class="explorer-grid">
+        <!-- Endpoint Selection List -->
+        <div class="endpoint-list">
+          <div style="font-size: 0.8rem; font-weight: 700; color: var(--text-dim); text-transform: uppercase; margin-bottom: 0.25rem;">
+            NewsApi Endpoints (v3.1)
+          </div>
+
+          <button class="endpoint-btn active" onclick="selectEndpoint('get-articles', this)">
+            <span><span class="method-badge method-get">GET</span> /api/v1/articles</span>
+            <span style="font-size: 0.7rem; color: var(--text-dim);">Feed</span>
+          </button>
+
+          <button class="endpoint-btn" onclick="selectEndpoint('get-opinions', this)">
+            <span><span class="method-badge method-get">GET</span> /api/v1/articles?type=Opinion</span>
+            <span style="font-size: 0.7rem; color: var(--accent-amber);">Op-Eds</span>
+          </button>
+
+          <button class="endpoint-btn" onclick="selectEndpoint('search-articles', this)">
+            <span><span class="method-badge method-get">GET</span> /api/v1/articles/search</span>
+            <span style="font-size: 0.7rem; color: var(--accent-cyan);">FTS5</span>
+          </button>
+
+          <button class="endpoint-btn" onclick="selectEndpoint('get-briefings', this)">
+            <span><span class="method-badge method-get">GET</span> /api/v1/articles/briefings</span>
+            <span style="font-size: 0.7rem; color: var(--text-dim);">Curated</span>
+          </button>
+
+          <button class="endpoint-btn" onclick="selectEndpoint('get-audio', this)">
+            <span><span class="method-badge method-get">GET</span> /api/v1/audio/{file}</span>
+            <span style="font-size: 0.7rem; color: var(--accent-rose);">HTTP 206</span>
+          </button>
+
+          <button class="endpoint-btn" onclick="selectEndpoint('get-audio-latest', this)">
+            <span><span class="method-badge method-get">GET</span> /api/v1/audio/briefings/latest</span>
+            <span style="font-size: 0.7rem; color: var(--accent-rose);">Daily Flash</span>
+          </button>
+
+          <button class="endpoint-btn" onclick="selectEndpoint('post-audio-upload', this)">
+            <span><span class="method-badge method-post">POST</span> /api/v1/audio/upload</span>
+            <span style="font-size: 0.7rem; color: var(--accent-purple);">50MB Safe</span>
+          </button>
+
+          <button class="endpoint-btn" onclick="selectEndpoint('post-articles', this)">
+            <span><span class="method-badge method-post">POST</span> /api/v1/articles</span>
+            <span style="font-size: 0.7rem; color: var(--accent-purple);">Auth Key</span>
+          </button>
+
+          <button class="endpoint-btn" onclick="selectEndpoint('post-feedback', this)">
+            <span><span class="method-badge method-post">POST</span> /api/v1/feedback</span>
+            <span style="font-size: 0.7rem; color: var(--text-dim);">Feedback</span>
+          </button>
+
+          <button class="endpoint-btn" onclick="selectEndpoint('get-feedback', this)">
+            <span><span class="method-badge method-get">GET</span> /api/v1/feedback</span>
+            <span style="font-size: 0.7rem; color: var(--accent-purple);">Admin Auth</span>
+          </button>
+
+          <button class="endpoint-btn" onclick="selectEndpoint('get-socialposts', this)">
+            <span><span class="method-badge method-get">GET</span> /api/v1/socialposts</span>
+            <span style="font-size: 0.7rem; color: var(--text-dim);">Socials</span>
+          </button>
+
+          <button class="endpoint-btn" onclick="selectEndpoint('get-socialhandles', this)">
+            <span><span class="method-badge method-get">GET</span> /api/v1/socialhandles</span>
+            <span style="font-size: 0.7rem; color: var(--text-dim);">Handles</span>
+          </button>
+
+          <button class="endpoint-btn" onclick="selectEndpoint('get-sponsored', this)">
+            <span><span class="method-badge method-get">GET</span> /api/v1/articles/sponsored</span>
+            <span style="font-size: 0.7rem; color: var(--text-dim);">Ads</span>
+          </button>
+
+          <button class="endpoint-btn" onclick="selectEndpoint('post-sponsored', this)">
+            <span><span class="method-badge method-post">POST</span> /api/v1/articles/sponsored</span>
+            <span style="font-size: 0.7rem; color: var(--accent-purple);">Publish</span>
+          </button>
+
+          <button class="endpoint-btn" onclick="selectEndpoint('track-impression', this)">
+            <span><span class="method-badge method-post">POST</span> /api/v1/articles/{id}/track</span>
+            <span style="font-size: 0.7rem; color: var(--text-dim);">Telemetry</span>
+          </button>
+
+          <button class="endpoint-btn" onclick="selectEndpoint('get-sources', this)">
+            <span><span class="method-badge method-get">GET</span> /api/v1/sources</span>
+            <span style="font-size: 0.7rem; color: var(--text-dim);">Sources</span>
+          </button>
+
+          <button class="endpoint-btn" onclick="selectEndpoint('get-videostories', this)">
+            <span><span class="method-badge method-get">GET</span> /api/v1/videostories</span>
+            <span style="font-size: 0.7rem; color: var(--text-dim);">Videos</span>
+          </button>
+
+          <button class="endpoint-btn" onclick="selectEndpoint('get-videochannels', this)">
+            <span><span class="method-badge method-get">GET</span> /api/v1/videochannels</span>
+            <span style="font-size: 0.7rem; color: var(--text-dim);">Channels</span>
+          </button>
+
+          <button class="endpoint-btn" onclick="selectEndpoint('get-analytics', this)">
+            <span><span class="method-badge method-get">GET</span> /api/v1/analytics/summary</span>
+            <span style="font-size: 0.7rem; color: var(--accent-purple);">Admin Auth</span>
+          </button>
+
+          <button class="endpoint-btn" onclick="selectEndpoint('get-health', this)">
+            <span><span class="method-badge method-get">GET</span> /healthz/liveness</span>
+            <span style="font-size: 0.7rem; color: var(--accent-green);">Health</span>
+          </button>
+        </div>
+
+        <!-- Endpoint Inspector Panel -->
+        <div class="sim-card" id="apiDetailPanel">
+          <!-- Dynamically filled via selectEndpoint() -->
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 4: MAUI CLIENT BREAKDOWN -->
+    <section id="tab-maui" class="tab-content">
+      <div style="margin-bottom: 0.5rem;">
+        <h2 style="font-size: 1.3rem;">📱 .NET MAUI Client Architecture & Screen Map</h2>
+        <p style="color: var(--text-muted); font-size: 0.85rem;">
+          Cross-platform client (Android, Windows, iOS) built with Clean MVVM, First-run Onboarding, Background Audio Receivers, Brand Typography, and Zero-Jitter Scroll Stabilization.
+        </p>
+      </div>
+
+      <div class="maui-grid">
+        
+        <div class="maui-card">
+          <div class="maui-header">
+            <span class="maui-page-title">OnboardingPage.xaml</span>
+            <span class="badge-pill badge-rose">First-Run Setup</span>
+          </div>
+          <p style="font-size: 0.8rem; color: var(--text-muted);">
+            Introductory configuration wizard on app install. Guides users through multi-language selection (English, Yoruba, Igbo, Hausa), notification permissions, daily briefing schedule (8 AM / 6 PM WAT), and topic interest chips.
+          </p>
+          <div class="info-section">
+            <span class="section-label">Associated Code</span>
+            <span class="code-pill">OnboardingPage.xaml.cs</span>
+            <span class="code-pill">INotificationService.RequestPermissionAsync()</span>
+            <span class="code-pill">App.CreateWindow Routing</span>
+          </div>
+        </div>
+
+        <div class="maui-card">
+          <div class="maui-header">
+            <span class="maui-page-title">AudioBriefingReceiver.cs</span>
+            <span class="badge-pill badge-amber">AlarmManager Background</span>
+          </div>
+          <p style="font-size: 0.8rem; color: var(--text-muted);">
+            Android broadcast receiver invoked at 8:00 AM & 6:00 PM WAT by AlarmManager. Automatically fetches the latest audio briefing from NewsApi, persists it to local cache, and triggers native notification alerts. Rescheduled upon phone reboot via <span class="code-pill">BootCompletedReceiver.cs</span>.
+          </p>
+          <div class="info-section">
+            <span class="section-label">Associated Code</span>
+            <span class="code-pill">Platforms/Android/AudioBriefingReceiver.cs</span>
+            <span class="code-pill">Platforms/Android/BootCompletedReceiver.cs</span>
+            <span class="code-pill">BroadcastReceiver</span>
+          </div>
+        </div>
+
+        <div class="maui-card">
+          <div class="maui-header">
+            <span class="maui-page-title">MainPage.xaml</span>
+            <span class="badge-pill">Home Feed</span>
+          </div>
+          <p style="font-size: 0.8rem; color: var(--text-muted);">
+            Main news aggregation portal. Features hero breaking story carousels, category filter tabs, interactive audio narration bar with Play/Pause/Resume, pull-to-refresh, and pinned sponsored cards. Decoupled via <span class="code-pill">MainViewModel.cs</span> (82% code-behind reduction).
+          </p>
+          <div class="info-section">
+            <span class="section-label">Associated Code</span>
+            <span class="code-pill">MainViewModel.cs</span>
+            <span class="code-pill">ITextToSpeechService.Pause()</span>
+            <span class="code-pill">ResolveApiBaseUrlAsync()</span>
+          </div>
+        </div>
+
+        <div class="maui-card">
+          <div class="maui-header">
+            <span class="maui-page-title">DiscoverPage.xaml</span>
+            <span class="badge-pill badge-cyan">Explore Tab</span>
+          </div>
+          <p style="font-size: 0.8rem; color: var(--text-muted);">
+            Exploration hub. Search 18+ publishers, filter by publisher badges (Punch, Vanguard, BusinessDay), explore dedicated Opinion & Editorial columns with author bylines, and watch curated YouTube video briefings. Features batch progressive rendering.
+          </p>
+          <div class="info-section">
+            <span class="section-label">Associated Code</span>
+            <span class="code-pill">DiscoverViewModel.cs</span>
+            <span class="code-pill">GetOpinionsAsync()</span>
+            <span class="code-pill">Batch Progressive Rendering (15 cards)</span>
+          </div>
+        </div>
+
+        <div class="maui-card">
+          <div class="maui-header">
+            <span class="maui-page-title">ArticleWebPage.xaml</span>
+            <span class="badge-pill badge-amber">Reader View</span>
+          </div>
+          <p style="font-size: 0.8rem; color: var(--text-muted);">
+            Distraction-free article reader with brand typography (<span class="code-pill">Legacy Serif Bold</span> headlines & <span class="code-pill">Legacy Sans Book</span> body), audio streaming with range seeking, font resizing, and native sharing.
+          </p>
+          <div class="info-section">
+            <span class="section-label">Associated Code</span>
+            <span class="code-pill">ArticleDistillerService.cs</span>
+            <span class="code-pill">AudioPlayerService</span>
+            <span class="code-pill">TrackImpressionAsync()</span>
+          </div>
+        </div>
+
+        <div class="maui-card">
+          <div class="maui-header">
+            <span class="maui-page-title">Bookmarks & Recents</span>
+            <span class="badge-pill">Saved Vault</span>
+          </div>
+          <p style="font-size: 0.8rem; color: var(--text-muted);">
+            Offline reading vault and history tracking. Persists saved articles locally into SQLite with swipe-to-delete, offline full text access, and chronological reading history via <span class="code-pill">RecentlyReadService.cs</span>.
+          </p>
+          <div class="info-section">
+            <span class="section-label">Associated Code</span>
+            <span class="code-pill">BookmarksPage.xaml.cs</span>
+            <span class="code-pill">BookmarkService.cs</span>
+            <span class="code-pill">RecentlyReadService.cs</span>
+          </div>
+        </div>
+
+        <div class="maui-card">
+          <div class="maui-header">
+            <span class="maui-page-title">Notification Services</span>
+            <span class="badge-pill badge-purple">Cross-Platform Alerts</span>
+          </div>
+          <p style="font-size: 0.8rem; color: var(--text-muted);">
+            Unified cross-platform notifications. Implements Android NotificationChannels with high-priority audio channels, iOS <span class="code-pill">UNUserNotificationCenter</span> with <span class="code-pill">iOSNotificationDelegate</span>, and Windows Toast notifications.
+          </p>
+          <div class="info-section">
+            <span class="section-label">Associated Code</span>
+            <span class="code-pill">Platforms/Android/NotificationService.cs</span>
+            <span class="code-pill">Platforms/iOS/NotificationService.cs</span>
+            <span class="code-pill">AppNotificationBridge.cs</span>
+          </div>
+        </div>
+
+        <div class="maui-card">
+          <div class="maui-header">
+            <span class="maui-page-title">Android Scroll Stabilization</span>
+            <span class="badge-pill badge-green">UI Performance</span>
+          </div>
+          <p style="font-size: 0.8rem; color: var(--text-muted);">
+            Zero-jitter Android scrolling optimization: fixed 140px card dimensions to prevent image relayout shifts, native horizontal ScrollView replacing nested CollectionView, ARGB hex overlays replacing buggy BoxView opacity, and 2-day image caching.
+          </p>
+          <div class="info-section">
+            <span class="section-label">Key Techniques</span>
+            <span class="code-pill">HeightRequest="140" WidthRequest="130"</span>
+            <span class="code-pill">ItemSizingStrategy="MeasureFirstItem"</span>
+            <span class="code-pill">CachingEnabled = true</span>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- TAB 5: SECURITY & HARDENING MATRIX -->
+    <section id="tab-security" class="tab-content">
+      <div class="sim-card">
+        <h2 style="font-size: 1.3rem;">🛡️ Enterprise Security & API Hardening Matrix</h2>
+        <p style="color: var(--text-muted); font-size: 0.85rem;">
+          Detailed architecture breakdown of the 6-Step API Hardening Roadmap implemented across NewsApi, AdminDashboard, and client endpoints.
+        </p>
+
+        <div class="security-grid">
+          
+          <div class="sec-card">
+            <div class="sec-card-header">
+              <span style="font-weight: 700; color: var(--accent-green);">Step 1: Secrets & Config</span>
+              <span class="badge-pill">Completed</span>
+            </div>
+            <p style="font-size: 0.8rem; color: var(--text-muted);">
+              Scrubbed all hardcoded credentials from committed repository files. Configured .NET Secret Manager (<span class="code-pill">UserSecretsId</span>) for local development and non-blocking startup audit logging in <span class="code-pill">Program.cs</span>.
+            </p>
+            <div class="info-section">
+              <span class="section-label">Key Files</span>
+              <span class="code-pill">NewsApi/Program.cs</span>
+              <span class="code-pill">NewsApi/NewsApi.csproj</span>
+            </div>
+          </div>
+
+          <div class="sec-card">
+            <div class="sec-card-header">
+              <span style="font-weight: 700; color: var(--accent-cyan);">Step 2: Transport & Headers</span>
+              <span class="badge-pill badge-cyan">Completed</span>
+            </div>
+            <p style="font-size: 0.8rem; color: var(--text-muted);">
+              Enforced HTTPS redirection, HTTP Strict Transport Security (HSTS), and centralized security headers (<span class="code-pill">CSP</span>, <span class="code-pill">X-Frame-Options: DENY</span>, <span class="code-pill">X-Content-Type-Options: nosniff</span>, <span class="code-pill">Permissions-Policy</span>).
+            </p>
+            <div class="info-section">
+              <span class="section-label">Key Files</span>
+              <span class="code-pill">NewsApi/Program.cs (Security Headers Middleware)</span>
+            </div>
+          </div>
+
+          <div class="sec-card">
+            <div class="sec-card-header">
+              <span style="font-weight: 700; color: var(--accent-purple);">Step 3: Auth & Fail-Closed</span>
+              <span class="badge-pill badge-purple">Completed</span>
+            </div>
+            <p style="font-size: 0.8rem; color: var(--text-muted);">
+              Implemented fail-closed <span class="code-pill">ApiKeyMiddleware</span> (HTTP 503 in non-dev if secret key is missing; HTTP 401 on unauthorized write calls). Secured administrative endpoints while preserving public mobile telemetry.
+            </p>
+            <div class="info-section">
+              <span class="section-label">Key Files</span>
+              <span class="code-pill">Middleware/ApiKeyMiddleware.cs</span>
+              <span class="code-pill">Services/FeedbackService.cs</span>
+            </div>
+          </div>
+
+          <div class="sec-card">
+            <div class="sec-card-header">
+              <span style="font-weight: 700; color: var(--accent-amber);">Step 4: Validation & Uploads</span>
+              <span class="badge-pill badge-amber">Completed</span>
+            </div>
+            <p style="font-size: 0.8rem; color: var(--text-muted);">
+              Model binding annotations (<span class="code-pill">[Required]</span>, <span class="code-pill">[Url]</span>, <span class="code-pill">[StringLength]</span>), 50MB request size limit on audio uploads, file extension whitelisting (.mp3, .wav, .m4a, .ogg, .aac), and path traversal protection.
+            </p>
+            <div class="info-section">
+              <span class="section-label">Key Files</span>
+              <span class="code-pill">Controllers/AudioController.cs</span>
+              <span class="code-pill">Controllers/SourcesController.cs</span>
+            </div>
+          </div>
+
+          <div class="sec-card">
+            <div class="sec-card-header">
+              <span style="font-weight: 700; color: var(--accent-blue);">Step 5: DTO Decoupling</span>
+              <span class="badge-pill badge-blue">Completed</span>
+            </div>
+            <p style="font-size: 0.8rem; color: var(--text-muted);">
+              Decoupled API responses from EF Core database entities via dedicated strongly typed contracts (<span class="code-pill">SourceDto</span>, <span class="code-pill">VideoChannelDto</span>, <span class="code-pill">SocialPostDto</span>) and interface abstractions (<span class="code-pill">IYouTubeFeedService</span>, <span class="code-pill">ISocialFeedService</span>).
+            </p>
+            <div class="info-section">
+              <span class="section-label">Key Files</span>
+              <span class="code-pill">Models/ResponseDtos.cs</span>
+              <span class="code-pill">Services/ISocialFeedService.cs</span>
+            </div>
+          </div>
+
+          <div class="sec-card">
+            <div class="sec-card-header">
+              <span style="font-weight: 700; color: var(--accent-rose);">Step 6: Problem Details</span>
+              <span class="badge-pill badge-rose">Completed</span>
+            </div>
+            <p style="font-size: 0.8rem; color: var(--text-muted);">
+              Standardized on RFC 9457 <span class="code-pill">ProblemDetails</span> (<span class="code-pill">application/problem+json</span>) for all API errors with correlation <span class="code-pill">traceId</span>. Eliminated raw internal exception leaks in controllers while logging stack traces.
+            </p>
+            <div class="info-section">
+              <span class="section-label">Key Files</span>
+              <span class="code-pill">Middleware/GlobalExceptionMiddleware.cs</span>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Automated Test Coverage Matrix -->
+        <div class="sim-box" style="margin-top: 0.5rem;">
+          <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
+            <h3 style="font-size: 1rem;">🧪 Automated Unit & Integration Test Suite Status</h3>
+            <span class="badge-pill">237 Passed • 0 Failed (100%)</span>
+          </div>
+          <p style="font-size: 0.85rem; color: var(--text-muted);">
+            All 15 automated test suites execute in ~7 seconds under <span class="code-pill">dotnet test tests/NewsApiClient.Tests</span> verifying security, persistence, audio, and client logic.
+          </p>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 0.75rem; margin-top: 0.5rem;">
+            <div style="background: var(--bg-primary); padding: 0.6rem 0.75rem; border-radius: 6px; border: 1px solid var(--border-color); font-size: 0.8rem;">
+              <span style="color: var(--accent-green); font-weight: 700;">✓ ApiKeyMiddlewareHardeningTests</span> (18 tests)
+            </div>
+            <div style="background: var(--bg-primary); padding: 0.6rem 0.75rem; border-radius: 6px; border: 1px solid var(--border-color); font-size: 0.8rem;">
+              <span style="color: var(--accent-green); font-weight: 700;">✓ StoryDeduplicationTests</span> (24 tests)
+            </div>
+            <div style="background: var(--bg-primary); padding: 0.6rem 0.75rem; border-radius: 6px; border: 1px solid var(--border-color); font-size: 0.8rem;">
+              <span style="color: var(--accent-green); font-weight: 700;">✓ OpinionEditorialTests</span> (25 tests)
+            </div>
+            <div style="background: var(--bg-primary); padding: 0.6rem 0.75rem; border-radius: 6px; border: 1px solid var(--border-color); font-size: 0.8rem;">
+              <span style="color: var(--accent-green); font-weight: 700;">✓ ArticlesControllerTests</span> (35 tests)
+            </div>
+            <div style="background: var(--bg-primary); padding: 0.6rem 0.75rem; border-radius: 6px; border: 1px solid var(--border-color); font-size: 0.8rem;">
+              <span style="color: var(--accent-green); font-weight: 700;">✓ DbInitializerTests</span> (14 tests)
+            </div>
+            <div style="background: var(--bg-primary); padding: 0.6rem 0.75rem; border-radius: 6px; border: 1px solid var(--border-color); font-size: 0.8rem;">
+              <span style="color: var(--accent-green); font-weight: 700;">✓ ArticleSearchTests</span> (16 tests)
+            </div>
+            <div style="background: var(--bg-primary); padding: 0.6rem 0.75rem; border-radius: 6px; border: 1px solid var(--border-color); font-size: 0.8rem;">
+              <span style="color: var(--accent-green); font-weight: 700;">✓ TtsSynthesizerTests</span> (12 tests)
+            </div>
+            <div style="background: var(--bg-primary); padding: 0.6rem 0.75rem; border-radius: 6px; border: 1px solid var(--border-color); font-size: 0.8rem;">
+              <span style="color: var(--accent-green); font-weight: 700;">✓ AdminDashboardAuthTests</span> (15 tests)
+            </div>
+            <div style="background: var(--bg-primary); padding: 0.6rem 0.75rem; border-radius: 6px; border: 1px solid var(--border-color); font-size: 0.8rem;">
+              <span style="color: var(--accent-green); font-weight: 700;">✓ NotificationPreferencesTests</span> (16 tests)
+            </div>
+            <div style="background: var(--bg-primary); padding: 0.6rem 0.75rem; border-radius: 6px; border: 1px solid var(--border-color); font-size: 0.8rem;">
+              <span style="color: var(--accent-green); font-weight: 700;">✓ VideoThumbnailResolutionTests</span> (14 tests)
+            </div>
+            <div style="background: var(--bg-primary); padding: 0.6rem 0.75rem; border-radius: 6px; border: 1px solid var(--border-color); font-size: 0.8rem;">
+              <span style="color: var(--accent-green); font-weight: 700;">✓ FeedbackServiceTests</span> (12 tests)
+            </div>
+            <div style="background: var(--bg-primary); padding: 0.6rem 0.75rem; border-radius: 6px; border: 1px solid var(--border-color); font-size: 0.8rem;">
+              <span style="color: var(--accent-green); font-weight: 700;">✓ DateGroupingTests</span> (14 tests)
+            </div>
+            <div style="background: var(--bg-primary); padding: 0.6rem 0.75rem; border-radius: 6px; border: 1px solid var(--border-color); font-size: 0.8rem;">
+              <span style="color: var(--accent-green); font-weight: 700;">✓ NewSourcesTests</span> (10 tests)
+            </div>
+            <div style="background: var(--bg-primary); padding: 0.6rem 0.75rem; border-radius: 6px; border: 1px solid var(--border-color); font-size: 0.8rem;">
+              <span style="color: var(--accent-green); font-weight: 700;">✓ TtsBriefingFormatterTests</span> (8 tests)
+            </div>
+            <div style="background: var(--bg-primary); padding: 0.6rem 0.75rem; border-radius: 6px; border: 1px solid var(--border-color); font-size: 0.8rem;">
+              <span style="color: var(--accent-green); font-weight: 700;">✓ ServiceConfigurationTests</span> (4 tests)
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- TAB 6: QUICK START & DEV GUIDE -->
+    <section id="tab-quickstart" class="tab-content">
+      <div class="sim-card">
+        <h2 style="font-size: 1.3rem;">🚀 Running NigerianNewsGrid Locally & Testing</h2>
+        <p style="color: var(--text-muted); font-size: 0.85rem;">
+          The system supports one-click startup via PowerShell, Batch script, or Docker Compose with complete environment orchestration.
+        </p>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.25rem;">
+          
+          <div class="sim-box">
+            <h3 style="font-size: 1rem; color: var(--accent-green);">Method 1: PowerShell Startup (Recommended)</h3>
+            <p style="font-size: 0.8rem; color: var(--text-muted);">
+              Launches NewsApi, AdminDashboard, and NewsScraperService in interactive console windows or background jobs.
+            </p>
+            <pre class="code-block">
+# 1. Run all services with interactive logs
+.\run-services.ps1
+
+# 2. Or run silently in background jobs
+.\run-services.ps1 -Background
+
+# 3. Stop all running services
+.\run-services.ps1 -Stop
+
+# 4. Run full test suite (237 tests)
+dotnet test tests/NewsApiClient.Tests
+            </pre>
+          </div>
+
+          <div class="sim-box">
+            <h3 style="font-size: 1rem; color: var(--accent-cyan);">Method 2: Docker Compose (All 4 Microservices)</h3>
+            <p style="font-size: 0.8rem; color: var(--text-muted);">
+              Runs PostgreSQL 16, NewsApi, AdminDashboard, Scraper, and TtsWorker with shared persistent audio-data volume.
+            </p>
+            <pre class="code-block">
+# Launch all microservices + PostgreSQL
+docker-compose up -d --build
+
+# View live container logs
+docker-compose logs -f
+
+# Shut down and remove containers
+docker-compose down
+            </pre>
+          </div>
+
+          <div class="sim-box">
+            <h3 style="font-size: 1rem; color: var(--accent-amber);">Method 3: Local .NET CLI Debugging</h3>
+            <p style="font-size: 0.8rem; color: var(--text-muted);">
+              Run individual projects directly for active development in Visual Studio, VS Code, or terminal.
+            </p>
+            <pre class="code-block">
+# Start Web API (Port 56193)
+dotnet run --project src/NewsApi
+
+# Start Admin Dashboard (Port 56192)
+dotnet run --project src/AdminDashboard
+
+# Start Scraper Worker
+dotnet run --project src/NewsScraperService
+
+# Start Tri-Tier TTS Worker
+dotnet run --project src/TtsWorker
+            </pre>
+          </div>
+
+        </div>
+
+        <div class="sim-box">
+          <h3 style="font-size: 1rem;">🌐 Default Service Ports & Architecture Endpoints</h3>
+          <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem; margin-top: 0.5rem;">
+              <thead>
+                <tr style="border-bottom: 1px solid var(--border-color); text-align: left; color: var(--text-dim);">
+                  <th style="padding: 0.5rem;">Service</th>
+                  <th style="padding: 0.5rem;">Development Port</th>
+                  <th style="padding: 0.5rem;">Docker Port</th>
+                  <th style="padding: 0.5rem;">Security / Authentication</th>
+                  <th style="padding: 0.5rem;">Key URL</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr style="border-bottom: 1px solid var(--border-color);">
+                  <td style="padding: 0.5rem; font-weight: 600;">NewsApi</td>
+                  <td style="padding: 0.5rem;"><span class="code-pill">56193</span></td>
+                  <td style="padding: 0.5rem;"><span class="code-pill">5000:8080</span></td>
+                  <td style="padding: 0.5rem;"><span class="badge-pill badge-purple">X-Api-Key Header</span></td>
+                  <td style="padding: 0.5rem;"><a href="http://localhost:56193/swagger" target="_blank" style="color: var(--accent-cyan);">http://localhost:56193/swagger</a></td>
+                </tr>
+                <tr style="border-bottom: 1px solid var(--border-color);">
+                  <td style="padding: 0.5rem; font-weight: 600;">Admin Dashboard</td>
+                  <td style="padding: 0.5rem;"><span class="code-pill">56192</span></td>
+                  <td style="padding: 0.5rem;"><span class="code-pill">5001:8080</span></td>
+                  <td style="padding: 0.5rem;"><span class="badge-pill badge-cyan">Cookie Auth (Login)</span></td>
+                  <td style="padding: 0.5rem;"><a href="http://localhost:56192" target="_blank" style="color: var(--accent-cyan);">http://localhost:56192</a></td>
+                </tr>
+                <tr style="border-bottom: 1px solid var(--border-color);">
+                  <td style="padding: 0.5rem; font-weight: 600;">TtsWorker</td>
+                  <td style="padding: 0.5rem;"><span class="code-pill">Background Worker</span></td>
+                  <td style="padding: 0.5rem;"><span class="code-pill">Containerized</span></td>
+                  <td style="padding: 0.5rem;"><span class="badge-pill badge-rose">Tri-Tier Synthesizer</span></td>
+                  <td style="padding: 0.5rem; color: var(--text-muted);">audio-data:/app/data/audio</td>
+                </tr>
+                <tr style="border-bottom: 1px solid var(--border-color);">
+                  <td style="padding: 0.5rem; font-weight: 600;">PostgreSQL 16 DB</td>
+                  <td style="padding: 0.5rem;"><span class="code-pill">SQLite (news.db)</span></td>
+                  <td style="padding: 0.5rem;"><span class="code-pill">5432:5432</span></td>
+                  <td style="padding: 0.5rem;"><span class="badge-pill">EF Core Auto-Heal</span></td>
+                  <td style="padding: 0.5rem; color: var(--text-muted);">Host=localhost;Database=newsgrid</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Footer -->
+  <footer>
+    Nigerian News Grid Architecture Map v3.1 • Tri-Tier Neural Audio, Enterprise API Hardening & MVVM Client • 237 Passing Tests • September 2026
+  </footer>
+
+  <!-- Interactive Logic -->
+  <script>
+    // Tab Switching
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+
+      const targetTab = document.getElementById('tab-' + tabId);
+      if (targetTab) {
+        targetTab.classList.add('active');
+      }
+
+      const activeBtn = Array.from(document.querySelectorAll('.tab-btn')).find(btn => 
+        btn.getAttribute('onclick') && btn.getAttribute('onclick').includes(tabId)
+      );
+      if (activeBtn) activeBtn.classList.add('active');
+    }
+
+    // Node Metadata Database
+    const nodeDetails = {
+      api: {
+        title: "⚡ NewsApi (Core Backend Service)",
+        tier: "Core & Storage",
+        badgeColor: "var(--accent-green)",
+        summary: "Hardened high-performance ASP.NET Core 9 Web API serving aggregated Nigerian news, ML classification metadata, audio narration with HTTP 206 range seeking, sponsored PR campaigns, video stories, and analytics.",
+        responsibility: [
+          "RESTful HTTP endpoints for article ingestion, category briefings, search, and publisher feeds",
+          "Audio streaming with HTTP 206 Partial Content (Range processing) for smooth mobile playback seeking",
+          "Full-Text Search (ArticleSearchService) using SQLite FTS5 triggers or PostgreSQL tsvector/GIN",
+          "Fail-closed API Key authentication (ApiKeyMiddleware) and RFC 9457 Problem Details standardization",
+          "Hardened 50MB audio upload endpoint with strict file extension whitelisting and path traversal defense",
+          "Decoupled Clean Architecture DTO responses protecting database entities from client leaks",
+          "Direct sponsorship monetization engine with CTR analytics & impression tracking",
+          "EF Core database context with SQLite (development) and PostgreSQL 16 (production) with EnsureTablesExistAsync auto-provisioning"
+        ],
+        files: [
+          { name: "Program.cs", desc: "Dependency injection, middleware pipeline, security headers, CORS, and health checks" },
+          { name: "Controllers/ArticlesController.cs", desc: "CRUD, search, pagination, sponsored story endpoints, and telemetry" },
+          { name: "Controllers/AudioController.cs", desc: "HTTP 206 seekable Range delivery & hardened audio file uploads (50MB limit)" },
+          { name: "Controllers/FeedbackController.cs", desc: "User feedback & bug reporting endpoints (public submission, auth review)" },
+          { name: "Controllers/SocialPostsController.cs", desc: "Curated social media discussion posts and verified handles" },
+          { name: "Middleware/ApiKeyMiddleware.cs", desc: "Fail-closed API key verification & unauthorized protection" },
+          { name: "Middleware/GlobalExceptionMiddleware.cs", desc: "RFC 9457 Problem Details with traceId correlation" },
+          { name: "Services/ArticleSearchService.cs", desc: "Full-text search engine with FTS5 and LINQ fallback" },
+          { name: "Models/ResponseDtos.cs", desc: "Clean Architecture response contracts decoupled from EF Core entities" }
+        ],
+        env: [
+          "ConnectionStrings:NewsDb (SQLite or PostgreSQL)",
+          "ApiKey = AIzaSyAh7soVCbg-JfW-gUKVZIQkbd0sdlE34QI",
+          "Default Port: 56193 (Dev) / 5000 (Docker)"
+        ]
+      },
+      scraper: {
+        title: "🕷️ NewsScraperService (Ingestion Engine)",
+        tier: "Ingestion Tier",
+        badgeColor: "var(--accent-purple)",
+        summary: "Autonomous .NET Background Service executing continuous 15-minute scraping loops across 18+ leading Nigerian publications with byline extraction and heuristic opinion detection.",
+        responsibility: [
+          "Dual strategy scrapers: SitemapScraperBase (XML sitemaps) & RssScraperBase (RSS feeds)",
+          "Heuristic Opinion Detection (OpinionDetector.cs) identifying op-eds, columnists, and editorial pieces",
+          "Author Byline Extraction (ArticleContentExtractor.cs) sanitizing journalist and writer credits from JSON-LD schema",
+          "Deduplicates against NewsApi before making authenticated POST /api/v1/articles ingest calls",
+          "Throttled HTTP requests with SemaphoreSlim to respect publisher rate limits"
+        ],
+        files: [
+          { name: "ScraperWorker.cs", desc: "BackgroundService orchestrating the recurring crawl schedule" },
+          { name: "Services/OpinionDetector.cs", desc: "High-precision URL, title, and topic opinion detection" },
+          { name: "Services/ArticleContentExtractor.cs", desc: "HTML body cleaning, JSON-LD author extraction, and image resolution" },
+          { name: "Services/ArticleEnricher.cs", desc: "Article metadata enrichment before API ingestion" },
+          { name: "Scrapers/BusinessDayScraper.cs", desc: "Dedicated financial and opinion extractor for BusinessDay" },
+          { name: "Scrapers/VanguardSitemapScraper.cs", desc: "Specialized extractor for Vanguard News" },
+          { name: "Scrapers/PunchSitemapScraper.cs", desc: "Specialized extractor for The Punch" },
+          { name: "Scrapers/LindaIkejiScraper.cs", desc: "Specialized entertainment extractor for Linda Ikeji Blog" }
+        ],
+        env: [
+          "NewsApi:BaseUrl = http://localhost:56193",
+          "NewsApi:ApiKey = configured for authenticated ingestion",
+          "Scraper:IntervalMinutes = 15"
+        ]
+      },
+      ml: {
+        title: "🧠 NewsCategorizer.Trainer (ML Engine)",
+        tier: "Machine Learning Tier",
+        badgeColor: "var(--accent-amber)",
+        summary: "Machine learning trainer built on ML.NET 5.0 to automatically classify raw news stories into 7 primary categories with high accuracy.",
+        responsibility: [
+          "Featurizes article titles and summaries using n-gram text transformation",
+          "Trains Multiclass Maximum Entropy (L-BFGS) classification models",
+          "Evaluates Log-loss, Macro-accuracy, and Micro-accuracy",
+          "Preserves orthogonal ContentType (News vs Opinion) alongside topical categorization",
+          "Provides seed dataset and category feed configurations"
+        ],
+        files: [
+          { name: "Program.cs", desc: "ML pipeline definition, training execution, and model evaluation" },
+          { name: "ArticleTrainingData.cs", desc: "Input features and predicted category label schemas" },
+          { name: "SeedDataset.cs", desc: "Curated dataset of verified Nigerian news headlines" },
+          { name: "CategoryFeedConfig.cs", desc: "Category heuristics and classification thresholds" }
+        ],
+        env: [
+          "Output Model: MLModels/NewsCategorizerModel.zip"
+        ]
+      },
+      tts: {
+        title: "🎙️ TtsWorker (Tri-Tier Neural Speech Engine)",
+        tier: "Background Workers",
+        badgeColor: "var(--accent-rose)",
+        summary: "Scheduled background worker (8am & 6pm WAT) utilizing a Tri-Tier Neural Synthesis Engine to generate authentic Nigerian voice briefings.",
+        responsibility: [
+          "Tier 1 (Google Cloud TTS): Neural2 high-fidelity synthesis (en-NG-Neural2-A)",
+          "Tier 2 (Microsoft Edge Neural TTS — Default $0 Cost): Authentic Nigerian voices (en-NG-EzinneNeural & en-NG-AbeoNeural) streamed over TLS WebSockets",
+          "Tier 3 (Local Offline Safety Net): Compliant RIFF WAVE container generation during network outages",
+          "Cross-Source Story Deduplication (StoryDeduplicationHelper) preventing repetitive reading of identical news events across outlets",
+          "Shared persistent Docker volume (audio-data:/app/data/audio) for instant NewsApi delivery"
+        ],
+        files: [
+          { name: "Program.cs", desc: "Host builder and background worker registration" },
+          { name: "Service.cs", desc: "Briefing generation loop, story deduplication, and audio pipeline" },
+          { name: "Synthesizers/CompositeTtsSynthesizer.cs", desc: "Tri-tier fallback coordinator and engine selector" },
+          { name: "Synthesizers/EdgeNeuralTtsSynthesizer.cs", desc: "Zero-cost Edge Neural TTS with Nigerian English voices" },
+          { name: "Synthesizers/GoogleCloudTtsSynthesizer.cs", desc: "Cloud Neural2 high-fidelity synthesis provider" },
+          { name: "Synthesizers/LocalFallbackTtsSynthesizer.cs", desc: "Offline RIFF synthesizer safety net" }
+        ],
+        env: [
+          "NewsApi:BaseUrl = http://localhost:56193",
+          "GoogleCloud:ApiKey (optional for Tier 1)",
+          "AudioDirectory = data/audio"
+        ]
+      },
+      maui: {
+        title: "📱 NigerianNewGrid (.NET MAUI App)",
+        tier: "Client Tier",
+        badgeColor: "var(--accent-cyan)",
+        summary: "Cross-platform mobile and desktop application for Android, Windows, and iOS built with .NET MAUI, Clean MVVM architecture, and first-run onboarding wizard.",
+        responsibility: [
+          "First-run Onboarding Setup Wizard configuring language (English, Yoruba, Igbo, Hausa), alerts, and topic chips",
+          "Clean MVVM Architecture (MainViewModel, DiscoverViewModel) with dynamic endpoint racing (82% code-behind reduction)",
+          "Background Audio Briefing Scheduler (AudioBriefingReceiver & BootCompletedReceiver) fetching 8am & 6pm WAT audio",
+          "Cross-Platform Notifications (Android NotificationChannels, iOS UNUserNotificationCenter, Windows Toast)",
+          "Interactive voice narration player with segmented story playback and Play / Pause / Resume controls",
+          "Brand typography enforcement using bundled TrueType fonts (Legacy Serif Bold & Legacy Sans Book)",
+          "Android scroll stabilization (fixed 140px card dimensions, horizontal ScrollView, ARGB overlays, 2-day image caching)",
+          "Offline-capable SQLite bookmarks vault and recently read history (RecentlyReadService)"
+        ],
+        files: [
+          { name: "App.xaml.cs", desc: "First-run onboarding gateway and initial window swap routing" },
+          { name: "OnboardingPage.xaml", desc: "Language selection, notification schedule, and topic interest chips" },
+          { name: "ViewModels/MainViewModel.cs", desc: "Home feed MVVM state, audio play/pause/resume, and endpoint resolution" },
+          { name: "ViewModels/DiscoverViewModel.cs", desc: "Exploration hub state, op-eds, and video feed bindings" },
+          { name: "Platforms/Android/AudioBriefingReceiver.cs", desc: "AlarmManager broadcast receiver downloading 8am/6pm WAT briefings" },
+          { name: "Platforms/Android/NotificationService.cs", desc: "Android NotificationChannel manager and intent builder" },
+          { name: "Platforms/iOS/NotificationService.cs", desc: "iOS UNUserNotificationCenter delegate and badge manager" },
+          { name: "ArticleWebPage.xaml.cs", desc: "Full article reader, custom typography, audio player, and impression telemetry" },
+          { name: "Services/RecentlyReadService.cs", desc: "Local reading history tracking and recents manager" }
+        ],
+        env: [
+          "Consumes NigerianNewsGrid.Client portable SDK",
+          "Dynamic API URL racing: localhost / 10.0.2.2 / LAN / Cloud Run"
+        ]
+      },
+      admin: {
+        title: "📊 AdminDashboard (Web Management Portal)",
+        tier: "Management Tier",
+        badgeColor: "var(--accent-purple)",
+        summary: "ASP.NET Core Razor web portal providing monitoring, scrape triggering, source management, real-time CTR analytics, and cookie authentication.",
+        responsibility: [
+          "Secure Cookie Authentication (Login/Logout) protecting administrative operations",
+          "Direct Sponsor Management: Publish campaigns, set target URLs, pin to top, track live CTR",
+          "Real-time System Analytics: Daily active impressions, click metrics, and popular category breakdown",
+          "Source & Scrape Health Monitor: View last crawl timestamps, trigger manual syncs, and review logs",
+          "Social Handles & Curated Video Channel Management",
+          "Modern dark theme CSS dashboard with responsive layout"
+        ],
+        files: [
+          { name: "Pages/Login.cshtml", desc: "Secure administrator sign-in page with cookie session" },
+          { name: "Pages/Analytics.cshtml", desc: "Real-time impression, click, and user activity analytics dashboard" },
+          { name: "Pages/Sponsors.cshtml", desc: "Direct sponsorship publication & campaign analytics UI" },
+          { name: "Pages/Videos.cshtml", desc: "Curated YouTube channel & video briefing manager" },
+          { name: "Pages/Socials.cshtml", desc: "Social media handles and auto-syndication manager" },
+          { name: "Pages/Index.cshtml", desc: "System health overview and source status cards" }
+        ],
+        env: [
+          "ApiBaseUrl = http://localhost:56193",
+          "ApiKey = AIzaSyAh7soVCbg-JfW-gUKVZIQkbd0sdlE34QI",
+          "Default Port: 56192 (Dev) / 5001 (Docker)"
+        ]
+      },
+      db: {
+        title: "🗄️ Database Tier (SQLite / PostgreSQL)",
+        tier: "Storage Tier",
+        badgeColor: "var(--accent-blue)",
+        summary: "Persistent storage layer powered by Entity Framework Core with automatic SQLite/PostgreSQL provider switching, SQLite FTS5 synchronization, and auto-healing table migrations.",
+        responsibility: [
+          "SQLite in development with WAL (Write-Ahead Logging) mode enabled for high concurrency",
+          "PostgreSQL 16 container in production with connection pool optimization",
+          "Full-Text Search: Standalone Articles_fts index with synchronized AFTER UPDATE/DELETE triggers",
+          "Schema auto-healing (DbInitializer.EnsureTablesExistAsync) for persistent volume resilience",
+          "Legacy database baselining preventing duplicate column creation on pre-existing databases",
+          "Entities: Articles (Author, ContentType), Sources, VideoStories, SocialPosts, Feedbacks, AudioAssets"
+        ],
+        files: [
+          { name: "Data/NewsDbContext.cs", desc: "EF Core DbContext, entity configurations, and composite indexes" },
+          { name: "Infrastructure/DbInitializer.cs", desc: "Auto-healing table migrations, FTS5 triggers, and seed data" },
+          { name: "Migrations/20260913220753_AddAuthorAndContentType.cs", desc: "EF Core migration adding author bylines and opinion type" },
+          { name: "Extensions/ServiceCollectionExtensions.cs", desc: "Database provider switching & EF Core model warning suppression" }
+        ],
+        env: [
+          "PostgreSQL Port: 5432",
+          "User: newsuser, DB: newsgrid",
+          "SQLite Path: news.db"
+        ]
+      }
+    };
+
+    // Node Selection & Inspector Render
+    function selectNode(nodeKey) {
+      document.querySelectorAll('.arch-node').forEach(n => n.classList.remove('selected'));
+      const activeSvgNode = document.getElementById('node-' + nodeKey);
+      if (activeSvgNode) activeSvgNode.classList.add('selected');
+
+      const data = nodeDetails[nodeKey];
+      if (!data) return;
+
+      document.getElementById('inspTitle').innerHTML = data.title;
+      document.getElementById('inspTier').textContent = data.tier;
+      document.getElementById('inspTier').style.color = data.badgeColor;
+
+      let filesHtml = data.files.map(f => `
+        <li class="file-item">
+          <span class="file-name">${f.name}</span>
+          <span class="file-desc">${f.desc}</span>
+        </li>
+      `).join('');
+
+      let respHtml = data.responsibility.map(r => `
+        <li style="font-size: 0.8rem; color: var(--text-main); margin-bottom: 0.35rem;">• ${r}</li>
+      `).join('');
+
+      let envHtml = data.env.map(e => `
+        <span class="code-pill" style="display: block; margin-bottom: 0.3rem;">${e}</span>
+      `).join('');
+
+      document.getElementById('inspBody').innerHTML = `
+        <div class="info-section">
+          <span class="section-label">Summary</span>
+          <p style="font-size: 0.85rem; color: var(--text-muted);">${data.summary}</p>
+        </div>
+
+        <div class="info-section">
+          <span class="section-label">Core Responsibilities</span>
+          <ul style="list-style: none;">${respHtml}</ul>
+        </div>
+
+        <div class="info-section">
+          <span class="section-label">Key C# Files & Entry Points</span>
+          <ul class="file-list">${filesHtml}</ul>
+        </div>
+
+        <div class="info-section">
+          <span class="section-label">Configuration & Ports</span>
+          <div>${envHtml}</div>
+        </div>
+      `;
+    }
+
+    // Filter by Tier
+    function filterTier(tier, btn) {
+      document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+      btn.classList.add('active');
+
+      document.querySelectorAll('.arch-node').forEach(node => {
+        if (tier === 'all') {
+          node.style.opacity = '1';
+        } else {
+          node.style.opacity = node.classList.contains('tier-' + tier) ? '1' : '0.2';
+        }
+      });
+    }
+
+    // Search Nodes
+    function searchNodes(query) {
+      const q = query.toLowerCase().trim();
+      if (!q) {
+        document.querySelectorAll('.arch-node').forEach(n => n.style.opacity = '1');
+        return;
+      }
+
+      for (const [key, val] of Object.entries(nodeDetails)) {
+        const nodeEl = document.getElementById('node-' + key);
+        if (!nodeEl) continue;
+
+        const match = val.title.toLowerCase().includes(q) ||
+                      val.summary.toLowerCase().includes(q) ||
+                      val.files.some(f => f.name.toLowerCase().includes(q) || f.desc.toLowerCase().includes(q));
+
+        nodeEl.style.opacity = match ? '1' : '0.2';
+      }
+    }
+
+    function resetCanvas() {
+      document.getElementById('nodeSearch').value = '';
+      filterTier('all', document.querySelector('.filter-chip'));
+      selectNode('api');
+    }
+
+    // Simulation Steps Data
+    const simSteps = [
+      {
+        title: "1. Web Scraping & Byline Extraction",
+        component: "src/NewsScraperService",
+        status: "Step 1 of 6: Fetching RSS/Sitemaps & extracting author bylines",
+        desc: "The scraper loop queries 18+ publications (BusinessDay, Punch, Vanguard, The Guardian, etc.). OpinionDetector inspects URL paths and headline prefixes; ArticleContentExtractor parses JSON-LD metadata for author bylines.",
+        classes: ["ScraperWorker.cs", "OpinionDetector.cs", "ArticleContentExtractor.cs", "BusinessDayScraper.cs"],
+        payload: {
+          "sourceName": "BusinessDay",
+          "url": "https://businessday.ng/opinion/article/cbn-rate-hikes-and-the-future-of-naira/",
+          "title": "Opinion: CBN Rate Hikes and the Real Sector Outlook",
+          "author": "Dr. Aminu Bello",
+          "contentType": "Opinion",
+          "summary": "While monetary tightening curtails currency volatility, structural credit expansion remains vital...",
+          "publishedAt": "2026-09-18T08:30:00Z",
+          "imageUrl": "https://businessday.ng/wp-content/uploads/cbn_building.jpg"
+        }
+      },
+      {
+        title: "2. ML Text Categorization & Tagging",
+        component: "src/NewsCategorizer.Trainer",
+        status: "Step 2 of 6: Evaluating ML.NET classification model & op-ed routing",
+        desc: "Raw text passes through ML.NET n-gram featurization. The L-BFGS Multiclass classifier identifies topical category ('Business'), while OpinionDetector retains orthogonal 'Opinion' ContentType.",
+        classes: ["Program.cs", "ArticleTrainingData.cs", "PredictionEngine<Article, CategoryPrediction>"],
+        payload: {
+          "inputTitle": "Opinion: CBN Rate Hikes and the Real Sector Outlook",
+          "predictedCategory": "Business",
+          "contentType": "Opinion",
+          "confidenceScores": {
+            "Business": 0.962,
+            "Politics": 0.024,
+            "Tech": 0.010,
+            "Sports": 0.004
+          }
+        }
+      },
+      {
+        title: "3. Authenticated Ingestion & FTS5 Indexing",
+        component: "src/NewsApi -> EF Core",
+        status: "Step 3 of 6: Ingesting into NewsApi with API key & FTS5 full-text indexing",
+        desc: "The scraper POSTs to /api/v1/articles with X-Api-Key. ApiKeyMiddleware verifies authorization. NewsApi validates the DTO, saves to EF Core, and triggers automatic synchronization into Articles_fts.",
+        classes: ["ArticlesController.cs", "ApiKeyMiddleware.cs", "ResponseDtos.cs", "NewsDbContext.cs", "Articles_fts Triggers"],
+        payload: {
+          "id": 1280,
+          "title": "Opinion: CBN Rate Hikes and the Real Sector Outlook",
+          "author": "Dr. Aminu Bello",
+          "contentType": "Opinion",
+          "category": "Business",
+          "sourceName": "BusinessDay",
+          "ftsStatus": "Synchronized (DELETE old.Id trigger)",
+          "createdAt": "2026-09-18T08:31:02Z"
+        }
+      },
+      {
+        title: "4. Cross-Source Deduplication & Tri-Tier TTS",
+        component: "src/TtsWorker",
+        status: "Step 4 of 6: Deduplicating stories & synthesizing Nigerian neural voice audio",
+        desc: "TtsWorker checks recent reports using StoryDeduplicationHelper to prevent redundant briefings. It then synthesizes narration via EdgeNeuralTtsSynthesizer streaming authentic Nigerian voice (en-NG-EzinneNeural).",
+        classes: ["TtsWorker.cs", "StoryDeduplicationHelper.cs", "CompositeTtsSynthesizer.cs", "EdgeNeuralTtsSynthesizer.cs"],
+        payload: {
+          "articleId": 1280,
+          "deduplicationResult": "Unique Story Confirmed",
+          "synthesizerTier": "Tier 2 (Microsoft Edge Neural - en-NG-EzinneNeural)",
+          "cost": "$0.00 Cloud Cost",
+          "audioFile": "Business_1280.mp3",
+          "audioDurationSeconds": 142
+        }
+      },
+      {
+        title: "5. Seekable Audio Delivery & Output Caching",
+        component: "src/NewsApi (AudioController)",
+        status: "Step 5 of 6: Serving seekable audio with HTTP 206 Partial Content",
+        desc: "The client requests audio via GET /api/v1/audio/Business_1280.mp3. NewsApi processes HTTP Range headers and serves 206 Partial Content so mobile players can seek forward and backward instantly without downloading the whole file.",
+        classes: ["AudioController.cs", "PhysicalFile(..., enableRangeProcessing: true)", "NewsApiClient.cs"],
+        payload: {
+          "httpStatus": "206 Partial Content",
+          "contentRange": "bytes 0-1048575/2097152",
+          "acceptRanges": "bytes",
+          "contentType": "audio/mpeg",
+          "latency": "< 8ms"
+        }
+      },
+      {
+        title: "6. User Consumption, Audio Controls & Alarms",
+        component: "NigerianNewGrid (.NET MAUI)",
+        status: "Step 6 of 6: Rendered in MAUI reader mode with Play/Pause/Resume & scheduled alarm",
+        desc: "The user opens the article in distraction-free Reader Mode styled with custom fonts (Legacy Serif Bold). Tapping Play streams narration with live Pause and Resume support. At 8am & 6pm WAT, AudioBriefingReceiver fetches the latest briefing.",
+        classes: ["OnboardingPage.xaml", "MainViewModel.cs", "ArticleWebPage.xaml.cs", "AudioBriefingReceiver.cs", "ITextToSpeechService.cs"],
+        payload: {
+          "userAction": "READER_MODE_OPENED",
+          "typography": "Legacy Serif Bold / Legacy Sans Book",
+          "audioPlayback": "Playing (0:34 / 2:22)",
+          "offlineSaved": true,
+          "scheduledAlarm": "8:00 AM WAT & 6:00 PM WAT Active",
+          "telemetry": "POST /api/v1/articles/1280/track [200 OK]"
+        }
+      }
+    ];
+
+    let currentSimStep = 0;
+    let autoPlayInterval = null;
+
+    function renderSimStep(idx) {
+      currentSimStep = idx;
+      const step = simSteps[idx];
+
+      document.querySelectorAll('.step-item').forEach((el, i) => {
+        el.classList.toggle('active', i === idx);
+      });
+
+      document.getElementById('stepStatusText').textContent = step.status;
+      document.getElementById('simBoxTitle').textContent = step.title;
+      document.getElementById('simBoxComponent').textContent = step.component;
+      document.getElementById('simBoxDesc').textContent = step.desc;
+      document.getElementById('simClasses').innerHTML = step.classes.map(c => `<span class="code-pill">${c}</span>`).join(' ');
+      document.getElementById('simPayload').textContent = JSON.stringify(step.payload, null, 2);
+    }
+
+    function nextStep() {
+      currentSimStep = (currentSimStep + 1) % simSteps.length;
+      renderSimStep(currentSimStep);
+    }
+
+    function prevStep() {
+      currentSimStep = (currentSimStep - 1 + simSteps.length) % simSteps.length;
+      renderSimStep(currentSimStep);
+    }
+
+    function goToStep(idx) {
+      renderSimStep(idx);
+    }
+
+    function toggleAutoPlay() {
+      const btn = document.getElementById('autoPlayBtn');
+      if (autoPlayInterval) {
+        clearInterval(autoPlayInterval);
+        autoPlayInterval = null;
+        btn.textContent = "▶️ Auto-Play";
+        btn.classList.remove('btn-primary');
+        btn.classList.add('btn-secondary');
+      } else {
+        btn.textContent = "⏸️ Pause";
+        btn.classList.remove('btn-secondary');
+        btn.classList.add('btn-primary');
+        autoPlayInterval = setInterval(nextStep, 4000);
+      }
+    }
+
+    // Endpoint Database (v3.1)
+    const apiEndpoints = {
+      'get-articles': {
+        method: 'GET',
+        path: '/api/v1/articles',
+        auth: 'Public',
+        desc: 'Returns paginated news articles filtered by category, search keyword, source publisher, or contentType (News vs Opinion).',
+        params: [
+          { name: 'category', type: 'string', desc: 'Optional category filter (Politics, Business, Tech, etc.)' },
+          { name: 'contentType', type: 'string', desc: 'Optional content type: "News" or "Opinion"' },
+          { name: 'sourceId', type: 'int', desc: 'Optional publisher source ID filter' },
+          { name: 'page', type: 'int', desc: 'Page number (default: 1)' },
+          { name: 'pageSize', type: 'int', desc: 'Results per page (default: 20)' }
+        ],
+        sampleResponse: {
+          "page": 1,
+          "pageSize": 20,
+          "totalCount": 2450,
+          "items": [
+            {
+              "id": 1280,
+              "title": "CBN Holds Monetary Policy Rate at 26.75% to Anchor Inflation",
+              "author": null,
+              "contentType": "News",
+              "category": "Business",
+              "sourceName": "Vanguard News",
+              "publishedAt": "2026-09-18T06:15:00Z",
+              "imageUrl": "https://vanguardngr.com/uploads/cbn.jpg"
+            }
+          ]
+        }
+      },
+      'get-opinions': {
+        method: 'GET',
+        path: '/api/v1/articles?contentType=Opinion',
+        auth: 'Public',
+        desc: 'Retrieves curated editorial pieces, columns, and op-eds with verified author bylines from major Nigerian news outlets.',
+        params: [
+          { name: 'contentType', type: 'string', desc: 'Set to "Opinion"' },
+          { name: 'days', type: 'int', desc: 'Filter stories published within the last N days' },
+          { name: 'source', type: 'string', desc: 'Filter by publisher name (e.g. BusinessDay, Punch)' }
+        ],
+        sampleResponse: {
+          "page": 1,
+          "pageSize": 20,
+          "totalCount": 142,
+          "items": [
+            {
+              "id": 1281,
+              "title": "Opinion: CBN Rate Hikes and the Real Sector Outlook",
+              "author": "Dr. Aminu Bello",
+              "contentType": "Opinion",
+              "category": "Business",
+              "sourceName": "BusinessDay",
+              "publishedAt": "2026-09-18T08:30:00Z",
+              "imageUrl": "https://businessday.ng/uploads/bello.jpg"
+            }
+          ]
+        }
+      },
+      'get-audio': {
+        method: 'GET',
+        path: '/api/v1/audio/{fileName}',
+        auth: 'Public (Seekable)',
+        desc: 'Delivers synthesized news narration audio streams. Fully supports HTTP 206 Partial Content (Range processing) for mobile scrubbing.',
+        params: [
+          { name: 'fileName', type: 'string', desc: 'The audio filename (e.g. Business_1280.mp3)' },
+          { name: 'Range', type: 'Header', desc: 'Optional HTTP Range header (e.g. bytes=0-1048575)' }
+        ],
+        sampleResponse: {
+          "status": "HTTP 206 Partial Content",
+          "headers": {
+            "Accept-Ranges": "bytes",
+            "Content-Range": "bytes 0-1048575/2097152",
+            "Content-Type": "audio/mpeg"
+          }
+        }
+      },
+      'get-audio-latest': {
+        method: 'GET',
+        path: '/api/v1/audio/briefings/latest',
+        auth: 'Public',
+        desc: 'Automated discovery endpoint returning the most recently synthesized morning or evening audio news briefing metadata.',
+        params: [],
+        sampleResponse: {
+          "fileName": "Briefing_20260918_Morning.mp3",
+          "audioUrl": "/api/v1/audio/Briefing_20260918_Morning.mp3",
+          "generatedAt": "2026-09-18T07:00:00Z",
+          "durationSeconds": 180
+        }
+      },
+      'post-audio-upload': {
+        method: 'POST',
+        path: '/api/v1/audio/upload',
+        auth: 'Protected (X-Api-Key Required)',
+        desc: 'Hardened file upload endpoint for synthesized briefings. Enforces a 50MB RequestSizeLimit, strict file extension whitelisting (.mp3, .wav, .m4a, .ogg, .aac), and path traversal protection.',
+        params: [
+          { name: 'X-Api-Key', type: 'Header', desc: 'Required secret server API key' },
+          { name: 'file', type: 'IFormFile', desc: 'Audio binary file stream' }
+        ],
+        sampleResponse: {
+          "status": "Uploaded",
+          "fileName": "Briefing_20260918_Evening.mp3",
+          "sizeBytes": 2841920
+        }
+      },
+      'search-articles': {
+        method: 'GET',
+        path: '/api/v1/articles/search',
+        auth: 'Public',
+        desc: 'High-speed full-text search across titles, excerpts, and author bylines powered by SQLite FTS5 / PostgreSQL tsvector.',
+        params: [
+          { name: 'q', type: 'string', desc: 'Keyword search query (e.g. "Naira devaluation")' },
+          { name: 'category', type: 'string', desc: 'Optional category constraint' }
+        ],
+        sampleResponse: {
+          "query": "Naira devaluation",
+          "totalResults": 18,
+          "results": [
+            { "id": 1280, "title": "Naira firms up across parallel market", "sourceName": "TheCable" }
+          ]
+        }
+      },
+      'get-briefings': {
+        method: 'GET',
+        path: '/api/v1/articles/briefings',
+        auth: 'Public (Cached)',
+        desc: 'Curated home feed for the .NET MAUI client. Serves deduplicated top headlines, category briefings, and active sponsored announcements.',
+        params: [
+          { name: 'category', type: 'string', desc: 'Filter by category (optional)' }
+        ],
+        sampleResponse: {
+          "generatedAt": "2026-09-18T08:00:00Z",
+          "pinnedSponsored": {
+            "id": 990,
+            "title": "Flutterwave Expands Cross-Border Remittance",
+            "sponsorName": "Flutterwave",
+            "isSponsored": true
+          },
+          "categories": ["Politics", "Business", "Tech", "Sports", "Opinion"],
+          "heroArticles": []
+        }
+      },
+      'post-articles': {
+        method: 'POST',
+        path: '/api/v1/articles',
+        auth: 'Protected (X-Api-Key Required)',
+        desc: 'Ingests a newly scraped article from NewsScraperService into the NewsApi database. Rejects unauthorized callers with HTTP 401 or fail-closed 503.',
+        params: [
+          { name: 'X-Api-Key', type: 'Header', desc: 'Required secret server API key' },
+          { name: 'body', type: 'JSON ArticleDto', desc: 'Article payload (title, url, author, contentType, etc.)' }
+        ],
+        sampleResponse: {
+          "id": 1282,
+          "status": "Created",
+          "slug": "cbn-rate-hikes-and-real-sector"
+        }
+      },
+      'post-feedback': {
+        method: 'POST',
+        path: '/api/v1/feedback',
+        auth: 'Public',
+        desc: 'Allows mobile users to submit feedback, report broken stories, or suggest features.',
+        params: [
+          { name: 'UserEmail', type: 'string', desc: 'Optional user email address' },
+          { name: 'Message', type: 'string', desc: 'User feedback comment or bug report' },
+          { name: 'Category', type: 'string', desc: 'Feedback category (General, Bug, Content)' }
+        ],
+        sampleResponse: {
+          "id": 45,
+          "status": "Feedback Received",
+          "receivedAt": "2026-09-18T08:35:00Z"
+        }
+      },
+      'get-feedback': {
+        method: 'GET',
+        path: '/api/v1/feedback',
+        auth: 'Protected (X-Api-Key Required)',
+        desc: 'Administrative endpoint returning recent user feedback submissions with chronological sorting.',
+        params: [
+          { name: 'X-Api-Key', type: 'Header', desc: 'Mandatory API key' },
+          { name: 'limit', type: 'int', desc: 'Maximum records (default: 50)' }
+        ],
+        sampleResponse: [
+          { "id": 45, "userEmail": "reader@example.ng", "message": "Love the offline audio player!", "createdAt": "2026-09-18T08:35:00Z" }
+        ]
+      },
+      'get-socialposts': {
+        method: 'GET',
+        path: '/api/v1/socialposts',
+        auth: 'Public',
+        desc: 'Retrieves curated social posts from Nigerian journalists and official public agencies.',
+        params: [
+          { name: 'platform', type: 'string', desc: 'Optional platform filter (Twitter, YouTube)' }
+        ],
+        sampleResponse: [
+          { "id": 12, "handle": "@cenbank", "content": "MPC decisions for September 2026 released.", "postedAt": "2026-09-18T07:00:00Z" }
+        ]
+      },
+      'get-socialhandles': {
+        method: 'GET',
+        path: '/api/v1/socialhandles',
+        auth: 'Public',
+        desc: 'Returns verified Nigerian journalists, ministries, and media accounts monitored for automated social syndication.',
+        params: [],
+        sampleResponse: [
+          { "id": 1, "handle": "@cenbank", "displayName": "Central Bank of Nigeria", "isActive": true }
+        ]
+      },
+      'get-sponsored': {
+        method: 'GET',
+        path: '/api/v1/articles/sponsored',
+        auth: 'Public',
+        desc: 'Retrieves all active corporate sponsored campaigns with impression and CTR performance metrics.',
+        params: [],
+        sampleResponse: [
+          {
+            "id": 990,
+            "title": "Flutterwave Expands Enterprise Cross-Border Remittance",
+            "sponsorName": "Flutterwave",
+            "sponsorUrl": "https://flutterwave.com",
+            "isPinned": true,
+            "impressionCount": 6120,
+            "clickCount": 268,
+            "ctr": "4.38%"
+          }
+        ]
+      },
+      'post-sponsored': {
+        method: 'POST',
+        path: '/api/v1/articles/sponsored',
+        auth: 'Protected (X-Api-Key Required)',
+        desc: 'Publishes a new direct sponsored news article with campaign duration and custom destination URL.',
+        params: [
+          { name: 'X-Api-Key', type: 'Header', desc: 'Mandatory API key' },
+          { name: 'SponsorName', type: 'string', desc: 'Corporate brand name' },
+          { name: 'SponsorUrl', type: 'string', desc: 'Destination click URL' }
+        ],
+        sampleResponse: {
+          "id": 992,
+          "status": "Campaign Published",
+          "isPinned": true
+        }
+      },
+      'track-impression': {
+        method: 'POST',
+        path: '/api/v1/articles/{id}/track',
+        auth: 'Public (Low Latency)',
+        desc: 'Telemetry tracking endpoint incrementing article read or sponsored ad impression counters.',
+        params: [
+          { name: 'id', type: 'int', desc: 'Target article ID' }
+        ],
+        sampleResponse: {
+          "status": "Tracked",
+          "impressionCount": 6121
+        }
+      },
+      'get-sources': {
+        method: 'GET',
+        path: '/api/v1/sources',
+        auth: 'Public',
+        desc: 'Returns all 18+ registered Nigerian news publisher sources and active scraping statuses.',
+        params: [],
+        sampleResponse: [
+          { "id": 1, "name": "Vanguard", "url": "https://vanguardngr.com", "isActive": true },
+          { "id": 2, "name": "The Punch", "url": "https://punchng.com", "isActive": true },
+          { "id": 3, "name": "BusinessDay", "url": "https://businessday.ng", "isActive": true }
+        ]
+      },
+      'get-videostories': {
+        method: 'GET',
+        path: '/api/v1/videostories',
+        auth: 'Public',
+        desc: 'Fetches curated video shorts and briefings from Channels TV, Arise News, TVC, and BBC News Yoruba with resilient thumbnail resolution.',
+        params: [],
+        sampleResponse: [
+          { "id": 65, "title": "Channels TV News Recap", "youtubeVideoId": "xabc123", "channelName": "Channels Television", "displayThumbnailUrl": "https://i.ytimg.com/vi/xabc123/hqdefault.jpg" }
+        ]
+      },
+      'get-videochannels': {
+        method: 'GET',
+        path: '/api/v1/videochannels',
+        auth: 'Public',
+        desc: 'Lists registered broadcast news channels on YouTube with syndication sync status.',
+        params: [],
+        sampleResponse: [
+          { "id": 1, "name": "Channels Television", "channelId": "UCxxxx", "isActive": true }
+        ]
+      },
+      'get-analytics': {
+        method: 'GET',
+        path: '/api/v1/analytics/summary',
+        auth: 'Protected (X-Api-Key Required)',
+        desc: 'Provides system KPI metrics for the Admin Dashboard (Total impressions, clicks, article counts).',
+        params: [
+          { name: 'X-Api-Key', type: 'Header', desc: 'Mandatory API key' }
+        ],
+        sampleResponse: {
+          "totalArticles": 18900,
+          "activeSponsors": 4,
+          "totalImpressionsToday": 74200,
+          "averageCtr": "4.1%"
+        }
+      },
+      'get-health': {
+        method: 'GET',
+        path: '/healthz/liveness',
+        auth: 'Public',
+        desc: 'Liveness probe returning HTTP 200 OK used by Docker Compose and Google Cloud Run container health checks.',
+        params: [],
+        sampleResponse: {
+          "status": "Healthy",
+          "uptime": "4d 12h 30m"
+        }
+      }
+    };
+
+    function selectEndpoint(key, btn) {
+      document.querySelectorAll('.endpoint-btn').forEach(b => b.classList.remove('active'));
+      if (btn) btn.classList.add('active');
+
+      const ep = apiEndpoints[key];
+      if (!ep) return;
+
+      const methodClass = 'method-' + ep.method.toLowerCase();
+      let paramsHtml = ep.params.length === 0 
+        ? '<span style="font-size: 0.8rem; color: var(--text-dim);">No parameters required.</span>'
+        : ep.params.map(p => `
+          <div style="font-size: 0.8rem; margin-bottom: 0.35rem;">
+            <span class="code-pill" style="color: var(--accent-cyan);">${p.name}</span>
+            <span style="color: var(--text-dim); font-size: 0.75rem;">(${p.type})</span> : 
+            <span style="color: var(--text-muted);">${p.desc}</span>
+          </div>
+        `).join('');
+
+      document.getElementById('apiDetailPanel').innerHTML = `
+        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
+          <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <span class="method-badge ${methodClass}">${ep.method}</span>
+            <span style="font-family: var(--font-mono); font-size: 1.05rem; font-weight: 700;">${ep.path}</span>
+          </div>
+          <span class="badge-pill ${ep.auth.includes('Protected') ? 'badge-purple' : 'badge-cyan'}">${ep.auth}</span>
+        </div>
+
+        <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.25rem;">${ep.desc}</p>
+
+        <div class="info-section">
+          <span class="section-label">Parameters & Headers</span>
+          <div style="background: var(--bg-card); padding: 0.75rem; border-radius: 6px; border: 1px solid var(--border-color);">
+            ${paramsHtml}
+          </div>
+        </div>
+
+        <div class="info-section">
+          <span class="section-label">Sample JSON Response</span>
+          <pre class="code-block">${JSON.stringify(ep.sampleResponse, null, 2)}</pre>
+        </div>
+      `;
+    }
+
+    // Initialize Default State
+    window.addEventListener('DOMContentLoaded', () => {
+      selectNode('api');
+      renderSimStep(0);
+      selectEndpoint('get-articles', document.querySelector('.endpoint-btn'));
+    });
+  </script>
+</body>
+</html>

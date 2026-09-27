@@ -1,4 +1,7 @@
 using System.ComponentModel;
+using NigerianNewsGrid.Client;
+using NigerianNewsGrid.Client.Models;
+using NigerianNewGrid.Constants;
 using NigerianNewGrid.Services;
 
 namespace NigerianNewGrid;
@@ -6,8 +9,10 @@ namespace NigerianNewGrid;
 public partial class SettingsPage : ContentPage
 {
     private readonly INotificationService _notificationService;
-    private readonly Dictionary<string, (Label checkLabel, Label textLabel)> _langRows;
+    private readonly NewsApiClient _apiClient;
     private bool _isInitializing = true;
+    private int _selectedRating = 5;
+    private string _selectedFeedbackCategory = "General";
 
     private static readonly string[] PresetSuggestions =
     [
@@ -20,47 +25,16 @@ public partial class SettingsPage : ContentPage
         "CBN"
     ];
 
-    public SettingsPage(INotificationService notificationService)
+    public SettingsPage(INotificationService notificationService, NewsApiClient apiClient)
     {
         InitializeComponent();
         _notificationService = notificationService;
-
-        // Map language names to their XAML named controls
-        _langRows = new()
-        {
-            ["English"] = (CheckEnglish, LblEnglish),
-            ["Yoruba"] = (CheckYoruba, LblYoruba),
-            ["Igbo"] = (CheckIgbo, LblIgbo),
-            ["Hausa"] = (CheckHausa, LblHausa),
-        };
+        _apiClient = apiClient;
 
         Appearing += (_, _) =>
         {
-            UpdateLanguageChecks();
             LoadNotificationSettings();
         };
-    }
-
-    private void UpdateLanguageChecks()
-    {
-        var current = Preferences.Get("preferred_language", "English");
-        CurrentLanguageLabel.Text = $"Currently: {current}";
-
-        foreach (var (lang, (check, lbl)) in _langRows)
-        {
-            var isSelected = string.Equals(lang, current, StringComparison.OrdinalIgnoreCase);
-            check.IsVisible = isSelected;
-            lbl.FontAttributes = isSelected ? FontAttributes.Bold : FontAttributes.None;
-        }
-    }
-
-    private void OnLanguageTapped(object? sender, TappedEventArgs e)
-    {
-        if (e.Parameter is not string lang) return;
-
-        Preferences.Set("preferred_language", lang);
-        Preferences.Set("has_seen_onboarding", true);
-        UpdateLanguageChecks();
     }
 
     // ──────────────────────────────────────────────────────────
@@ -75,6 +49,9 @@ public partial class SettingsPage : ContentPage
         MorningTimeContainer.IsVisible = NotificationPreferences.MorningBriefingEnabled;
         TimePickerMorning.Time = NotificationPreferences.MorningBriefingTime;
 
+        SwitchAudioBriefings.IsToggled = NotificationPreferences.AudioBriefingsEnabled;
+        AudioBriefingsScheduleContainer.IsVisible = NotificationPreferences.AudioBriefingsEnabled;
+
         SwitchKeywordAlerts.IsToggled = NotificationPreferences.KeywordAlertsEnabled;
         KeywordAlertsContainer.IsVisible = NotificationPreferences.KeywordAlertsEnabled;
 
@@ -85,6 +62,27 @@ public partial class SettingsPage : ContentPage
         RenderPresetSuggestions();
 
         _isInitializing = false;
+    }
+
+    private async void OnAudioBriefingsToggled(object? sender, ToggledEventArgs e)
+    {
+        if (_isInitializing) return;
+
+        NotificationPreferences.AudioBriefingsEnabled = e.Value;
+        AudioBriefingsScheduleContainer.IsVisible = e.Value;
+
+        if (e.Value)
+        {
+            var granted = await _notificationService.RequestPermissionAsync();
+            if (granted)
+            {
+                _notificationService.ScheduleAudioBriefings();
+            }
+        }
+        else
+        {
+            _notificationService.CancelAudioBriefings();
+        }
     }
 
     private async void OnMorningBriefingToggled(object? sender, ToggledEventArgs e)
@@ -112,9 +110,9 @@ public partial class SettingsPage : ContentPage
     {
         if (_isInitializing || e.PropertyName != nameof(TimePicker.Time)) return;
 
-        if (TimePickerMorning.Time.HasValue)
+        var picker = sender as TimePicker ?? TimePickerMorning;
+        if (picker?.Time is { } time)
         {
-            var time = TimePickerMorning.Time.Value;
             NotificationPreferences.MorningBriefingTime = time;
             if (NotificationPreferences.MorningBriefingEnabled)
             {
@@ -299,4 +297,129 @@ public partial class SettingsPage : ContentPage
         if (_isInitializing) return;
         Preferences.Set("analytics_enabled", e.Value);
     }
+
+    // ──────────────────────────────────────────────────────────
+    // Feedback & Support Submission
+    // ──────────────────────────────────────────────────────────
+
+    private void OnStarClicked(object? sender, EventArgs e)
+    {
+        if (sender is Button btn && int.TryParse(btn.CommandParameter?.ToString(), out int rating))
+        {
+            _selectedRating = rating;
+            Button[] stars = [Star1, Star2, Star3, Star4, Star5];
+            for (int i = 0; i < stars.Length; i++)
+            {
+                if (i + 1 == rating)
+                {
+                    stars[i].BackgroundColor = GetColor("AccentBlue", Color.FromArgb("#0066FF"));
+                    stars[i].TextColor = Colors.White;
+                    stars[i].FontAttributes = FontAttributes.Bold;
+                }
+                else
+                {
+                    stars[i].BackgroundColor = GetRes<Color>("Gray100", Color.FromArgb("#F1F5F9"));
+                    stars[i].TextColor = GetRes<Color>("Gray900", Color.FromArgb("#212529"));
+                    stars[i].FontAttributes = FontAttributes.None;
+                }
+            }
+        }
+    }
+
+    private void OnFeedbackCategoryClicked(object? sender, EventArgs e)
+    {
+        if (sender is Button btn && btn.CommandParameter is string category)
+        {
+            _selectedFeedbackCategory = category;
+            Button[] categories = [CatGeneral, CatBug, CatFeature, CatContent];
+            foreach (var b in categories)
+            {
+                bool isSel = string.Equals(b.CommandParameter as string, category, StringComparison.OrdinalIgnoreCase);
+                if (isSel)
+                {
+                    b.BackgroundColor = GetColor("AccentBlue", Color.FromArgb("#0066FF"));
+                    b.TextColor = Colors.White;
+                    b.FontAttributes = FontAttributes.Bold;
+                }
+                else
+                {
+                    b.BackgroundColor = GetRes<Color>("Gray100", Color.FromArgb("#F1F5F9"));
+                    b.TextColor = GetRes<Color>("Gray900", Color.FromArgb("#212529"));
+                    b.FontAttributes = FontAttributes.None;
+                }
+            }
+        }
+    }
+
+    private async void OnSubmitFeedbackClicked(object? sender, EventArgs e)
+    {
+        var msg = TxtFeedbackMessage.Text?.Trim();
+        if (string.IsNullOrWhiteSpace(msg) || msg.Length < 3)
+        {
+            LblFeedbackStatus.Text = "⚠️ Please type a message with at least 3 characters.";
+            LblFeedbackStatus.TextColor = Colors.Red;
+            LblFeedbackStatus.IsVisible = true;
+            return;
+        }
+
+        try
+        {
+            BtnSubmitFeedback.IsEnabled = false;
+            FeedbackSpinner.IsVisible = true;
+            FeedbackSpinner.IsRunning = true;
+            LblFeedbackStatus.IsVisible = false;
+
+            var baseUrl = Preferences.Get(AppPreferenceKeys.ApiBaseUrl, "http://localhost:56193");
+            _apiClient.BaseUrl = baseUrl;
+
+            var req = new FeedbackRequestDto(
+                Rating: _selectedRating,
+                Category: _selectedFeedbackCategory,
+                Message: msg,
+                UserEmail: TxtFeedbackEmail.Text?.Trim(),
+                AppVersion: "1.0.0",
+                Platform: DeviceInfo.Platform.ToString()
+            );
+
+            var resp = await _apiClient.SubmitFeedbackAsync(req);
+            FeedbackSpinner.IsRunning = false;
+            FeedbackSpinner.IsVisible = false;
+
+            if (resp.Success)
+            {
+                LblFeedbackStatus.Text = $"✅ {resp.Message}";
+                LblFeedbackStatus.TextColor = GetRes<Color>("AccentGreen", Color.FromArgb("#16A34A"));
+                LblFeedbackStatus.IsVisible = true;
+                TxtFeedbackMessage.Text = string.Empty;
+                SemanticScreenReader.Announce("Feedback submitted successfully. Thank you!");
+            }
+            else
+            {
+                LblFeedbackStatus.Text = $"❌ {resp.Message}";
+                LblFeedbackStatus.TextColor = Colors.Red;
+                LblFeedbackStatus.IsVisible = true;
+            }
+        }
+        catch (Exception ex)
+        {
+            FeedbackSpinner.IsRunning = false;
+            FeedbackSpinner.IsVisible = false;
+            LblFeedbackStatus.Text = $"❌ Error sending feedback: {ex.Message}";
+            LblFeedbackStatus.TextColor = Colors.Red;
+            LblFeedbackStatus.IsVisible = true;
+        }
+        finally
+        {
+            BtnSubmitFeedback.IsEnabled = true;
+        }
+    }
+
+    private static T GetRes<T>(string key, T fallback)
+    {
+        if (Application.Current?.Resources is { } res &&
+            res.TryGetValue(key, out var raw) && raw is T typed)
+            return typed;
+        return fallback;
+    }
 }
+

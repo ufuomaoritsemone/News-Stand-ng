@@ -67,6 +67,16 @@ public class BookmarkService : IBookmarkService
         }
     }
 
+    public void ClearAllBookmarks()
+    {
+        EnsureLoaded();
+        if (_bookmarks.Count == 0) return;
+
+        _bookmarks.Clear();
+        Save();
+        BookmarksChanged?.Invoke(this, EventArgs.Empty);
+    }
+
     private void EnsureLoaded()
     {
         if (_initialized) return;

@@ -30,7 +30,12 @@ public class NewsDbContext : DbContext
             entity.HasIndex(a => a.PublishedAt);
             entity.HasIndex(a => a.Category);
             entity.HasIndex(a => a.Source);
+            entity.HasIndex(a => a.ContentType);
             entity.HasIndex(a => a.Url);
+            entity.HasIndex(a => a.Title);
+            entity.HasIndex(a => a.IsSponsored);
+            entity.HasIndex(a => a.IsPinned);
+            entity.HasIndex(a => a.CampaignExpiresAt);
         });
 
         modelBuilder.Entity<AudioAsset>(entity =>

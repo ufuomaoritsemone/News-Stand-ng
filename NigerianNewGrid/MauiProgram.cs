@@ -4,6 +4,7 @@ using System.Net.Http;
 using Polly;
 using Polly.Extensions.Http;
 using NigerianNewsGrid.Client;
+using Plugin.AdMob;
 
 namespace NigerianNewGrid
 {
@@ -14,12 +15,15 @@ namespace NigerianNewGrid
             var builder = MauiApp.CreateBuilder();
             builder
                 .UseMauiApp<App>()
+                .UseAdMob()
                 .ConfigureFonts(fonts =>
                 {
                     fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
                     fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
                     fonts.AddFont("LegacySerifITCTTBold.ttf", "LegacySerifBold");
-                    fonts.AddFont("Legacy Sans Book.PFM", "LegacySansBook");
+                    fonts.AddFont("LegacySerifITCTTBold.ttf", "LegacySerifITCTTBold");
+                    fonts.AddFont("Legacy Sans Book.TTF", "LegacySansBook");
+                    fonts.AddFont("Legacy Sans Book.TTF", "Legacy Sans Book");
                 });
 
 #if DEBUG
@@ -27,7 +31,7 @@ namespace NigerianNewGrid
 #endif
 
             // Register NewsApiClient as a typed client with IHttpClientFactory and resiliency policies.
-            // NOTE: BaseAddress is intentionally NOT set here. ResolveApiBaseUrlAsync in MainPage
+            // NOTE: BaseAddress is intentionally NOT set here. ResolveApiBaseUrlAsync in MainViewModel
             // dynamically discovers the correct host (e.g. 10.0.2.2 on Android emulator vs localhost
             // on Windows/iOS). GetDailyBriefingAsync builds fully-qualified URIs, so BaseAddress is unused.
             builder.Services.AddHttpClient<NewsApiClient>((sp, client) =>
@@ -48,9 +52,10 @@ namespace NigerianNewGrid
                 client.Timeout = TimeSpan.FromSeconds(5);
             });
 
-            // Register Core Architecture Services (TTS, Bookmarks, Caching)
+            // Register Core Architecture Services (TTS, Bookmarks, Caching, Recently Read)
             builder.Services.AddSingleton<NigerianNewGrid.Services.ITextToSpeechService, NigerianNewGrid.Services.MauiTextToSpeechService>();
             builder.Services.AddSingleton<NigerianNewGrid.Services.IBookmarkService, NigerianNewGrid.Services.BookmarkService>();
+            builder.Services.AddSingleton<NigerianNewGrid.Services.IRecentlyReadService, NigerianNewGrid.Services.RecentlyReadService>();
             builder.Services.AddSingleton<NigerianNewGrid.Services.IBriefingCacheService, NigerianNewGrid.Services.BriefingCacheService>();
             builder.Services.AddSingleton<NigerianNewGrid.Services.IAnalyticsService, NigerianNewGrid.Services.AnalyticsService>();
 
@@ -68,12 +73,17 @@ namespace NigerianNewGrid
             builder.Services.AddSingleton<NigerianNewGrid.Services.INotificationService, NigerianNewGrid.Services.NullNotificationService>();
 #endif
 
+            // Register UI ViewModels (Fix #32, #33)
+            builder.Services.AddTransient<NigerianNewGrid.ViewModels.MainViewModel>();
+            builder.Services.AddTransient<NigerianNewGrid.ViewModels.DiscoverViewModel>();
+
             // Register UI pages so they can be resolved from DI if needed.
             builder.Services.AddTransient<MainPage>();
             builder.Services.AddTransient<ArticleWebPage>();
             builder.Services.AddTransient<BookmarksPage>();
             builder.Services.AddTransient<DiscoverPage>();
             builder.Services.AddTransient<SettingsPage>();
+            builder.Services.AddTransient<OnboardingPage>();
             builder.Services.AddSingleton<AppShell>();
 
             var app = builder.Build();

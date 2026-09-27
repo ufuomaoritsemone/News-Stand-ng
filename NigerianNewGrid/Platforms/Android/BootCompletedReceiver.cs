@@ -19,5 +19,13 @@ public class BootCompletedReceiver : BroadcastReceiver
 
             notificationService.ScheduleDailyMorningBriefing(NotificationPreferences.MorningBriefingTime);
         }
+
+        if (NotificationPreferences.AudioBriefingsEnabled)
+        {
+            var notificationService = IPlatformApplication.Current?.Services.GetService<INotificationService>()
+                ?? new NotificationService();
+
+            notificationService.ScheduleAudioBriefings();
+        }
     }
 }

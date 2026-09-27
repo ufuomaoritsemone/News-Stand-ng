@@ -1,0 +1,57 @@
+# Antigravity AI Agent Skill: API Security & Structure Auditor
+# Version: 1.0.0
+# Description: Evaluates an existing C# ASP.NET Core backend API codebase against security best practices and architectural standards.
+
+meta:
+  name: "api_security_structure_auditor"
+  category: "code_review"
+  framework: "NET_Core"
+
+execution_steps:
+  - step: 1
+    action: "Scan the codebase for Program.cs, Startup.cs, and configuration files to verify pipeline middleware, security components, and dependency injection patterns."
+  - step: 2
+    action: "Review Controllers, Minimal API endpoints, and Data Transfer Objects (DTOs) to evaluate input handling and model separation."
+  - step: 3
+    action: "Inspect the Data Access Layer (DAL) or Entity Framework Core contexts to verify query formulation and connection behaviors."
+  - step: 4
+    action: "Generate a structured compliance report marking each item as [PASSED], [FAILED], or [WARNING]."
+
+checklist:
+  authentication_and_authorization:
+    - rule: "Standard Authentication Verification"
+      check: "Search for custom JWT decoding blocks. Ensure standard packages like Microsoft.AspNetCore.Authentication.JwtBearer are utilized instead."
+    - rule: "Token Validation Parameters"
+      check: "Verify TokenValidationParameters specifies ValidateIssuer = true, ValidateAudience = true, ValidateLifetime = true, and a robust IssuerSigningKey."
+    - rule: "Authorization Granularity"
+      check: "Check that [Authorize] attributes are not just applied globally without intent. Look for policy-based or requirement-based constraints rather than raw string roles."
+
+  transport_and_network_security:
+    - rule: "HTTPS Redirection"
+      check: "Verify 'app.UseHttpsRedirection();' is declared early in the pipeline program initialization."
+    - rule: "Strict CORS Controls"
+      check: "Ensure builder.Services.AddCors() explicitly lists allowed origins. Throw a FAILED alert if .AllowAnyOrigin() or '*' is configured alongside AllowCredentials()."
+    - rule: "Security Header Injection"
+      check: "Look for custom middleware or production configurations applying headers such as X-Content-Type-Options: nosniff and Content-Security-Policy."
+
+  data_validation_and_handling:
+    - rule: "Model Separation (DTOs)"
+      check: "Scan API action parameters. Ensure DbContext entities (e.g., classes inheriting from or mapped to the DB) are never directly accepted as inputs or raw outputs."
+    - rule: "Input Validation Layers"
+      check: "Check for DataAnnotations ([Required], [StringLength]) or explicit AbstractValidator registrations using FluentValidation frameworks."
+    - rule: "Rate Limiting Pipeline"
+      check: "Confirm 'app.UseRateLimiter();' is chained within the request pipeline to prevent denial-of-service and route exhaustion."
+    - rule: "SQL Injection Prevention"
+      check: "Inspect Linq/EF Core expressions. Flag any occurrences of raw string concatenation inside FromSqlRaw or ExecuteSqlRaw methods."
+
+  secrets_and_environment_management:
+    - rule: "Zero Hardcoded Secrets"
+      check: "Scan appsettings.json, appsettings.Development.json, and constants files for production-grade passwords, private keys, or raw SQL connection strings."
+    - rule: "Vault Integration Proof"
+      check: "Verify implementation of Secret Manager during local development and Azure Key Vault or AWS Secrets Manager configuration for production environments."
+
+  observability_and_error_handling:
+    - rule: "Safe Logging Configuration"
+      check: "Ensure Serilog, NLog, or ILogger configurations do not bind destructuring parameters across high-risk fields like Password, CVV, or Secret."
+    - rule: "Exception Masking & RFC 9457 Compliance"
+      check: "Verify 'app.UseExceptionHandler();' is correctly registered. Ensure customized ExceptionHandlers return RFC 9457 Problem Details instead of full engine stack traces to the client."

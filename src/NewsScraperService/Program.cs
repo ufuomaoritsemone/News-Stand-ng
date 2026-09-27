@@ -10,6 +10,7 @@ var host = Host.CreateDefaultBuilder(args)
         services.AddSingleton<MlCategorizerEngine>();
         services.AddSingleton<ArticleContentExtractor>();
         services.AddSingleton<UrlFrontierManager>();
+        services.AddSingleton<IArticleEnricher, ArticleEnricher>();
         services.AddHostedService<ScraperWorker>();
     })
     .Build();

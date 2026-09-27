@@ -32,7 +32,8 @@ public class AnalyticsController : ControllerBase
 
         var allowedTypes = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
-            "app_open", "article_read", "article_share", "article_bookmark"
+            "app_open", "article_read", "article_share", "article_bookmark",
+            "audio_listen_start", "audio_listen_complete", "audio_listen", "audio_complete"
         };
 
         var validEvents = events
@@ -77,11 +78,15 @@ public class AnalyticsController : ControllerBase
         CancellationToken cancellationToken = default)
     {
         var since = DateTimeOffset.UtcNow.AddDays(-Math.Abs(days));
-
-        var events = await _db.UserEvents
+        var allRecent = await _db.UserEvents
             .AsNoTracking()
-            .Where(e => e.OccurredAt >= since)
             .ToListAsync(cancellationToken);
+
+        var events = allRecent
+            .Where(e => e.OccurredAt >= since)
+            .OrderByDescending(e => e.OccurredAt)
+            .Take(10000)
+            .ToList();
 
         var totalEvents = events.Count;
         var uniqueDevices = events.Select(e => e.DeviceId).Distinct().Count();
@@ -115,6 +120,10 @@ public class AnalyticsController : ControllerBase
             .OrderBy(d => d.Date)
             .ToList();
 
+        var audioStarted = byType.GetValueOrDefault("audio_listen_start", 0) + byType.GetValueOrDefault("audio_listen", 0);
+        var audioCompleted = byType.GetValueOrDefault("audio_listen_complete", 0) + byType.GetValueOrDefault("audio_complete", 0);
+        var audioCompletionRate = audioStarted > 0 ? Math.Round((audioCompleted * 100.0 / audioStarted), 1) : 0.0;
+
         return Ok(new AnalyticsSummaryDto
         {
             TotalEvents = totalEvents,
@@ -123,6 +132,9 @@ public class AnalyticsController : ControllerBase
             ArticleReads = byType.GetValueOrDefault("article_read", 0),
             SharesClicked = byType.GetValueOrDefault("article_share", 0),
             BookmarksAdded = byType.GetValueOrDefault("article_bookmark", 0),
+            AudioListensStarted = audioStarted,
+            AudioListensCompleted = audioCompleted,
+            AudioCompletionRate = audioCompletionRate,
             TopArticles = topArticles,
             DailyBreakdown = dailyBreakdown,
             PeriodDays = days
@@ -147,13 +159,14 @@ public class AnalyticsController : ControllerBase
         if (!string.IsNullOrWhiteSpace(eventType))
             query = query.Where(e => e.EventType == eventType.ToLowerInvariant());
 
-        var total = await query.CountAsync(cancellationToken);
+        var allMatching = await query.ToListAsync(cancellationToken);
+        var total = allMatching.Count;
 
-        var rawRows = await query
+        var rawRows = allMatching
             .OrderByDescending(e => e.OccurredAt)
             .Skip((pageIndex - 1) * size)
             .Take(size)
-            .ToListAsync(cancellationToken);
+            .ToList();
 
         var rows = rawRows.Select(e => new UserEventRowDto
         {
@@ -197,6 +210,9 @@ public class AnalyticsSummaryDto
     public int ArticleReads { get; set; }
     public int SharesClicked { get; set; }
     public int BookmarksAdded { get; set; }
+    public int AudioListensStarted { get; set; }
+    public int AudioListensCompleted { get; set; }
+    public double AudioCompletionRate { get; set; }
     public int PeriodDays { get; set; }
     public List<TopArticleDto> TopArticles { get; set; } = [];
     public List<DailyCountDto> DailyBreakdown { get; set; } = [];

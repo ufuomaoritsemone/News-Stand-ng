@@ -28,7 +28,7 @@
 		<MauiXamlInflator>SourceGen</MauiXamlInflator>
 
 		<!-- Display name -->
-		<ApplicationTitle>Nigerian News Grid</ApplicationTitle>
+		<ApplicationTitle>Nigerian News</ApplicationTitle>
 
 		<!-- App Identifier -->
 		<ApplicationId>com.nigeriannewsgrid.app</ApplicationId>
@@ -42,25 +42,17 @@
 
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">15.0</SupportedOSPlatformVersion>
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst'">15.0</SupportedOSPlatformVersion>
-		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">21.0</SupportedOSPlatformVersion>
+		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">23.0</SupportedOSPlatformVersion>
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</SupportedOSPlatformVersion>
 		<TargetPlatformMinVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</TargetPlatformMinVersion>
 	</PropertyGroup>
 
 	<ItemGroup>
-		<!-- App Icon — Nigerian News Grid brand logo with green adaptive background -->
-		<MauiIcon Include="Resources\AppIcon\logo.png"
-		          Resize="true"
-		          BaseSize="1400,900"
-		          ForegroundFile="Resources\AppIcon\logo.png"
-		          ForegroundScale="0.65"
-		          Color="#1B6B3A" />
+		<!-- App Icon — Nigerian News brand logo with dark adaptive background -->
+		<MauiIcon Include="Resources\AppIcon\logo.png" Resize="true" BaseSize="512,512" ForegroundFile="Resources\AppIcon\logo.png" ForegroundScale="0.85" Color="#1A1D20" />
 
-		<!-- Splash Screen — Green-tinted-white background (#EEF6F1), bigger logo centred with correct aspect ratio -->
-		<MauiSplashScreen Include="Resources\Splash\logo.png"
-		                  Color="#EEF6F1"
-		                  BaseSize="360,196"
-		                  Resize="true" />
+		<!-- Splash Screen — Centred Nigerian News brand logo -->
+		<MauiSplashScreen Include="Resources\Splash\logo.png" Color="#EEF6F1" BaseSize="300,300" Resize="true" />
 
 		<!-- Images -->
 		<MauiImage Include="Resources\Images\*" />
@@ -74,12 +66,14 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Microsoft.Maui.Controls" Version="10.0.90" />
-		<PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="10.0.10" />
-		<PackageReference Include="Microsoft.Extensions.Http" Version="10.0.10" />
-		<PackageReference Include="Microsoft.Extensions.Http.Polly" Version="10.0.10" />
+		<PackageReference Include="Microsoft.Maui.Controls" Version="10.0.100" />
+		<PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="10.0.11" />
+		<PackageReference Include="Microsoft.Extensions.Http" Version="10.0.11" />
+		<PackageReference Include="Microsoft.Extensions.Http.Polly" Version="10.0.11" />
 		<PackageReference Include="Polly" Version="8.7.0" />
 		<PackageReference Include="Polly.Extensions.Http" Version="3.0.0" />
+		<PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
+		<PackageReference Include="Plugin.AdMob" Version="10.0.90" />
 	</ItemGroup>
 
 	<ItemGroup>

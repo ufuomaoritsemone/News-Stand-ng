@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace NigerianNewsGrid.Client.Models;
 
 /// <summary>
@@ -20,6 +22,36 @@ public sealed record VideoStoryItem
     public int? TrendingRank { get; init; }
     public long ViewCount { get; init; } = 0;
     public long LikeCount { get; init; } = 0;
+
+    /// <summary>
+    /// Computes the best available thumbnail URL: returns ThumbnailUrl if present and HTTP(S),
+    /// otherwise falls back to deterministic YouTube CDN (hqdefault.jpg), or a high-quality fallback image.
+    /// </summary>
+    [JsonIgnore]
+    public string DisplayThumbnailUrl
+    {
+        get
+        {
+            if (!string.IsNullOrWhiteSpace(ThumbnailUrl) &&
+                (ThumbnailUrl.StartsWith("https://", StringComparison.OrdinalIgnoreCase) ||
+                 ThumbnailUrl.StartsWith("http://", StringComparison.OrdinalIgnoreCase)))
+            {
+                var trimmed = ThumbnailUrl.Trim();
+                if (trimmed.StartsWith("http://", StringComparison.OrdinalIgnoreCase))
+                {
+                    trimmed = "https://" + trimmed["http://".Length..];
+                }
+                return trimmed;
+            }
+
+            if (!string.IsNullOrWhiteSpace(VideoId))
+            {
+                return $"https://i.ytimg.com/vi/{VideoId.Trim()}/hqdefault.jpg";
+            }
+
+            return "https://images.unsplash.com/photo-1585829365295-ab7cd400c167?w=600&auto=format&fit=crop&q=80";
+        }
+    }
 }
 
 /// <summary>
@@ -66,3 +98,23 @@ public sealed record SocialFeedItem
     public string Bio { get; init; } = string.Empty;
     public string Category { get; init; } = "Media";
 }
+
+/// <summary>
+/// User experience feedback submission DTOs for client-side API interaction.
+/// </summary>
+public sealed record FeedbackRequestDto(
+    int Rating,
+    string? Category,
+    string Message,
+    string? UserEmail = null,
+    string? UserName = null,
+    string? AppVersion = null,
+    string? Platform = null
+);
+
+public sealed record FeedbackResponseDto(
+    bool Success,
+    string Message,
+    string? FeedbackId = null
+);
+

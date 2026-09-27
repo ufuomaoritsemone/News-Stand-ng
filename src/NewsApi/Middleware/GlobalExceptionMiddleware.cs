@@ -1,10 +1,14 @@
 using System.Diagnostics;
 using System.Net;
 using System.Text.Json;
-using NewsApi.Models;
+using Microsoft.AspNetCore.Mvc;
 
 namespace NewsApi.Middleware;
 
+/// <summary>
+/// Catches unhandled exceptions and returns standardized RFC 9457 Problem Details.
+/// Prevents internal stack trace or exception leaks to external clients.
+/// </summary>
 public class GlobalExceptionMiddleware
 {
     private readonly RequestDelegate _next;
@@ -27,21 +31,20 @@ public class GlobalExceptionMiddleware
             var traceId = Activity.Current?.Id ?? context.TraceIdentifier;
             _logger.LogError(ex, "Unhandled exception occurred. TraceId: {TraceId}", traceId);
 
-            context.Response.ContentType = "application/json";
+            context.Response.ContentType = "application/problem+json";
             context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
 
-            var response = new ErrorResponseDto
+            var problemDetails = new ProblemDetails
             {
-                Error = new ErrorPayload
-                {
-                    Code = "INTERNAL_SERVER_ERROR",
-                    Message = "An unexpected server error occurred. Please try again later.",
-                    Timestamp = DateTime.UtcNow,
-                    TraceId = traceId
-                }
+                Type = "https://tools.ietf.org/html/rfc9110#section-15.6.1",
+                Title = "An unexpected server error occurred.",
+                Status = (int)HttpStatusCode.InternalServerError,
+                Detail = "An unexpected error occurred while processing your request. Please reference the trace identifier when reporting this issue.",
+                Instance = context.Request.Path
             };
+            problemDetails.Extensions["traceId"] = traceId;
 
-            var json = JsonSerializer.Serialize(response, new JsonSerializerOptions
+            var json = JsonSerializer.Serialize(problemDetails, new JsonSerializerOptions
             {
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase
             });

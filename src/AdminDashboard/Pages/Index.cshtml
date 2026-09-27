@@ -23,10 +23,16 @@
             </div>
             <p class="text-muted mb-0 mt-1">Admin Management & Searchable Archived News Feed</p>
         </div>
-        <div class="d-flex align-items-center gap-2">
+        <div class="d-flex align-items-center gap-2 flex-wrap">
             <a href="/Videos" class="btn btn-outline-danger btn-sm"><i class="bi bi-youtube me-1"></i> Videos</a>
             <a href="/Socials" class="btn btn-outline-info btn-sm"><i class="bi bi-twitter-x me-1"></i> Socials</a>
             <a href="/Analytics" class="btn btn-outline-success btn-sm"><i class="bi bi-bar-chart-fill me-1"></i> Analytics</a>
+            <a href="/Sponsors" class="btn btn-outline-warning btn-sm"><i class="bi bi-megaphone me-1"></i> Sponsored</a>
+            <button type="button" class="theme-toggle-btn" onclick="toggleAdminTheme()" title="Toggle Light / Dark Theme">
+                <i class="bi bi-moon-stars-fill theme-icon-dark"></i>
+                <i class="bi bi-sun-fill theme-icon-light"></i>
+                <span class="theme-toggle-label">Dark</span>
+            </button>
             <form method="get" class="d-flex gap-2">
                 <input type="hidden" name="selectedChannel" value="@Model.SelectedChannel" />
                 <input type="hidden" name="selectedCategory" value="@Model.SelectedCategory" />
@@ -168,14 +174,14 @@
                                     <span class="source-badge">@article.Source</span>
                                     <form method="post" asp-page-handler="UpdateCategory" class="position-absolute top-0 end-0 m-2">
                                         <input type="hidden" name="articleId" value="@article.Id" />
-                                        <select name="newCategory" class="form-select form-select-sm border-info text-white bg-dark bg-opacity-90 py-0 px-2 rounded-pill shadow-sm" style="font-size: 0.72rem; height: 26px; cursor: pointer;" onchange="this.form.submit()" title="Re-categorize story to train ML model">
-                                            <option value="Politics" selected="@(article.Category == "Politics")">🏷️ Politics</option>
-                                            <option value="Business" selected="@(article.Category == "Business")">🏷️ Business</option>
-                                            <option value="Sports" selected="@(article.Category == "Sports")">🏷️ Sports</option>
-                                            <option value="Entertainment" selected="@(article.Category == "Entertainment")">🏷️ Entertainment</option>
-                                            <option value="Technology" selected="@(article.Category == "Technology")">🏷️ Technology</option>
-                                            <option value="Crime" selected="@(article.Category == "Crime")">🏷️ Crime</option>
-                                            <option value="General" selected="@(article.Category == "General")">🏷️ General</option>
+                                        <select name="newCategory" class="form-select form-select-sm border-info text-white bg-dark bg-opacity-90 py-0 px-2 rounded-pill shadow-sm" style="font-size: 0.72rem; height: 26px; cursor: pointer;" onchange="updateArticleCategory(this, '@article.Id')" title="Re-categorize story to train ML model">
+                                            <option value="Politics"      selected="@(article.Category == "Politics"      ? "selected" : null)">🏷️ Politics</option>
+                                            <option value="Business"      selected="@(article.Category == "Business"      ? "selected" : null)">🏷️ Business</option>
+                                            <option value="Sports"        selected="@(article.Category == "Sports"        ? "selected" : null)">🏷️ Sports</option>
+                                            <option value="Entertainment" selected="@(article.Category == "Entertainment" ? "selected" : null)">🏷️ Entertainment</option>
+                                            <option value="Technology"    selected="@(article.Category == "Technology"    ? "selected" : null)">🏷️ Technology</option>
+                                            <option value="Crime"         selected="@(article.Category == "Crime"         ? "selected" : null)">🏷️ Crime</option>
+                                            <option value="General"       selected="@(article.Category == "General"       ? "selected" : null)">🏷️ General</option>
                                         </select>
                                     </form>
                                 </div>
@@ -371,6 +377,40 @@
             }
         }
 
+        async function updateArticleCategory(selectElement, articleId) {
+            var newCategory = selectElement.value;
+            var form = selectElement.closest('form');
+            var tokenInput = form ? form.querySelector('input[name="__RequestVerificationToken"]') : null;
+            var token = tokenInput ? tokenInput.value : '';
+
+            var formData = new FormData();
+            formData.append('articleId', articleId);
+            formData.append('newCategory', newCategory);
+            if (token) {
+                formData.append('__RequestVerificationToken', token);
+            }
+
+            try {
+                var response = await fetch('/Index?handler=UpdateCategory', {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+
+                if (response.ok) {
+                    var data = await response.json();
+                    showToast(data.message || ('Category updated to ' + newCategory + '!'));
+                } else {
+                    showToast('Failed to update category.', 'warning');
+                }
+            } catch (err) {
+                console.error('Error updating category:', err);
+                showToast('Error updating category.', 'warning');
+            }
+        }
+
         function showToast(message, type) {
             var msgEl = document.getElementById('toastMessage');
             if (msgEl) {
@@ -384,3 +424,4 @@
         }
     </script>
 }
+

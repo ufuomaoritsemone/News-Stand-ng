@@ -1,13 +1,11 @@
 <Solution>
   <Folder Name="/src/">
-    <Project Path="src/AdminDashboard/AdminDashboard.csproj">
-      <BuildDependency Project="NigerianNewGrid/NigerianNewGrid.csproj" />
-      <BuildDependency Project="src/NewsApi/NewsApi.csproj" />
-      <BuildDependency Project="tests/NewsApiClient.Tests/NewsApiClient.Tests.csproj" />
-    </Project>
+    <Project Path="src/AdminDashboard/AdminDashboard.csproj" />
     <Project Path="src/NewsApi/NewsApi.csproj" />
     <Project Path="src/NigerianNewsGrid.Client/NigerianNewsGrid.Client.csproj" />
     <Project Path="src/NewsCategorizer.Trainer/NewsCategorizer.Trainer.csproj" />
+    <Project Path="src/NewsScraperService/NewsScraperService.csproj" />
+    <Project Path="src/TtsWorker/TtsWorker.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/NewsApiClient.Tests/NewsApiClient.Tests.csproj" />

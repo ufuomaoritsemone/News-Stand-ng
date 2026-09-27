@@ -11,6 +11,29 @@ public class iOSNotificationDelegate : UNUserNotificationCenterDelegate
         var userInfo = response.Notification.Request.Content.UserInfo;
         if (userInfo != null)
         {
+            var action = userInfo.ValueForKey(new NSString("action"))?.ToString();
+            if (string.Equals(action, "play_audio_briefing", StringComparison.OrdinalIgnoreCase))
+            {
+                MainThread.BeginInvokeOnMainThread(async () =>
+                {
+                    try
+                    {
+                        if (Shell.Current != null)
+                        {
+                            await Shell.Current.GoToAsync("//MainPage");
+                            NigerianNewGrid.Services.AppNotificationBridge.TriggerAutoPlayAudioBriefing();
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"[iOSNotificationDelegate] Audio briefing launch error: {ex.Message}");
+                    }
+                });
+
+                completionHandler();
+                return;
+            }
+
             var articleId = userInfo.ValueForKey(new NSString("article_id"))?.ToString();
             var articleUrl = userInfo.ValueForKey(new NSString("article_url"))?.ToString();
             var articleTitle = userInfo.ValueForKey(new NSString("article_title"))?.ToString();

@@ -4,6 +4,7 @@ using Android.Content.PM;
 using Android.OS;
 using System.Text.Json;
 using NigerianNewsGrid.Client.Models;
+using NigerianNewGrid.Services;
 
 namespace NigerianNewGrid;
 
@@ -25,6 +26,34 @@ public class MainActivity : MauiAppCompatActivity
     private static void HandleNotificationIntent(Intent? intent)
     {
         if (intent == null) return;
+
+        var action = intent.GetStringExtra("action");
+        if (string.Equals(action, "play_audio_briefing", StringComparison.OrdinalIgnoreCase))
+        {
+            MainThread.BeginInvokeOnMainThread(async () =>
+            {
+                try
+                {
+                    int attempts = 0;
+                    while (Shell.Current == null && attempts < 15)
+                    {
+                        await Task.Delay(200);
+                        attempts++;
+                    }
+
+                    if (Shell.Current != null)
+                    {
+                        await Shell.Current.GoToAsync("//MainPage");
+                        AppNotificationBridge.TriggerAutoPlayAudioBriefing();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[MainActivity] Audio briefing launch error: {ex.Message}");
+                }
+            });
+            return;
+        }
 
         var articleId = intent.GetStringExtra("article_id");
         var articleUrl = intent.GetStringExtra("article_url");

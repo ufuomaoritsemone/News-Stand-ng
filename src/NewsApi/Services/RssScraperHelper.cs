@@ -41,10 +41,12 @@ public static class RssScraperHelper
                 sources = new List<Source>
                 {
                     new Source { Id = "punch", Name = "Punch Newspaper", RssUrl = "https://punchng.com/feed/" },
-                    new Source { Id = "guardian", Name = "The Guardian Nigeria", RssUrl = "https://guardian.ng/feed/" },
+                    new Source { Id = "guardian", Name = "The Guardian Nigeria", RssUrl = "https://news.google.com/rss/search?q=site:guardian.ng&hl=en-NG&gl=NG&ceid=NG:en" },
                     new Source { Id = "premiumtimes", Name = "Premium Times", RssUrl = "https://www.premiumtimesng.com/feed" },
                     new Source { Id = "vanguard", Name = "Vanguard News", RssUrl = "https://www.vanguardngr.com/feed/" },
-                    new Source { Id = "arise", Name = "Arise Tv", RssUrl = "https://arise.tv/feed/" }
+                    new Source { Id = "arise", Name = "Arise Tv", RssUrl = "https://arise.tv/feed/" },
+                    new Source { Id = "businessday", Name = "BusinessDay Nigeria", RssUrl = "https://businessday.ng/feed/" },
+                    new Source { Id = "lindaikeji", Name = "Linda Ikeji's Blog", RssUrl = "https://www.lindaikejisblog.com/feed" }
                 };
             }
 
@@ -159,6 +161,13 @@ public static class RssScraperHelper
         title = NormalizeTitle(title);
         var cleanSummary = StripHtml(summary);
         var cat = Categorize(title, cleanSummary);
+        if (cat == "General")
+        {
+            if (sourceName.Contains("Linda Ikeji", StringComparison.OrdinalIgnoreCase))
+                cat = "Entertainment";
+            else if (sourceName.Contains("BusinessDay", StringComparison.OrdinalIgnoreCase))
+                cat = "Business";
+        }
 
         return new Article
         {

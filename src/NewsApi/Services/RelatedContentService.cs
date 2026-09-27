@@ -13,37 +13,7 @@ public class RelatedStoriesDto
     public int TotalCount => Articles.Count + Videos.Count + SocialPosts.Count;
 }
 
-public class VideoStoryDto
-{
-    public string Id { get; set; } = string.Empty;
-    public string VideoId { get; set; } = string.Empty;
-    public string Title { get; set; } = string.Empty;
-    public string? Summary { get; set; }
-    public string VideoUrl { get; set; } = string.Empty;
-    public string ThumbnailUrl { get; set; } = string.Empty;
-    public string ChannelName { get; set; } = string.Empty;
-    public string ChannelId { get; set; } = string.Empty;
-    public string Duration { get; set; } = string.Empty;
-    public string Category { get; set; } = string.Empty;
-    public DateTime PublishedAt { get; set; }
-}
-
-public class SocialPostDto
-{
-    public string Id { get; set; } = string.Empty;
-    public string AuthorName { get; set; } = string.Empty;
-    public string AuthorHandle { get; set; } = string.Empty;
-    public string AuthorAvatarUrl { get; set; } = string.Empty;
-    public string Content { get; set; } = string.Empty;
-    public string PostUrl { get; set; } = string.Empty;
-    public string? MediaUrl { get; set; }
-    public string Category { get; set; } = string.Empty;
-    public int LikesCount { get; set; }
-    public int RetweetsCount { get; set; }
-    public DateTime PublishedAt { get; set; }
-}
-
-public class RelatedContentService
+public class RelatedContentService : IRelatedContentService
 {
     private readonly NewsDbContext _db;
     private readonly ILogger<RelatedContentService> _logger;

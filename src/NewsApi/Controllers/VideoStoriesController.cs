@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using NewsApi.Data;
 using NewsApi.Models;
 using NewsApi.Services;
@@ -11,58 +12,88 @@ namespace NewsApi.Controllers;
 public class VideoStoriesController : ControllerBase
 {
     private readonly NewsDbContext _db;
-    private readonly YouTubeFeedService _ytService;
+    private readonly IYouTubeFeedService _ytService;
+    private readonly IServiceScopeFactory _scopeFactory;
+    private readonly IMemoryCache _cache;
     private readonly ILogger<VideoStoriesController> _logger;
 
-    public VideoStoriesController(NewsDbContext db, YouTubeFeedService ytService, ILogger<VideoStoriesController> logger)
+    public VideoStoriesController(
+        NewsDbContext db,
+        IYouTubeFeedService ytService,
+        IServiceScopeFactory scopeFactory,
+        IMemoryCache cache,
+        ILogger<VideoStoriesController> logger)
     {
-        _db = db;
-        _ytService = ytService;
-        _logger = logger;
+        _db           = db;
+        _ytService    = ytService;
+        _scopeFactory = scopeFactory;
+        _cache        = cache;
+        _logger       = logger;
     }
 
     /// <summary>
     /// Gets the latest video stories posted by monitored YouTube channels (ordered by recency).
+    /// Highly optimized with in-memory caching and non-blocking background sync.
     /// </summary>
     [HttpGet]
     public async Task<IActionResult> GetLatest([FromQuery] int limit = 20, [FromQuery] string? category = null)
     {
-        var latestVideo = await _db.VideoStories.AsNoTracking().OrderByDescending(v => v.PublishedAt).FirstOrDefaultAsync();
+        var effectiveLimit = Math.Clamp(limit, 1, 50);
+        var normCategory = string.IsNullOrWhiteSpace(category) ? "All" : category.Trim();
+        var cacheKey = $"videostories_latest_{normCategory.ToLowerInvariant()}_{effectiveLimit}";
 
-        // If no video stories exist yet, or newest is > 2 hours old, trigger sync
-        if (latestVideo == null)
+        if (_cache.TryGetValue(cacheKey, out List<VideoStoryDto>? cached) && cached != null)
         {
-            try
-            {
-                await _ytService.SyncAllChannelsAsync();
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Initial YouTube sync failed during GetLatest");
-            }
-        }
-        else if (latestVideo.PublishedAt < DateTime.UtcNow.AddHours(-2))
-        {
-            // Stale-while-revalidate background refresh
-            _ = Task.Run(async () =>
-            {
-                try { await _ytService.SyncAllChannelsAsync(); } catch { }
-            });
+            Response.Headers.Append("X-Cache", "HIT");
+            return Ok(cached);
         }
 
         var query = _db.VideoStories.AsNoTracking().AsQueryable();
 
-        if (!string.IsNullOrWhiteSpace(category) && !string.Equals(category, "All", StringComparison.OrdinalIgnoreCase))
+        if (!string.Equals(normCategory, "All", StringComparison.OrdinalIgnoreCase))
         {
-            query = query.Where(v => v.Category.ToLower() == category.ToLower());
+            query = query.Where(v => v.Category.ToLower() == normCategory.ToLower());
         }
 
         var stories = await query
             .OrderByDescending(v => v.PublishedAt)
-            .Take(Math.Clamp(limit, 1, 50))
+            .Take(effectiveLimit)
             .ToListAsync();
 
-        return Ok(stories);
+        foreach (var s in stories)
+        {
+            s.ThumbnailUrl = YouTubeFeedService.ResolveBestThumbnail(s.ThumbnailUrl, null, s.VideoId, s.Category);
+        }
+
+        // Stale-while-revalidate / initial background sync (non-blocking with isolated DI scope)
+        if (stories.Count == 0 || stories[0].PublishedAt < DateTime.UtcNow.AddHours(-2))
+        {
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    using var scope = _scopeFactory.CreateScope();
+                    var ytService = scope.ServiceProvider.GetRequiredService<IYouTubeFeedService>();
+                    await ytService.SyncAllChannelsAsync();
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Background channel sync failed in VideoStoriesController");
+                }
+            });
+        }
+
+        var dtos = stories.Select(ToDto).ToList();
+
+        if (dtos.Count > 0)
+        {
+            _cache.Set(cacheKey, dtos, new MemoryCacheEntryOptions()
+                .SetSlidingExpiration(TimeSpan.FromMinutes(3))
+                .SetAbsoluteExpiration(TimeSpan.FromMinutes(5)));
+        }
+
+        Response.Headers.Append("X-Cache", "MISS");
+        return Ok(dtos);
     }
 
     /// <summary>
@@ -79,54 +110,96 @@ public class VideoStoriesController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error syncing YouTube video channels");
-            return StatusCode(500, new { message = $"Sync failed: {ex.Message}" });
+            return StatusCode(500, new { message = "Sync failed. An error occurred while synchronizing YouTube feeds." });
         }
     }
 
     /// <summary>
     /// Gets top trending video stories in Nigeria from YouTube.
+    /// Highly optimized with in-memory caching and non-blocking background sync.
     /// </summary>
     [HttpGet("trending")]
     public async Task<IActionResult> GetTrending([FromQuery] int limit = 20, [FromQuery] string? category = null)
     {
-        var latestTrending = await _db.VideoStories.AsNoTracking().Where(v => v.IsTrending).OrderByDescending(v => v.PublishedAt).FirstOrDefaultAsync();
+        var effectiveLimit = Math.Clamp(limit, 1, 50);
+        var normCategory = string.IsNullOrWhiteSpace(category) ? "All" : category.Trim();
+        var cacheKey = $"videostories_trending_{normCategory.ToLowerInvariant()}_{effectiveLimit}";
 
-        // If no trending stories exist yet, or data is stale, trigger trending sync
-        if (latestTrending == null)
+        if (_cache.TryGetValue(cacheKey, out List<VideoStoryDto>? cached) && cached != null)
         {
-            try
-            {
-                await _ytService.SyncTrendingNewsAsync();
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Initial YouTube trending sync failed during GetTrending");
-            }
-        }
-        else if (latestTrending.PublishedAt < DateTime.UtcNow.AddHours(-2))
-        {
-            _ = Task.Run(async () =>
-            {
-                try { await _ytService.SyncTrendingNewsAsync(); } catch { }
-            });
+            Response.Headers.Append("X-Cache", "HIT");
+            return Ok(cached);
         }
 
         var query = _db.VideoStories.AsNoTracking().Where(v => v.IsTrending).AsQueryable();
 
-        if (!string.IsNullOrWhiteSpace(category) && !string.Equals(category, "All", StringComparison.OrdinalIgnoreCase))
+        if (!string.Equals(normCategory, "All", StringComparison.OrdinalIgnoreCase))
         {
-            query = query.Where(v => v.Category.ToLower() == category.ToLower());
+            query = query.Where(v => v.Category.ToLower() == normCategory.ToLower());
         }
 
         var trendingStories = await query
             .OrderBy(v => v.TrendingRank ?? int.MaxValue)
             .ThenByDescending(v => v.ViewCount)
             .ThenByDescending(v => v.PublishedAt)
-            .Take(Math.Clamp(limit, 1, 50))
+            .Take(effectiveLimit)
             .ToListAsync();
 
-        return Ok(trendingStories);
+        foreach (var s in trendingStories)
+        {
+            s.ThumbnailUrl = YouTubeFeedService.ResolveBestThumbnail(s.ThumbnailUrl, null, s.VideoId, s.Category);
+        }
+
+        // Stale-while-revalidate / initial background sync (non-blocking with isolated DI scope)
+        if (trendingStories.Count == 0 || trendingStories[0].PublishedAt < DateTime.UtcNow.AddHours(-2))
+        {
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    using var scope = _scopeFactory.CreateScope();
+                    var ytService = scope.ServiceProvider.GetRequiredService<IYouTubeFeedService>();
+                    await ytService.SyncTrendingNewsAsync();
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Background trending sync failed in VideoStoriesController");
+                }
+            });
+        }
+
+        var dtos = trendingStories.Select(ToDto).ToList();
+
+        if (dtos.Count > 0)
+        {
+            _cache.Set(cacheKey, dtos, new MemoryCacheEntryOptions()
+                .SetSlidingExpiration(TimeSpan.FromMinutes(3))
+                .SetAbsoluteExpiration(TimeSpan.FromMinutes(5)));
+        }
+
+        Response.Headers.Append("X-Cache", "MISS");
+        return Ok(dtos);
     }
+
+    private static VideoStoryDto ToDto(VideoStory s) => new()
+    {
+        Id = s.Id,
+        VideoId = s.VideoId,
+        Title = s.Title,
+        Summary = s.Summary,
+        VideoUrl = s.VideoUrl,
+        ThumbnailUrl = s.ThumbnailUrl,
+        ChannelName = s.ChannelName,
+        ChannelId = s.ChannelId,
+        Duration = s.Duration,
+        Category = s.Category,
+        PublishedAt = s.PublishedAt,
+        CreatedAt = s.CreatedAt,
+        IsTrending = s.IsTrending,
+        TrendingRank = s.TrendingRank,
+        ViewCount = s.ViewCount,
+        LikeCount = s.LikeCount
+    };
 
     /// <summary>
     /// Triggers an immediate refresh of trending YouTube video stories.
@@ -142,7 +215,7 @@ public class VideoStoriesController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error syncing trending YouTube stories");
-            return StatusCode(500, new { message = $"Trending sync failed: {ex.Message}" });
+            return StatusCode(500, new { message = "Trending sync failed. An error occurred while synchronizing trending stories." });
         }
     }
 
@@ -166,7 +239,7 @@ public class VideoStoriesController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error syncing all YouTube channels and trending stories");
-            return StatusCode(500, new { message = $"Full sync failed: {ex.Message}" });
+            return StatusCode(500, new { message = "Full sync failed. An error occurred while synchronizing all feeds." });
         }
     }
 

@@ -15,6 +15,16 @@ public class BriefingItemDto
     public string? AudioUrl { get; set; }
     public string? Language { get; set; }
     public string? VoiceName { get; set; }
+    public string? Author { get; set; }
+    public string? ContentType { get; set; } = "News";
+
+    // Direct In-House Sponsorship Engine Fields
+    public bool IsSponsored { get; set; }
+    public string? SponsorName { get; set; }
+    public string? SponsorUrl { get; set; }
+    public bool IsPinned { get; set; }
+    public int? TargetPosition { get; set; }
+    public int PriorityWeight { get; set; } = 1;
 }
 
 // <summary> /// DTO for briefing categories. /// </summary>

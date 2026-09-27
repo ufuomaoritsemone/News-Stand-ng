@@ -52,7 +52,7 @@ public class IndexModel : PageModel
             return Page();
         }
 
-        var client = _httpClientFactory.CreateClient();
+        var client = _httpClientFactory.CreateClient("NewsApiClient");
         var apiBaseUrl = _configuration["ApiBaseUrl"] ?? "http://localhost:56193";
         try
         {
@@ -84,7 +84,7 @@ public class IndexModel : PageModel
 
     public async Task<IActionResult> OnPostScrapeSourceAsync(string id)
     {
-        var client = _httpClientFactory.CreateClient();
+        var client = _httpClientFactory.CreateClient("NewsApiClient");
         var apiBaseUrl = _configuration["ApiBaseUrl"] ?? "http://localhost:56193";
         try
         {
@@ -109,7 +109,7 @@ public class IndexModel : PageModel
 
     public async Task<IActionResult> OnPostRemoveSourceAsync(string id)
     {
-        var client = _httpClientFactory.CreateClient();
+        var client = _httpClientFactory.CreateClient("NewsApiClient");
         var apiBaseUrl = _configuration["ApiBaseUrl"] ?? "http://localhost:56193";
         try
         {
@@ -135,27 +135,48 @@ public class IndexModel : PageModel
     {
         if (string.IsNullOrWhiteSpace(articleId) || string.IsNullOrWhiteSpace(newCategory))
         {
+            if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+            {
+                return new JsonResult(new { success = false, message = "Article ID and new category are required." });
+            }
             TempData["Error"] = "Article ID and new category are required.";
             return RedirectToPage(new { SelectedChannel, SelectedCategory, SearchQuery });
         }
 
-        var client = _httpClientFactory.CreateClient();
+        var client = _httpClientFactory.CreateClient("NewsApiClient");
         var apiBaseUrl = _configuration["ApiBaseUrl"] ?? "http://localhost:56193";
         try
         {
             var response = await client.PutAsJsonAsync($"{apiBaseUrl.TrimEnd('/')}/api/v1/articles/{articleId}/category", new { category = newCategory });
             if (response.IsSuccessStatusCode)
             {
-                TempData["Message"] = $"Category updated to '{newCategory}'! Correction saved to ML.NET training dataset.";
+                var msg = $"Category updated to '{newCategory}'! Saved to ML training dataset.";
+                if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+                {
+                    return new JsonResult(new { success = true, message = msg });
+                }
+                TempData["Message"] = msg;
             }
             else
             {
-                TempData["Error"] = "Failed to update article category.";
+                var errorBody = await response.Content.ReadAsStringAsync();
+                var msg = !string.IsNullOrWhiteSpace(errorBody) ? errorBody : response.ReasonPhrase ?? "Unknown error";
+                var errorMsg = $"Failed to update article category ({response.StatusCode}): {msg}";
+                if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+                {
+                    return new JsonResult(new { success = false, message = errorMsg });
+                }
+                TempData["Error"] = errorMsg;
             }
         }
         catch (Exception ex)
         {
-            TempData["Error"] = $"Error updating category: {ex.Message}";
+            var errorMsg = $"Error updating category: {ex.Message}";
+            if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+            {
+                return new JsonResult(new { success = false, message = errorMsg });
+            }
+            TempData["Error"] = errorMsg;
         }
 
         return RedirectToPage(new { SelectedChannel, SelectedCategory, SearchQuery });
@@ -163,7 +184,7 @@ public class IndexModel : PageModel
 
     private async Task LoadDataAsync()
     {
-        var client = _httpClientFactory.CreateClient();
+        var client = _httpClientFactory.CreateClient("NewsApiClient");
         var apiBaseUrl = _configuration["ApiBaseUrl"] ?? "http://localhost:56193";
 
         // Load Sources

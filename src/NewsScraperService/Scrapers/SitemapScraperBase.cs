@@ -28,6 +28,7 @@ public abstract class SitemapScraperBase : IScraper
     public abstract string SourceName { get; }
     public abstract string SitemapUrl { get; }
     public virtual string? FallbackRssUrl => null;
+    public virtual string? FallbackApiUrl => null;
 
     /// <summary>
     /// Maximum number of discovered URLs to enrich per scraping cycle to maintain high responsiveness.
@@ -49,6 +50,33 @@ public abstract class SitemapScraperBase : IScraper
                 using var stream = await resp.Content.ReadAsStreamAsync(cancellationToken);
                 var doc = XDocument.Load(stream);
                 discoveredItems = ParseSitemapDocument(doc);
+
+                // If document was a <sitemapindex> rather than a direct <urlset>, resolve child sitemaps
+                if (discoveredItems.Count == 0)
+                {
+                    var childSitemaps = doc.Descendants().Where(e => e.Name.LocalName == "sitemap")
+                        .Select(s => s.Elements().FirstOrDefault(e => e.Name.LocalName == "loc")?.Value?.Trim())
+                        .Where(loc => !string.IsNullOrWhiteSpace(loc))
+                        .ToList();
+
+                    // Prioritize news sitemap or recent post sitemap
+                    var targetChild = childSitemaps.FirstOrDefault(u => u!.Contains("news", StringComparison.OrdinalIgnoreCase))
+                                      ?? childSitemaps.FirstOrDefault(u => u!.Contains("post", StringComparison.OrdinalIgnoreCase))
+                                      ?? childSitemaps.FirstOrDefault();
+
+                    if (!string.IsNullOrEmpty(targetChild))
+                    {
+                        using var childReq = new HttpRequestMessage(HttpMethod.Get, targetChild);
+                        childReq.Headers.UserAgent.ParseAdd("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36");
+                        using var childResp = await _http.SendAsync(childReq, cancellationToken);
+                        if (childResp.IsSuccessStatusCode)
+                        {
+                            using var childStream = await childResp.Content.ReadAsStreamAsync(cancellationToken);
+                            var childDoc = XDocument.Load(childStream);
+                            discoveredItems = ParseSitemapDocument(childDoc);
+                        }
+                    }
+                }
             }
         }
         catch
@@ -60,6 +88,12 @@ public abstract class SitemapScraperBase : IScraper
         if (discoveredItems.Count == 0 && !string.IsNullOrWhiteSpace(FallbackRssUrl))
         {
             discoveredItems = (await ScrapeFallbackRssAsync(FallbackRssUrl, cancellationToken)).ToList();
+        }
+
+        // Fallback to WordPress JSON REST API if sitemap and RSS both yielded no items
+        if (discoveredItems.Count == 0 && !string.IsNullOrWhiteSpace(FallbackApiUrl))
+        {
+            discoveredItems = (await ScrapeFallbackJsonApiAsync(FallbackApiUrl, cancellationToken)).ToList();
         }
 
         if (discoveredItems.Count == 0) return Array.Empty<ArticleModel>();
@@ -238,6 +272,71 @@ public abstract class SitemapScraperBase : IScraper
                     Source = SourceName,
                     ImageUrl = imageUrl
                 });
+            }
+
+            return list;
+        }
+        catch
+        {
+            return Array.Empty<ArticleModel>();
+        }
+    }
+
+    protected async Task<IEnumerable<ArticleModel>> ScrapeFallbackJsonApiAsync(string apiUrl, CancellationToken cancellationToken)
+    {
+        try
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Get, apiUrl);
+            request.Headers.UserAgent.ParseAdd("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36");
+            using var resp = await _http.SendAsync(request, cancellationToken);
+            if (!resp.IsSuccessStatusCode) return Array.Empty<ArticleModel>();
+
+            using var stream = await resp.Content.ReadAsStreamAsync(cancellationToken);
+            using var doc = await System.Text.Json.JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
+            var list = new List<ArticleModel>();
+
+            foreach (var post in doc.RootElement.EnumerateArray())
+            {
+                var title = post.TryGetProperty("title", out var titleProp) && titleProp.TryGetProperty("rendered", out var tRen)
+                    ? System.Net.WebUtility.HtmlDecode(tRen.GetString() ?? string.Empty)
+                    : string.Empty;
+
+                var link = post.TryGetProperty("link", out var linkProp) ? linkProp.GetString() : null;
+
+                DateTime? published = null;
+                if (post.TryGetProperty("date_gmt", out var dateProp) && DateTimeOffset.TryParse(dateProp.GetString(), out var dto))
+                {
+                    published = dto.UtcDateTime;
+                }
+
+                var summary = post.TryGetProperty("excerpt", out var excerptProp) && excerptProp.TryGetProperty("rendered", out var eRen)
+                    ? ArticleContentExtractor.SanitizeText(eRen.GetString() ?? string.Empty)
+                    : null;
+
+                string? imageUrl = null;
+                if (post.TryGetProperty("_embedded", out var embedded) &&
+                    embedded.TryGetProperty("wp:featuredmedia", out var mediaArr) &&
+                    mediaArr.GetArrayLength() > 0)
+                {
+                    var firstMedia = mediaArr[0];
+                    if (firstMedia.TryGetProperty("source_url", out var srcUrl))
+                    {
+                        imageUrl = srcUrl.GetString();
+                    }
+                }
+
+                if (!string.IsNullOrWhiteSpace(title) && !string.IsNullOrWhiteSpace(link))
+                {
+                    list.Add(new ArticleModel
+                    {
+                        Title = title,
+                        Url = link,
+                        Summary = summary,
+                        PublishedAt = published,
+                        Source = SourceName,
+                        ImageUrl = imageUrl
+                    });
+                }
             }
 
             return list;
