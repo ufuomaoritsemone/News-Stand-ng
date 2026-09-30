@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Nigerian News Grid — Interactive Code Map & Architecture Explorer v3.1</title>
+  <title>News Stand NG — Interactive Code Map & Architecture Explorer v4.0</title>
   <style>
     :root {
       --bg-primary: #0b0f19;
@@ -51,7 +51,7 @@
 
     /* Top Navbar */
     header {
-      background: rgba(17, 24, 39, 0.92);
+      background: rgba(17, 24, 39, 0.94);
       backdrop-filter: blur(14px);
       border-bottom: 1px solid var(--border-color);
       position: sticky;
@@ -72,15 +72,15 @@
     }
 
     .brand-logo {
-      width: 40px;
-      height: 40px;
+      width: 42px;
+      height: 42px;
       background: linear-gradient(135deg, var(--accent-green), var(--accent-cyan));
       border-radius: 10px;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-weight: 800;
-      font-size: 1.2rem;
+      font-weight: 900;
+      font-size: 1.15rem;
       color: #0b0f19;
       box-shadow: 0 0 18px var(--accent-green-glow);
     }
@@ -222,7 +222,7 @@
       display: flex;
       flex-direction: column;
       padding: 1.5rem;
-      max-width: 1650px;
+      max-width: 1720px;
       width: 100%;
       margin: 0 auto;
     }
@@ -245,10 +245,10 @@
 
     /* Banner callout */
     .hero-banner {
-      background: linear-gradient(135deg, rgba(16, 185, 129, 0.09) 0%, rgba(6, 182, 212, 0.06) 50%, rgba(139, 92, 246, 0.05) 100%);
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(6, 182, 212, 0.08) 50%, rgba(139, 92, 246, 0.06) 100%);
       border: 1px solid rgba(16, 185, 129, 0.25);
       border-radius: 12px;
-      padding: 1rem 1.25rem;
+      padding: 1.15rem 1.35rem;
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -268,7 +268,8 @@
     .hero-banner-subtitle {
       font-size: 0.82rem;
       color: var(--text-muted);
-      margin-top: 0.2rem;
+      margin-top: 0.25rem;
+      line-height: 1.45;
     }
 
     .hero-banner-tags {
@@ -281,12 +282,12 @@
     /* Architecture Split Layout */
     .graph-view-wrapper {
       display: grid;
-      grid-template-columns: 1fr 400px;
+      grid-template-columns: 1fr 420px;
       gap: 1.5rem;
-      min-height: 680px;
+      min-height: 720px;
     }
 
-    @media (max-width: 1200px) {
+    @media (max-width: 1280px) {
       .graph-view-wrapper {
         grid-template-columns: 1fr;
       }
@@ -357,7 +358,7 @@
       color: var(--text-main);
       font-size: 0.8rem;
       outline: none;
-      width: 170px;
+      width: 180px;
     }
 
     .svg-canvas-container {
@@ -373,7 +374,8 @@
     .arch-svg {
       width: 100%;
       height: 100%;
-      max-height: 640px;
+      min-height: 700px;
+      max-height: 760px;
     }
 
     /* SVG Nodes */
@@ -413,6 +415,12 @@
     .flow-line.alarm-flow {
       stroke: var(--accent-amber);
       stroke-width: 2;
+    }
+
+    .flow-line.stress-flow {
+      stroke: #e11d48;
+      stroke-width: 2.2;
+      stroke-dasharray: 4 3;
     }
 
     @keyframes dash {
@@ -528,6 +536,8 @@
       justify-content: space-between;
       position: relative;
       margin: 1rem 0 1.5rem 0;
+      overflow-x: auto;
+      padding-bottom: 0.5rem;
     }
 
     .stepper-bar::before {
@@ -546,10 +556,10 @@
       position: relative;
       z-index: 2;
       background: var(--bg-secondary);
-      padding: 0.5rem 1rem;
+      padding: 0.5rem 0.85rem;
       border-radius: 9999px;
       border: 2px solid var(--border-color);
-      font-size: 0.8rem;
+      font-size: 0.78rem;
       font-weight: 600;
       color: var(--text-muted);
       cursor: pointer;
@@ -557,6 +567,7 @@
       align-items: center;
       gap: 0.5rem;
       transition: all 0.2s;
+      white-space: nowrap;
     }
 
     .step-item.active {
@@ -597,7 +608,7 @@
     /* API Explorer Tab */
     .explorer-grid {
       display: grid;
-      grid-template-columns: 340px 1fr;
+      grid-template-columns: 350px 1fr;
       gap: 1.5rem;
     }
 
@@ -615,7 +626,7 @@
       display: flex;
       flex-direction: column;
       gap: 0.4rem;
-      max-height: 750px;
+      max-height: 780px;
       overflow-y: auto;
     }
 
@@ -699,7 +710,7 @@
     }
 
     .maui-page-title {
-      font-size: 1rem;
+      font-size: 0.98rem;
       font-weight: 700;
       color: var(--text-main);
       font-family: var(--font-mono);
@@ -761,14 +772,14 @@
   <!-- Top Navbar -->
   <header>
     <div class="brand">
-      <div class="brand-logo">NG</div>
+      <div class="brand-logo">NS</div>
       <div>
         <div class="brand-title">
-          NigerianNewsGrid
-          <span class="badge-pill">Code Map v3.1</span>
+          News Stand NG
+          <span class="badge-pill">Code Map v4.0 Enterprise</span>
         </div>
         <div style="font-size: 0.75rem; color: var(--text-dim);">
-          Tri-Tier Neural Audio • Hardened API • MVVM .NET MAUI • Multi-Provider PostgreSQL/SQLite • 237 Passing Tests
+          On-Device SQLite Cache (WAL) • Tri-Tier Neural Audio • NBomber Stress Engine • Vite React Web • 260 Passing Tests
         </div>
       </div>
     </div>
@@ -808,18 +819,19 @@
     <div class="hero-banner">
       <div>
         <div class="hero-banner-title">
-          <span>🎙️ Production Milestone: Tri-Tier Neural Audio, Enterprise API Hardening & Background Alarms</span>
+          <span>🎙️ Production Milestone: On-Device SQLite Cache, Tri-Tier Neural Audio & NBomber Stress Testing</span>
         </div>
         <div class="hero-banner-subtitle">
-          Microsoft Edge Neural Nigerian voices ($0 cost) • HTTP 206 Partial Content Range Seeking • Android AlarmManager (8am & 6pm WAT) • PostgreSQL 16 Auto-Provisioning • 237 Passing Tests
+          On-Device 14-Day SQLite Cache & Stale-While-Revalidate Engine • Autonomous Widget Sync (+20% Typography & Thumbnails) • NBomber 6.6 Distributed Stress Engine (4 Scenarios) • Tri-Tier Edge Neural Voices ($0 Cost) • 260 Passing Tests (100%)
         </div>
       </div>
       <div class="hero-banner-tags">
-        <span class="badge-pill badge-rose">en-NG-EzinneNeural</span>
-        <span class="badge-pill badge-purple">RFC 9457 Problem Details</span>
-        <span class="badge-pill badge-amber">AudioBriefingReceiver</span>
-        <span class="badge-pill badge-cyan">EF Core Multi-Provider</span>
-        <span class="badge-pill">237 Tests (100% Pass)</span>
+        <span class="badge-pill">260 Tests (100% Pass)</span>
+        <span class="badge-pill badge-cyan">On-Device SQLite WAL</span>
+        <span class="badge-pill badge-rose">NBomber Stress Engine</span>
+        <span class="badge-pill badge-purple">RFC 9457 & Rate Limits</span>
+        <span class="badge-pill badge-amber">Autonomous Widget Sync</span>
+        <span class="badge-pill badge-blue">International Category</span>
       </div>
     </div>
 
@@ -831,11 +843,12 @@
         <div class="canvas-panel">
           <div class="canvas-toolbar">
             <div class="tier-filters">
-              <span class="filter-chip active" onclick="filterTier('all', this)">All Projects (6)</span>
+              <span class="filter-chip active" onclick="filterTier('all', this)">All Projects (8)</span>
               <span class="filter-chip" onclick="filterTier('ingestion', this)">Ingestion & ML</span>
               <span class="filter-chip" onclick="filterTier('core', this)">Core API & DB</span>
-              <span class="filter-chip" onclick="filterTier('workers', this)">Background Workers</span>
-              <span class="filter-chip" onclick="filterTier('clients', this)">Clients & UI</span>
+              <span class="filter-chip" onclick="filterTier('workers', this)">Workers & Speech</span>
+              <span class="filter-chip" onclick="filterTier('clients', this)">Clients & Web</span>
+              <span class="filter-chip" onclick="filterTier('testing', this)">Load Testing</span>
             </div>
             <div class="search-box">
               <span>🔍</span>
@@ -845,7 +858,7 @@
 
           <!-- SVG Visual Node Diagram -->
           <div class="svg-canvas-container" id="canvasContainer">
-            <svg class="arch-svg" id="archSvg" viewBox="0 0 1000 680">
+            <svg class="arch-svg" id="archSvg" viewBox="0 0 1150 780">
               <defs>
                 <linearGradient id="grad-green" x1="0" y1="0" x2="1" y2="1">
                   <stop offset="0%" stop-color="#10b981" />
@@ -871,6 +884,10 @@
                   <stop offset="0%" stop-color="#f43f5e" />
                   <stop offset="100%" stop-color="#be123c" />
                 </linearGradient>
+                <linearGradient id="grad-red" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0%" stop-color="#ef4444" />
+                  <stop offset="100%" stop-color="#991b1b" />
+                </linearGradient>
                 <marker id="arrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
                   <path d="M 0 0 L 10 5 L 0 10 z" fill="#6b7280" />
                 </marker>
@@ -883,55 +900,69 @@
                 <marker id="arrow-amber" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
                   <path d="M 0 0 L 10 5 L 0 10 z" fill="#f59e0b" />
                 </marker>
+                <marker id="arrow-red" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                  <path d="M 0 0 L 10 5 L 0 10 z" fill="#ef4444" />
+                </marker>
               </defs>
 
               <!-- Flow Connection Lines -->
               <!-- Scraper -> API (Authenticated Ingestion) -->
-              <path d="M 230 145 L 460 270" class="flow-line active" id="line-scraper-api" marker-end="url(#arrow-active)" />
-              <text x="285" y="195" fill="#10b981" font-size="11" font-weight="600" font-family="sans-serif">POST /api/v1/articles (X-Api-Key)</text>
+              <path d="M 245 110 L 430 250" class="flow-line active" id="line-scraper-api" marker-end="url(#arrow-active)" />
+              <text x="270" y="180" fill="#10b981" font-size="11" font-weight="600" font-family="sans-serif">POST /api/v1/articles/ingest</text>
 
               <!-- Scraper -> ML Categorizer -->
-              <path d="M 230 120 L 460 120" class="flow-line" id="line-scraper-ml" marker-end="url(#arrow)" />
-              <text x="295" y="105" fill="#9ca3af" font-size="11" font-family="sans-serif">Extract, Detect & Classify</text>
+              <path d="M 245 80 L 440 80" class="flow-line" id="line-scraper-ml" marker-end="url(#arrow)" />
+              <text x="280" y="70" fill="#9ca3af" font-size="11" font-family="sans-serif">Extract, Detect & Classify</text>
+
+              <!-- ML -> API -->
+              <path d="M 550 150 L 550 200" class="flow-line" id="line-ml-api" marker-end="url(#arrow)" />
 
               <!-- API -> Database -->
-              <path d="M 570 365 L 570 470" class="flow-line active" id="line-api-db" marker-end="url(#arrow-active)" />
-              <text x="585" y="415" fill="#9ca3af" font-size="11" font-family="sans-serif">EF Core SQLite/PG + FTS5 Auto-Heal</text>
+              <path d="M 550 360 L 550 450" class="flow-line active" id="line-api-db" marker-end="url(#arrow-active)" />
+              <text x="565" y="405" fill="#9ca3af" font-size="11" font-family="sans-serif">EF Core SQLite/PG + FTS5 Auto-Heal</text>
 
               <!-- TTS Worker -> API (Range Audio Delivery & Sync) -->
-              <path d="M 240 390 L 460 320" class="flow-line audio-flow" id="line-tts-api" marker-end="url(#arrow-rose)" />
-              <text x="250" y="375" fill="#f43f5e" font-size="11" font-weight="600" font-family="sans-serif">audio-data Shared Volume & Sync</text>
+              <path d="M 245 300 L 430 290" class="flow-line audio-flow" id="line-tts-api" marker-end="url(#arrow-rose)" />
+              <text x="260" y="280" fill="#f43f5e" font-size="11" font-weight="600" font-family="sans-serif">audio-data Shared Volume & Sync</text>
 
               <!-- MAUI App -> NewsApiClient -> API -->
-              <path d="M 770 200 L 690 275" class="flow-line active" id="line-maui-api" marker-end="url(#arrow-active)" />
-              <text x="730" y="240" fill="#9ca3af" font-size="11" font-family="sans-serif">REST, HTTP 206 & Telemetry</text>
+              <path d="M 820 125 L 670 240" class="flow-line active" id="line-maui-api" marker-end="url(#arrow-active)" />
+              <text x="705" y="170" fill="#06b6d4" font-size="11" font-weight="600" font-family="sans-serif">REST, HTTP 206 & SQLite SWR</text>
 
-              <!-- Background Audio Alarm Flow (8am & 6pm WAT) -->
-              <path d="M 200 450 C 200 620, 870 620, 870 270" class="flow-line alarm-flow" id="line-audio-alarm" marker-end="url(#arrow-amber)" />
-              <text x="500" y="610" fill="#f59e0b" font-size="11" font-weight="600" text-anchor="middle" font-family="sans-serif">⏰ 8:00 AM & 6:00 PM WAT Scheduled Briefing Fetch (AudioBriefingReceiver)</text>
+              <!-- Web App -> API -->
+              <path d="M 820 325 L 670 300" class="flow-line" id="line-web-api" marker-end="url(#arrow)" />
+              <text x="695" y="325" fill="#9ca3af" font-size="11" font-family="sans-serif">Vite React REST Client</text>
 
               <!-- Admin Dashboard -> API -->
-              <path d="M 770 410 L 690 335" class="flow-line" id="line-admin-api" marker-end="url(#arrow)" />
-              <text x="730" y="380" fill="#9ca3af" font-size="11" font-family="sans-serif">Cookie Auth & Realtime KPIs</text>
+              <path d="M 820 520 L 670 340" class="flow-line" id="line-admin-api" marker-end="url(#arrow)" />
+              <text x="715" y="440" fill="#9ca3af" font-size="11" font-family="sans-serif">Cookie Auth & Realtime KPIs</text>
+
+              <!-- Stress Test -> API -->
+              <path d="M 245 490 L 430 330" class="flow-line stress-flow" id="line-stress-api" marker-end="url(#arrow-red)" />
+              <text x="260" y="440" fill="#ef4444" font-size="11" font-weight="700" font-family="sans-serif">NBomber 300 RPS Stress Spike</text>
+
+              <!-- Background Alarm & Widget Refresh -->
+              <path d="M 140 365 C 140 680, 930 680, 930 195" class="flow-line alarm-flow" id="line-audio-alarm" marker-end="url(#arrow-amber)" />
+              <text x="550" y="670" fill="#f59e0b" font-size="11" font-weight="600" text-anchor="middle" font-family="sans-serif">⏰ 8am & 6pm WAT Audio Receiver + 30-min Autonomous Widget Sync (AlarmManager)</text>
 
               <!-- NODES -->
 
               <!-- 1. NewsScraperService -->
-              <g class="arch-node tier-ingestion" id="node-scraper" onclick="selectNode('scraper')" transform="translate(40, 70)">
-                <rect class="node-box" width="195" height="125" rx="10" fill="#1f2937" stroke="#374151" stroke-width="1.5" />
-                <rect width="195" height="6" rx="3" fill="url(#grad-purple)" />
+              <g class="arch-node tier-ingestion" id="node-scraper" onclick="selectNode('scraper')" transform="translate(40, 50)">
+                <rect class="node-box" width="205" height="125" rx="10" fill="#1f2937" stroke="#374151" stroke-width="1.5" />
+                <rect width="205" height="6" rx="3" fill="url(#grad-purple)" />
                 <circle cx="28" cy="38" r="14" fill="rgba(139, 92, 246, 0.2)" />
                 <text x="28" y="43" text-anchor="middle" font-size="14">🕷️</text>
                 <text x="50" y="34" fill="#f3f4f6" font-weight="700" font-size="13">NewsScraperService</text>
                 <text x="50" y="50" fill="#9ca3af" font-size="10">Background Ingestion Worker</text>
-                <line x1="15" y1="65" x2="180" y2="65" stroke="#374151" stroke-width="1" />
-                <text x="15" y="82" fill="#d1d5db" font-size="10">📰 18+ Outlets (BusinessDay, Punch)</text>
-                <text x="15" y="98" fill="#d1d5db" font-size="10">✍️ OpinionDetector & Bylines</text>
-                <text x="15" y="114" fill="#d1d5db" font-size="10">⏱️ Interval: 15 min throttle</text>
+                <line x1="15" y1="65" x2="190" y2="65" stroke="#374151" stroke-width="1" />
+                <text x="15" y="82" fill="#d1d5db" font-size="10">📰 18+ Outlets + World News Feeds</text>
+                <text x="15" y="98" fill="#d1d5db" font-size="10">✍️ Opinion & International Detection</text>
+                <text x="15" y="114" fill="#d1d5db" font-size="10">⏱️ Interval: 15 min throttled loops</text>
               </g>
 
               <!-- 2. NewsCategorizer.Trainer -->
-              <g class="arch-node tier-ingestion" id="node-ml" onclick="selectNode('ml')" transform="translate(460, 50)">
+              <g class="arch-node tier-ingestion" id="node-ml" onclick="selectNode('ml')" transform="translate(440, 40)">
                 <rect class="node-box" width="220" height="110" rx="10" fill="#1f2937" stroke="#374151" stroke-width="1.5" />
                 <rect width="220" height="6" rx="3" fill="url(#grad-amber)" />
                 <circle cx="28" cy="36" r="14" fill="rgba(245, 158, 11, 0.2)" />
@@ -939,80 +970,109 @@
                 <text x="50" y="32" fill="#f3f4f6" font-weight="700" font-size="13">NewsCategorizer</text>
                 <text x="50" y="48" fill="#9ca3af" font-size="10">ML.NET 5.0 Multiclass Classifier</text>
                 <line x1="15" y1="62" x2="205" y2="62" stroke="#374151" stroke-width="1" />
-                <text x="15" y="78" fill="#d1d5db" font-size="10">🏷️ 7 Core Categories + Op-Eds</text>
+                <text x="15" y="78" fill="#d1d5db" font-size="10">🏷️ 8 Categories (Inc. International)</text>
                 <text x="15" y="94" fill="#d1d5db" font-size="10">🎯 L-BFGS Maximum Entropy</text>
               </g>
 
               <!-- 3. NewsApi (CORE) -->
-              <g class="arch-node tier-core selected" id="node-api" onclick="selectNode('api')" transform="translate(460, 220)">
-                <rect class="node-box" width="230" height="145" rx="12" fill="#1f2937" stroke="#10b981" stroke-width="2" />
-                <rect width="230" height="6" rx="3" fill="url(#grad-green)" />
+              <g class="arch-node tier-core selected" id="node-api" onclick="selectNode('api')" transform="translate(430, 200)">
+                <rect class="node-box" width="240" height="160" rx="12" fill="#1f2937" stroke="#10b981" stroke-width="2" />
+                <rect width="240" height="6" rx="3" fill="url(#grad-green)" />
                 <circle cx="30" cy="38" r="16" fill="rgba(16, 185, 129, 0.25)" />
                 <text x="30" y="44" text-anchor="middle" font-size="16">⚡</text>
                 <text x="55" y="34" fill="#f3f4f6" font-weight="800" font-size="15">NewsApi (Core)</text>
                 <text x="55" y="50" fill="#10b981" font-size="11" font-weight="600">Hardened ASP.NET Core 9 API</text>
-                <line x1="15" y1="68" x2="215" y2="68" stroke="#374151" stroke-width="1" />
+                <line x1="15" y1="68" x2="225" y2="68" stroke="#374151" stroke-width="1" />
                 <text x="15" y="86" fill="#d1d5db" font-size="11">🔒 Fail-Closed ApiKeyMiddleware</text>
-                <text x="15" y="102" fill="#d1d5db" font-size="11">🎵 AudioController (HTTP 206 Range)</text>
-                <text x="15" y="118" fill="#d1d5db" font-size="11">🔍 ArticleSearchService (FTS5/Postgres)</text>
-                <text x="15" y="134" fill="#d1d5db" font-size="11">🛡️ RFC 9457 Problem Details & CSP</text>
+                <text x="15" y="102" fill="#d1d5db" font-size="11">⏱️ 120 req/min Sliding-Window Rate Limit</text>
+                <text x="15" y="118" fill="#d1d5db" font-size="11">🎵 AudioController (HTTP 206 Range)</text>
+                <text x="15" y="134" fill="#d1d5db" font-size="11">🔍 FTS5 Search + CancellationToken</text>
+                <text x="15" y="150" fill="#d1d5db" font-size="11">🛡️ RFC 9457 & CategoryImageMap</text>
               </g>
 
               <!-- 4. Database (Postgres / SQLite) -->
-              <g class="arch-node tier-core" id="node-db" onclick="selectNode('db')" transform="translate(470, 480)">
-                <rect class="node-box" width="210" height="110" rx="10" fill="#1f2937" stroke="#374151" stroke-width="1.5" />
-                <rect width="210" height="6" rx="3" fill="url(#grad-blue)" />
+              <g class="arch-node tier-core" id="node-db" onclick="selectNode('db')" transform="translate(440, 450)">
+                <rect class="node-box" width="220" height="120" rx="10" fill="#1f2937" stroke="#374151" stroke-width="1.5" />
+                <rect width="220" height="6" rx="3" fill="url(#grad-blue)" />
                 <circle cx="28" cy="35" r="14" fill="rgba(59, 130, 246, 0.2)" />
                 <text x="28" y="40" text-anchor="middle" font-size="14">🗄️</text>
                 <text x="50" y="32" fill="#f3f4f6" font-weight="700" font-size="13">Database Tier</text>
                 <text x="50" y="48" fill="#9ca3af" font-size="10">SQLite (Dev) / Postgres 16 (Prod)</text>
-                <line x1="15" y1="60" x2="195" y2="60" stroke="#374151" stroke-width="1" />
+                <line x1="15" y1="60" x2="205" y2="60" stroke="#374151" stroke-width="1" />
                 <text x="15" y="75" fill="#d1d5db" font-size="10">📊 Articles, Audio, Feedback, Socials</text>
                 <text x="15" y="90" fill="#d1d5db" font-size="10">⚡ FTS5 Trigger Sync + Author/Type</text>
                 <text x="15" y="105" fill="#d1d5db" font-size="10">🛡️ Auto-healing Schema Migrations</text>
               </g>
 
               <!-- 5. TtsWorker (Tri-Tier Speech Engine) -->
-              <g class="arch-node tier-workers" id="node-tts" onclick="selectNode('tts')" transform="translate(40, 330)">
-                <rect class="node-box" width="200" height="120" rx="10" fill="#1f2937" stroke="#374151" stroke-width="1.5" />
-                <rect width="200" height="6" rx="3" fill="url(#grad-rose)" />
+              <g class="arch-node tier-workers" id="node-tts" onclick="selectNode('tts')" transform="translate(40, 240)">
+                <rect class="node-box" width="205" height="125" rx="10" fill="#1f2937" stroke="#374151" stroke-width="1.5" />
+                <rect width="205" height="6" rx="3" fill="url(#grad-rose)" />
                 <circle cx="28" cy="36" r="14" fill="rgba(244, 63, 94, 0.2)" />
                 <text x="28" y="41" text-anchor="middle" font-size="14">🎙️</text>
                 <text x="50" y="32" fill="#f3f4f6" font-weight="700" font-size="13">TtsWorker</text>
                 <text x="50" y="48" fill="#f43f5e" font-size="10" font-weight="600">Tri-Tier Neural Speech Engine</text>
-                <line x1="15" y1="62" x2="185" y2="62" stroke="#374151" stroke-width="1" />
-                <text x="15" y="78" fill="#d1d5db" font-size="10">🇳🇬 en-NG-EzinneNeural & Abeo</text>
+                <line x1="15" y1="62" x2="190" y2="62" stroke="#374151" stroke-width="1" />
+                <text x="15" y="78" fill="#d1d5db" font-size="10">🇳🇬 en-NG-EzinneNeural ($0 Cost)</text>
                 <text x="15" y="94" fill="#d1d5db" font-size="10">🛡️ Local RIFF Fallback Safety Net</text>
                 <text x="15" y="110" fill="#d1d5db" font-size="10">🔁 Cross-Source Story Deduplication</text>
               </g>
 
-              <!-- 6. NigerianNewGrid (.NET MAUI Mobile/Desktop) -->
-              <g class="arch-node tier-clients" id="node-maui" onclick="selectNode('maui')" transform="translate(770, 130)">
-                <rect class="node-box" width="210" height="135" rx="10" fill="#1f2937" stroke="#374151" stroke-width="1.5" />
-                <rect width="210" height="6" rx="3" fill="url(#grad-cyan)" />
-                <circle cx="28" cy="36" r="14" fill="rgba(6, 182, 212, 0.2)" />
-                <text x="28" y="41" text-anchor="middle" font-size="14">📱</text>
-                <text x="50" y="32" fill="#f3f4f6" font-weight="700" font-size="13">NigerianNewGrid</text>
-                <text x="50" y="48" fill="#06b6d4" font-size="10" font-weight="600">.NET MAUI (Android, Win, iOS)</text>
-                <line x1="15" y1="62" x2="195" y2="62" stroke="#374151" stroke-width="1" />
-                <text x="15" y="78" fill="#d1d5db" font-size="10">✨ Onboarding Setup Wizard</text>
-                <text x="15" y="94" fill="#d1d5db" font-size="10">📐 MVVM Architecture (ViewModels)</text>
-                <text x="15" y="110" fill="#d1d5db" font-size="10">⏯️ Play / Pause / Resume Audio</text>
-                <text x="15" y="126" fill="#d1d5db" font-size="10">📖 Custom Typography & Reader</text>
+              <!-- 6. NewsApi.StressTests (NBomber Engine) -->
+              <g class="arch-node tier-testing" id="node-stress" onclick="selectNode('stress')" transform="translate(40, 430)">
+                <rect class="node-box" width="205" height="125" rx="10" fill="#1f2937" stroke="#374151" stroke-width="1.5" />
+                <rect width="205" height="6" rx="3" fill="url(#grad-red)" />
+                <circle cx="28" cy="36" r="14" fill="rgba(239, 68, 68, 0.2)" />
+                <text x="28" y="41" text-anchor="middle" font-size="14">🔥</text>
+                <text x="50" y="32" fill="#f3f4f6" font-weight="700" font-size="13">NewsApi.StressTests</text>
+                <text x="50" y="48" fill="#ef4444" font-size="10" font-weight="600">NBomber 6.6 Load Engine</text>
+                <line x1="15" y1="62" x2="190" y2="62" stroke="#374151" stroke-width="1" />
+                <text x="15" y="78" fill="#d1d5db" font-size="10">⚡ 4 Architectural Scenarios</text>
+                <text x="15" y="94" fill="#d1d5db" font-size="10">🚀 --bypass-rate-limit Saturation</text>
+                <text x="15" y="110" fill="#d1d5db" font-size="10">📊 Latency Percentiles (p50-p99)</text>
               </g>
 
-              <!-- 7. AdminDashboard (Web Management) -->
-              <g class="arch-node tier-clients" id="node-admin" onclick="selectNode('admin')" transform="translate(770, 340)">
-                <rect class="node-box" width="210" height="120" rx="10" fill="#1f2937" stroke="#374151" stroke-width="1.5" />
-                <rect width="210" height="6" rx="3" fill="url(#grad-purple)" />
+              <!-- 7. News Stand NG (.NET MAUI Mobile/Desktop) -->
+              <g class="arch-node tier-clients" id="node-maui" onclick="selectNode('maui')" transform="translate(820, 50)">
+                <rect class="node-box" width="220" height="145" rx="10" fill="#1f2937" stroke="#374151" stroke-width="1.5" />
+                <rect width="220" height="6" rx="3" fill="url(#grad-cyan)" />
+                <circle cx="28" cy="36" r="14" fill="rgba(6, 182, 212, 0.2)" />
+                <text x="28" y="41" text-anchor="middle" font-size="14">📱</text>
+                <text x="50" y="32" fill="#f3f4f6" font-weight="700" font-size="13">News Stand NG (MAUI)</text>
+                <text x="50" y="48" fill="#06b6d4" font-size="10" font-weight="600">.NET MAUI (Android, Win, iOS)</text>
+                <line x1="15" y1="62" x2="205" y2="62" stroke="#374151" stroke-width="1" />
+                <text x="15" y="78" fill="#d1d5db" font-size="10">💾 14-Day SQLite Cache & SWR</text>
+                <text x="15" y="94" fill="#d1d5db" font-size="10">🖼️ Android Widget (+20% Font/Image)</text>
+                <text x="15" y="110" fill="#d1d5db" font-size="10">🔄 Autonomous Background Sync</text>
+                <text x="15" y="126" fill="#d1d5db" font-size="10">🔔 Sonic Horn & Zero-Jitter Scroll</text>
+              </g>
+
+              <!-- 8. NigerianNewsGrid.Web (Vite + React) -->
+              <g class="arch-node tier-clients" id="node-web" onclick="selectNode('web')" transform="translate(820, 260)">
+                <rect class="node-box" width="220" height="130" rx="10" fill="#1f2937" stroke="#374151" stroke-width="1.5" />
+                <rect width="220" height="6" rx="3" fill="url(#grad-blue)" />
+                <circle cx="28" cy="36" r="14" fill="rgba(59, 130, 246, 0.2)" />
+                <text x="28" y="41" text-anchor="middle" font-size="14">🌐</text>
+                <text x="50" y="32" fill="#f3f4f6" font-weight="700" font-size="13">Modern Web Portal</text>
+                <text x="50" y="48" fill="#3b82f6" font-size="10" font-weight="600">Vite + React + Vanilla CSS</text>
+                <line x1="15" y1="62" x2="205" y2="62" stroke="#374151" stroke-width="1" />
+                <text x="15" y="78" fill="#d1d5db" font-size="10">📰 Hero Breaking Story Carousel</text>
+                <text x="15" y="94" fill="#d1d5db" font-size="10">📖 Reader Drawer with Audio</text>
+                <text x="15" y="110" fill="#d1d5db" font-size="10">⚡ Port 5173 / Mobile-first</text>
+              </g>
+
+              <!-- 9. AdminDashboard (Web Management) -->
+              <g class="arch-node tier-clients" id="node-admin" onclick="selectNode('admin')" transform="translate(820, 455)">
+                <rect class="node-box" width="220" height="130" rx="10" fill="#1f2937" stroke="#374151" stroke-width="1.5" />
+                <rect width="220" height="6" rx="3" fill="url(#grad-purple)" />
                 <circle cx="28" cy="36" r="14" fill="rgba(139, 92, 246, 0.2)" />
                 <text x="28" y="41" text-anchor="middle" font-size="14">📊</text>
                 <text x="50" y="32" fill="#f3f4f6" font-weight="700" font-size="13">AdminDashboard</text>
                 <text x="50" y="48" fill="#9ca3af" font-size="10">ASP.NET Core Razor Portal</text>
-                <line x1="15" y1="62" x2="195" y2="62" stroke="#374151" stroke-width="1" />
+                <line x1="15" y1="62" x2="205" y2="62" stroke="#374151" stroke-width="1" />
                 <text x="15" y="78" fill="#d1d5db" font-size="10">🔐 Cookie Authentication (Login)</text>
                 <text x="15" y="94" fill="#d1d5db" font-size="10">📈 Real-time Analytics & CTR</text>
-                <text x="15" y="110" fill="#d1d5db" font-size="10">💼 Sponsors, Videos & Socials</text>
+                <text x="15" y="110" fill="#d1d5db" font-size="10">💼 Sponsors, Videos & International</text>
               </g>
             </svg>
           </div>
@@ -1039,9 +1099,9 @@
       <div class="sim-card">
         <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
           <div>
-            <h2 style="font-size: 1.3rem;">⚡ Step-by-Step Article & Audio Lifecycle Simulator</h2>
+            <h2 style="font-size: 1.3rem;">⚡ Step-by-Step Article, Audio & Sync Lifecycle Simulator</h2>
             <p style="color: var(--text-muted); font-size: 0.85rem;">
-              Follow the end-to-end data transformation pipeline from multi-outlet scraping to neural voice synthesis and mobile consumption.
+              Follow the end-to-end data transformation pipeline from multi-outlet scraping to neural voice synthesis, on-device SQLite caching, and home screen widget updates.
             </p>
           </div>
           <div style="display: flex; gap: 0.5rem;">
@@ -1069,14 +1129,17 @@
             <span>5</span> HTTP 206 Streaming
           </div>
           <div class="step-item" id="simStep-5" onclick="goToStep(5)">
-            <span>6</span> Mobile & Alarm
+            <span>6</span> On-Device SQLite Cache
+          </div>
+          <div class="step-item" id="simStep-6" onclick="goToStep(6)">
+            <span>7</span> Autonomous Sync & Widget
           </div>
         </div>
 
         <!-- Simulator Content Window -->
         <div style="display: flex; flex-direction: column; gap: 1rem;">
           <div style="font-size: 0.85rem; color: var(--text-dim);" id="stepStatusText">
-            Step 1 of 6: Fetching RSS/Sitemaps & extracting author bylines
+            Step 1 of 7: Fetching RSS/Sitemaps & extracting author bylines
           </div>
 
           <div class="sim-box">
@@ -1085,7 +1148,7 @@
               <span class="code-pill" id="simBoxComponent">src/NewsScraperService</span>
             </div>
             <p style="font-size: 0.85rem; color: var(--text-muted);" id="simBoxDesc">
-              The scraper loop queries 18+ publications (BusinessDay, Punch, Vanguard, The Guardian, etc.). OpinionDetector inspects URL paths and headline prefixes; ArticleContentExtractor parses JSON-LD metadata for author bylines.
+              The scraper loop queries 18+ publications (BusinessDay, Punch, Vanguard, The Guardian, Daily Trust, Premium Times, etc.). OpinionDetector inspects URL paths and headline prefixes; ArticleContentExtractor parses JSON-LD metadata for author bylines.
             </p>
             
             <div class="info-section">
@@ -1107,7 +1170,7 @@
   "author": "Dr. Aminu Bello",
   "contentType": "Opinion",
   "summary": "While monetary tightening curtails currency volatility, structural credit expansion remains vital...",
-  "publishedAt": "2026-09-18T08:30:00Z",
+  "publishedAt": "2026-09-28T08:30:00Z",
   "imageUrl": "https://businessday.ng/wp-content/uploads/cbn_building.jpg"
 }
               </pre>
@@ -1124,12 +1187,17 @@
         <!-- Endpoint Selection List -->
         <div class="endpoint-list">
           <div style="font-size: 0.8rem; font-weight: 700; color: var(--text-dim); text-transform: uppercase; margin-bottom: 0.25rem;">
-            NewsApi Endpoints (v3.1)
+            NewsApi Endpoints (v4.0)
           </div>
 
           <button class="endpoint-btn active" onclick="selectEndpoint('get-articles', this)">
             <span><span class="method-badge method-get">GET</span> /api/v1/articles</span>
             <span style="font-size: 0.7rem; color: var(--text-dim);">Feed</span>
+          </button>
+
+          <button class="endpoint-btn" onclick="selectEndpoint('get-international', this)">
+            <span><span class="method-badge method-get">GET</span> /api/v1/articles?category=International</span>
+            <span style="font-size: 0.7rem; color: var(--accent-cyan);">Global</span>
           </button>
 
           <button class="endpoint-btn" onclick="selectEndpoint('get-opinions', this)">
@@ -1145,6 +1213,11 @@
           <button class="endpoint-btn" onclick="selectEndpoint('get-briefings', this)">
             <span><span class="method-badge method-get">GET</span> /api/v1/articles/briefings</span>
             <span style="font-size: 0.7rem; color: var(--text-dim);">Curated</span>
+          </button>
+
+          <button class="endpoint-btn" onclick="selectEndpoint('post-articles-ingest', this)">
+            <span><span class="method-badge method-post">POST</span> /api/v1/articles/ingest</span>
+            <span style="font-size: 0.7rem; color: var(--accent-rose);">Scraper Sync</span>
           </button>
 
           <button class="endpoint-btn" onclick="selectEndpoint('get-audio', this)">
@@ -1223,8 +1296,8 @@
           </button>
 
           <button class="endpoint-btn" onclick="selectEndpoint('get-health', this)">
-            <span><span class="method-badge method-get">GET</span> /healthz/liveness</span>
-            <span style="font-size: 0.7rem; color: var(--accent-green);">Health</span>
+            <span><span class="method-badge method-get">GET</span> /healthz</span>
+            <span style="font-size: 0.7rem; color: var(--accent-green);">Exempt Health</span>
           </button>
         </div>
 
@@ -1238,9 +1311,9 @@
     <!-- TAB 4: MAUI CLIENT BREAKDOWN -->
     <section id="tab-maui" class="tab-content">
       <div style="margin-bottom: 0.5rem;">
-        <h2 style="font-size: 1.3rem;">📱 .NET MAUI Client Architecture & Screen Map</h2>
+        <h2 style="font-size: 1.3rem;">📱 News Stand NG (.NET MAUI) Architecture & Screen Map</h2>
         <p style="color: var(--text-muted); font-size: 0.85rem;">
-          Cross-platform client (Android, Windows, iOS) built with Clean MVVM, First-run Onboarding, Background Audio Receivers, Brand Typography, and Zero-Jitter Scroll Stabilization.
+          Cross-platform client (Android, Windows, iOS) built with Clean MVVM, On-Device 14-Day SQLite Cache (WAL), Autonomous Widget Sync, Sonic Audio Feedback, and Zero-Jitter Scroll Stabilization.
         </p>
       </div>
 
@@ -1248,75 +1321,107 @@
         
         <div class="maui-card">
           <div class="maui-header">
-            <span class="maui-page-title">OnboardingPage.xaml</span>
-            <span class="badge-pill badge-rose">First-Run Setup</span>
+            <span class="maui-page-title">NewsPersistenceService.cs</span>
+            <span class="badge-pill badge-green">14-Day SQLite Store</span>
           </div>
           <p style="font-size: 0.8rem; color: var(--text-muted);">
-            Introductory configuration wizard on app install. Guides users through multi-language selection (English, Yoruba, Igbo, Hausa), notification permissions, daily briefing schedule (8 AM / 6 PM WAT), and topic interest chips.
+            On-device local SQLite store (<span class="code-pill">CachedStoryEntity</span>) operating in WAL mode (<span class="code-pill">PRAGMA journal_mode=WAL;</span>). Delivers instant 0ms app start-up, a 14-day rolling story cache with automatic non-bookmarked story eviction, and protects user bookmarks and read history from being purged.
           </p>
           <div class="info-section">
             <span class="section-label">Associated Code</span>
-            <span class="code-pill">OnboardingPage.xaml.cs</span>
-            <span class="code-pill">INotificationService.RequestPermissionAsync()</span>
-            <span class="code-pill">App.CreateWindow Routing</span>
+            <span class="code-pill">Services/NewsPersistenceService.cs</span>
+            <span class="code-pill">Models/CachedStoryEntity.cs</span>
+            <span class="code-pill">PruneOldStoriesAsync(14 Days)</span>
           </div>
         </div>
 
         <div class="maui-card">
           <div class="maui-header">
-            <span class="maui-page-title">AudioBriefingReceiver.cs</span>
-            <span class="badge-pill badge-amber">AlarmManager Background</span>
+            <span class="maui-page-title">NewsWidgetService.cs & Provider</span>
+            <span class="badge-pill badge-cyan">Enlarged Home Widget</span>
           </div>
           <p style="font-size: 0.8rem; color: var(--text-muted);">
-            Android broadcast receiver invoked at 8:00 AM & 6:00 PM WAT by AlarmManager. Automatically fetches the latest audio briefing from NewsApi, persists it to local cache, and triggers native notification alerts. Rescheduled upon phone reboot via <span class="code-pill">BootCompletedReceiver.cs</span>.
+            Android Home Screen widget featuring +20% larger typography (16sp masthead, 17sp headline, 12sp category badges) and 77dp rounded article thumbnails. Utilizes <span class="code-pill">WidgetImageHelper.cs</span> with power-of-two downsampling to strictly respect the Android 1MB Binder transaction limit.
           </p>
           <div class="info-section">
             <span class="section-label">Associated Code</span>
-            <span class="code-pill">Platforms/Android/AudioBriefingReceiver.cs</span>
-            <span class="code-pill">Platforms/Android/BootCompletedReceiver.cs</span>
-            <span class="code-pill">BroadcastReceiver</span>
+            <span class="code-pill">Platforms/Android/NewsWidgetService.cs</span>
+            <span class="code-pill">Platforms/Android/WidgetImageHelper.cs</span>
+            <span class="code-pill">NotifyAppWidgetDataChanged()</span>
           </div>
         </div>
 
         <div class="maui-card">
           <div class="maui-header">
-            <span class="maui-page-title">MainPage.xaml</span>
-            <span class="badge-pill">Home Feed</span>
+            <span class="maui-page-title">BackgroundSyncService.cs</span>
+            <span class="badge-pill badge-amber">Autonomous Doze Sync</span>
           </div>
           <p style="font-size: 0.8rem; color: var(--text-muted);">
-            Main news aggregation portal. Features hero breaking story carousels, category filter tabs, interactive audio narration bar with Play/Pause/Resume, pull-to-refresh, and pinned sponsored cards. Decoupled via <span class="code-pill">MainViewModel.cs</span> (82% code-behind reduction).
+            Autonomous background synchronization engine powered by <span class="code-pill">AlarmManager.SetAndAllowWhileIdle</span>. Enforces WorkManager-grade network checks and low-battery deferrals. Governed by the user opt-out toggle <span class="code-pill">NotificationPreferences.BackgroundUpdatesEnabled</span> to preserve battery life.
           </p>
           <div class="info-section">
             <span class="section-label">Associated Code</span>
-            <span class="code-pill">MainViewModel.cs</span>
-            <span class="code-pill">ITextToSpeechService.Pause()</span>
-            <span class="code-pill">ResolveApiBaseUrlAsync()</span>
+            <span class="code-pill">Platforms/Android/BackgroundSyncService.cs</span>
+            <span class="code-pill">Platforms/Android/NewsSyncReceiver.cs</span>
+            <span class="code-pill">BootCompletedReceiver.cs</span>
           </div>
         </div>
 
         <div class="maui-card">
           <div class="maui-header">
-            <span class="maui-page-title">DiscoverPage.xaml</span>
-            <span class="badge-pill badge-cyan">Explore Tab</span>
+            <span class="maui-page-title">SonicFeedbackService.cs</span>
+            <span class="badge-pill badge-rose">Newspaper Horn Chime</span>
           </div>
           <p style="font-size: 0.8rem; color: var(--text-muted);">
-            Exploration hub. Search 18+ publishers, filter by publisher badges (Punch, Vanguard, BusinessDay), explore dedicated Opinion & Editorial columns with author bylines, and watch curated YouTube video briefings. Features batch progressive rendering.
+            Haptic and auditory feedback engine playing a vintage newspaper delivery horn audio sound (<span class="code-pill">NewspaperHorn.mp3</span>) upon pull-to-refresh completions and major breaking news alerts. Implemented via <span class="code-pill">ISonicFeedbackService</span>.
           </p>
           <div class="info-section">
             <span class="section-label">Associated Code</span>
-            <span class="code-pill">DiscoverViewModel.cs</span>
-            <span class="code-pill">GetOpinionsAsync()</span>
-            <span class="code-pill">Batch Progressive Rendering (15 cards)</span>
+            <span class="code-pill">Services/SonicFeedbackService.cs</span>
+            <span class="code-pill">Resources/Raw/NewspaperHorn.mp3</span>
+            <span class="code-pill">PlayNewspaperHornAsync()</span>
+          </div>
+        </div>
+
+        <div class="maui-card">
+          <div class="maui-header">
+            <span class="maui-page-title">DiscoverViewModel.cs & Page</span>
+            <span class="badge-pill badge-purple">MVVM Hub & Global News</span>
+          </div>
+          <p style="font-size: 0.8rem; color: var(--text-muted);">
+            Fully refactored MVVM architecture (80% code-behind reduction). Features compiled XAML DataTemplates, infinite scrolling (<span class="code-pill">RemainingItemsThreshold="4"</span>), live search debouncing, YouTube video carousel, and full support for the new <span class="code-pill">International</span> category filter.
+          </p>
+          <div class="info-section">
+            <span class="section-label">Associated Code</span>
+            <span class="code-pill">ViewModels/DiscoverViewModel.cs</span>
+            <span class="code-pill">DiscoverPage.xaml (StoryItemTemplateSelector)</span>
+            <span class="code-pill">ApplyCategoryFilterAsync("International")</span>
+          </div>
+        </div>
+
+        <div class="maui-card">
+          <div class="maui-header">
+            <span class="maui-page-title">MainPage.xaml & MainViewModel</span>
+            <span class="badge-pill">Home Feed (SWR)</span>
+          </div>
+          <p style="font-size: 0.8rem; color: var(--text-muted);">
+            Stale-While-Revalidate news feed. Renders cached headlines instantly from SQLite before querying backend APIs. Features audio briefing narration with Play/Pause/Resume, pull-to-refresh with horn feedback, and graceful HTTP 429 rate limit fallbacks without clearing the UI.
+          </p>
+          <div class="info-section">
+            <span class="section-label">Associated Code</span>
+            <span class="code-pill">ViewModels/MainViewModel.cs</span>
+            <span class="code-pill">BriefingCacheService.cs</span>
+            <span class="code-pill">AppOpenAdManager.cs</span>
           </div>
         </div>
 
         <div class="maui-card">
           <div class="maui-header">
             <span class="maui-page-title">ArticleWebPage.xaml</span>
-            <span class="badge-pill badge-amber">Reader View</span>
+            <span class="badge-pill badge-amber">Offline Reader View</span>
           </div>
           <p style="font-size: 0.8rem; color: var(--text-muted);">
-            Distraction-free article reader with brand typography (<span class="code-pill">Legacy Serif Bold</span> headlines & <span class="code-pill">Legacy Sans Book</span> body), audio streaming with range seeking, font resizing, and native sharing.
+            Distraction-free article reader styled with custom typography (<span class="code-pill">Legacy Serif Bold</span> & <span class="code-pill">Legacy Sans Book</span>). Queries related stories from the on-device SQLite database when offline, streams audio with HTTP 206 seek ranges, and tracks telemetry.
           </p>
           <div class="info-section">
             <span class="section-label">Associated Code</span>
@@ -1328,49 +1433,17 @@
 
         <div class="maui-card">
           <div class="maui-header">
-            <span class="maui-page-title">Bookmarks & Recents</span>
-            <span class="badge-pill">Saved Vault</span>
+            <span class="maui-page-title">Onboarding & Permissions</span>
+            <span class="badge-pill badge-rose">First-Run Wizard</span>
           </div>
           <p style="font-size: 0.8rem; color: var(--text-muted);">
-            Offline reading vault and history tracking. Persists saved articles locally into SQLite with swipe-to-delete, offline full text access, and chronological reading history via <span class="code-pill">RecentlyReadService.cs</span>.
+            Introductory setup wizard guiding readers through language selection (English, Yoruba, Igbo, Hausa), notification permissions, daily briefing schedule (8 AM / 6 PM WAT), and topic chips including Politics, Business, and International.
           </p>
           <div class="info-section">
             <span class="section-label">Associated Code</span>
-            <span class="code-pill">BookmarksPage.xaml.cs</span>
-            <span class="code-pill">BookmarkService.cs</span>
-            <span class="code-pill">RecentlyReadService.cs</span>
-          </div>
-        </div>
-
-        <div class="maui-card">
-          <div class="maui-header">
-            <span class="maui-page-title">Notification Services</span>
-            <span class="badge-pill badge-purple">Cross-Platform Alerts</span>
-          </div>
-          <p style="font-size: 0.8rem; color: var(--text-muted);">
-            Unified cross-platform notifications. Implements Android NotificationChannels with high-priority audio channels, iOS <span class="code-pill">UNUserNotificationCenter</span> with <span class="code-pill">iOSNotificationDelegate</span>, and Windows Toast notifications.
-          </p>
-          <div class="info-section">
-            <span class="section-label">Associated Code</span>
-            <span class="code-pill">Platforms/Android/NotificationService.cs</span>
-            <span class="code-pill">Platforms/iOS/NotificationService.cs</span>
-            <span class="code-pill">AppNotificationBridge.cs</span>
-          </div>
-        </div>
-
-        <div class="maui-card">
-          <div class="maui-header">
-            <span class="maui-page-title">Android Scroll Stabilization</span>
-            <span class="badge-pill badge-green">UI Performance</span>
-          </div>
-          <p style="font-size: 0.8rem; color: var(--text-muted);">
-            Zero-jitter Android scrolling optimization: fixed 140px card dimensions to prevent image relayout shifts, native horizontal ScrollView replacing nested CollectionView, ARGB hex overlays replacing buggy BoxView opacity, and 2-day image caching.
-          </p>
-          <div class="info-section">
-            <span class="section-label">Key Techniques</span>
-            <span class="code-pill">HeightRequest="140" WidthRequest="130"</span>
-            <span class="code-pill">ItemSizingStrategy="MeasureFirstItem"</span>
-            <span class="code-pill">CachingEnabled = true</span>
+            <span class="code-pill">OnboardingPage.xaml.cs</span>
+            <span class="code-pill">INotificationService.RequestPermissionAsync()</span>
+            <span class="code-pill">App.CreateWindow Routing</span>
           </div>
         </div>
 
@@ -1380,9 +1453,9 @@
     <!-- TAB 5: SECURITY & HARDENING MATRIX -->
     <section id="tab-security" class="tab-content">
       <div class="sim-card">
-        <h2 style="font-size: 1.3rem;">🛡️ Enterprise Security & API Hardening Matrix</h2>
+        <h2 style="font-size: 1.3rem;">🛡️ Enterprise Security, Hardening & Stress Testing Matrix</h2>
         <p style="color: var(--text-muted); font-size: 0.85rem;">
-          Detailed architecture breakdown of the 6-Step API Hardening Roadmap implemented across NewsApi, AdminDashboard, and client endpoints.
+          Architectural overview of the 8-Step API Hardening Roadmap and NBomber 6.6 distributed load testing suite.
         </p>
 
         <div class="security-grid">
@@ -1463,11 +1536,11 @@
 
           <div class="sec-card">
             <div class="sec-card-header">
-              <span style="font-weight: 700; color: var(--accent-rose);">Step 6: Problem Details</span>
+              <span style="font-weight: 700; color: var(--accent-rose);">Step 6: Problem Details & Guards</span>
               <span class="badge-pill badge-rose">Completed</span>
             </div>
             <p style="font-size: 0.8rem; color: var(--text-muted);">
-              Standardized on RFC 9457 <span class="code-pill">ProblemDetails</span> (<span class="code-pill">application/problem+json</span>) for all API errors with correlation <span class="code-pill">traceId</span>. Eliminated raw internal exception leaks in controllers while logging stack traces.
+              Standardized on RFC 9457 <span class="code-pill">ProblemDetails</span> (<span class="code-pill">application/problem+json</span>) for all API errors with correlation <span class="code-pill">traceId</span>. Added <span class="code-pill">Response.HasStarted</span> defensive checks to prevent mid-stream header mutation crashes.
             </p>
             <div class="info-section">
               <span class="section-label">Key Files</span>
@@ -1475,20 +1548,84 @@
             </div>
           </div>
 
+          <div class="sec-card">
+            <div class="sec-card-header">
+              <span style="font-weight: 700; color: var(--accent-red);">Step 7: Rate Limiting & DoS Defense</span>
+              <span class="badge-pill badge-rose">Completed</span>
+            </div>
+            <p style="font-size: 0.8rem; color: var(--text-muted);">
+              Frontline sliding-window rate limiter configured for 120 req/min per IP. Cluster health checks (<span class="code-pill">/health</span>, <span class="code-pill">/healthz</span>) are permanently exempted, and <span class="code-pill">X-Bypass-Rate-Limit</span> header enables hardware saturation load testing.
+            </p>
+            <div class="info-section">
+              <span class="section-label">Key Files</span>
+              <span class="code-pill">Extensions/ServiceCollectionExtensions.cs</span>
+            </div>
+          </div>
+
+          <div class="sec-card">
+            <div class="sec-card-header">
+              <span style="font-weight: 700; color: var(--accent-cyan);">Step 8: Cooperative Cancellation</span>
+              <span class="badge-pill badge-cyan">Completed</span>
+            </div>
+            <p style="font-size: 0.8rem; color: var(--text-muted);">
+              Propagated <span class="code-pill">CancellationToken</span> across controller actions, EF Core async queries (<span class="code-pill">ToListAsync</span>, <span class="code-pill">SaveChangesAsync</span>), and outbound RSS scraper HTTP calls, eliminating orphaned threads on client disconnects.
+            </p>
+            <div class="info-section">
+              <span class="section-label">Key Files</span>
+              <span class="code-pill">Controllers/SourcesController.cs</span>
+              <span class="code-pill">Controllers/ArticlesController.cs</span>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Stress Testing Matrix -->
+        <div class="sim-box" style="margin-top: 0.5rem;">
+          <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
+            <h3 style="font-size: 1rem;">🔥 NBomber Distributed Load Testing Scenarios</h3>
+            <span class="badge-pill badge-rose">NBomber 6.6 CLI Engine</span>
+          </div>
+          <p style="font-size: 0.85rem; color: var(--text-muted);">
+            High-concurrency stress testing suite housed in <span class="code-pill">tests/NewsApi.StressTests</span> executing 4 real-world load scenarios and exporting reports to <span class="code-pill">reports/stress_tests/</span>:
+          </p>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 0.75rem; margin-top: 0.5rem;">
+            <div style="background: var(--bg-primary); padding: 0.75rem; border-radius: 6px; border: 1px solid var(--border-color); font-size: 0.8rem;">
+              <span style="color: var(--accent-green); font-weight: 700;">1. feed_read_spike</span> (300 RPS)
+              <div style="color: var(--text-muted); font-size: 0.75rem; margin-top: 0.2rem;">Evaluates in-memory caching and payload serialization during morning news traffic rushes.</div>
+            </div>
+            <div style="background: var(--bg-primary); padding: 0.75rem; border-radius: 6px; border: 1px solid var(--border-color); font-size: 0.8rem;">
+              <span style="color: var(--accent-cyan); font-weight: 700;">2. search_category_filter</span> (100 RPS)
+              <div style="color: var(--text-muted); font-size: 0.75rem; margin-top: 0.2rem;">Stresses FTS5 and LINQ query plans across 8 categories and randomized search terms.</div>
+            </div>
+            <div style="background: var(--bg-primary); padding: 0.75rem; border-radius: 6px; border: 1px solid var(--border-color); font-size: 0.8rem;">
+              <span style="color: var(--accent-amber); font-weight: 700;">3. scraper_write_contention</span> (50 Inserts/sec)
+              <div style="color: var(--text-muted); font-size: 0.75rem; margin-top: 0.2rem;">Measures database write-lock concurrency, duplicate title hashing, and commit latency.</div>
+            </div>
+            <div style="background: var(--bg-primary); padding: 0.75rem; border-radius: 6px; border: 1px solid var(--border-color); font-size: 0.8rem;">
+              <span style="color: var(--accent-purple); font-weight: 700;">4. audio_discovery_streaming</span> (150 RPS)
+              <div style="color: var(--text-muted); font-size: 0.75rem; margin-top: 0.2rem;">Probes audio briefing discovery and stream availability under concurrent client polling.</div>
+            </div>
+          </div>
         </div>
 
         <!-- Automated Test Coverage Matrix -->
         <div class="sim-box" style="margin-top: 0.5rem;">
           <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
             <h3 style="font-size: 1rem;">🧪 Automated Unit & Integration Test Suite Status</h3>
-            <span class="badge-pill">237 Passed • 0 Failed (100%)</span>
+            <span class="badge-pill">260 Passed • 0 Failed (100%)</span>
           </div>
           <p style="font-size: 0.85rem; color: var(--text-muted);">
-            All 15 automated test suites execute in ~7 seconds under <span class="code-pill">dotnet test tests/NewsApiClient.Tests</span> verifying security, persistence, audio, and client logic.
+            All 21 automated test suites execute under <span class="code-pill">dotnet test tests/NewsApiClient.Tests</span> verifying security, persistence, audio, categorization, and client logic.
           </p>
           <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 0.75rem; margin-top: 0.5rem;">
             <div style="background: var(--bg-primary); padding: 0.6rem 0.75rem; border-radius: 6px; border: 1px solid var(--border-color); font-size: 0.8rem;">
-              <span style="color: var(--accent-green); font-weight: 700;">✓ ApiKeyMiddlewareHardeningTests</span> (18 tests)
+              <span style="color: var(--accent-green); font-weight: 700;">✓ ApiKeyMiddlewareHardeningTests</span> (20 tests)
+            </div>
+            <div style="background: var(--bg-primary); padding: 0.6rem 0.75rem; border-radius: 6px; border: 1px solid var(--border-color); font-size: 0.8rem;">
+              <span style="color: var(--accent-green); font-weight: 700;">✓ CategorizerTests</span> (28 tests)
+            </div>
+            <div style="background: var(--bg-primary); padding: 0.6rem 0.75rem; border-radius: 6px; border: 1px solid var(--border-color); font-size: 0.8rem;">
+              <span style="color: var(--accent-green); font-weight: 700;">✓ ArticlesControllerTests</span> (36 tests)
             </div>
             <div style="background: var(--bg-primary); padding: 0.6rem 0.75rem; border-radius: 6px; border: 1px solid var(--border-color); font-size: 0.8rem;">
               <span style="color: var(--accent-green); font-weight: 700;">✓ StoryDeduplicationTests</span> (24 tests)
@@ -1497,16 +1634,13 @@
               <span style="color: var(--accent-green); font-weight: 700;">✓ OpinionEditorialTests</span> (25 tests)
             </div>
             <div style="background: var(--bg-primary); padding: 0.6rem 0.75rem; border-radius: 6px; border: 1px solid var(--border-color); font-size: 0.8rem;">
-              <span style="color: var(--accent-green); font-weight: 700;">✓ ArticlesControllerTests</span> (35 tests)
-            </div>
-            <div style="background: var(--bg-primary); padding: 0.6rem 0.75rem; border-radius: 6px; border: 1px solid var(--border-color); font-size: 0.8rem;">
               <span style="color: var(--accent-green); font-weight: 700;">✓ DbInitializerTests</span> (14 tests)
             </div>
             <div style="background: var(--bg-primary); padding: 0.6rem 0.75rem; border-radius: 6px; border: 1px solid var(--border-color); font-size: 0.8rem;">
               <span style="color: var(--accent-green); font-weight: 700;">✓ ArticleSearchTests</span> (16 tests)
             </div>
             <div style="background: var(--bg-primary); padding: 0.6rem 0.75rem; border-radius: 6px; border: 1px solid var(--border-color); font-size: 0.8rem;">
-              <span style="color: var(--accent-green); font-weight: 700;">✓ TtsSynthesizerTests</span> (12 tests)
+              <span style="color: var(--accent-green); font-weight: 700;">✓ TtsSynthesizerTests</span> (13 tests)
             </div>
             <div style="background: var(--bg-primary); padding: 0.6rem 0.75rem; border-radius: 6px; border: 1px solid var(--border-color); font-size: 0.8rem;">
               <span style="color: var(--accent-green); font-weight: 700;">✓ AdminDashboardAuthTests</span> (15 tests)
@@ -1530,7 +1664,7 @@
               <span style="color: var(--accent-green); font-weight: 700;">✓ TtsBriefingFormatterTests</span> (8 tests)
             </div>
             <div style="background: var(--bg-primary); padding: 0.6rem 0.75rem; border-radius: 6px; border: 1px solid var(--border-color); font-size: 0.8rem;">
-              <span style="color: var(--accent-green); font-weight: 700;">✓ ServiceConfigurationTests</span> (4 tests)
+              <span style="color: var(--accent-green); font-weight: 700;">✓ BackendOptimizationTests</span> (5 tests)
             </div>
           </div>
         </div>
@@ -1541,9 +1675,9 @@
     <!-- TAB 6: QUICK START & DEV GUIDE -->
     <section id="tab-quickstart" class="tab-content">
       <div class="sim-card">
-        <h2 style="font-size: 1.3rem;">🚀 Running NigerianNewsGrid Locally & Testing</h2>
+        <h2 style="font-size: 1.3rem;">🚀 Running News Stand NG Locally & Testing</h2>
         <p style="color: var(--text-muted); font-size: 0.85rem;">
-          The system supports one-click startup via PowerShell, Batch script, or Docker Compose with complete environment orchestration.
+          The system supports one-click startup via PowerShell, Batch script, Docker Compose, or individual .NET / Node CLI commands.
         </p>
 
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.25rem;">
@@ -1554,54 +1688,51 @@
               Launches NewsApi, AdminDashboard, and NewsScraperService in interactive console windows or background jobs.
             </p>
             <pre class="code-block">
-# 1. Run all services with interactive logs
+# 1. Run all backend services with interactive logs
 .\run-services.ps1
 
-# 2. Or run silently in background jobs
+# 2. Launch backend services + Modernist Web Application
+.\run-services.ps1 -Web
+
+# 3. Or run silently in background jobs
 .\run-services.ps1 -Background
 
-# 3. Stop all running services
+# 4. Stop all running services
 .\run-services.ps1 -Stop
-
-# 4. Run full test suite (237 tests)
-dotnet test tests/NewsApiClient.Tests
             </pre>
           </div>
 
           <div class="sim-box">
-            <h3 style="font-size: 1rem; color: var(--accent-cyan);">Method 2: Docker Compose (All 4 Microservices)</h3>
+            <h3 style="font-size: 1rem; color: var(--accent-cyan);">Method 2: Docker Compose (Microservices)</h3>
             <p style="font-size: 0.8rem; color: var(--text-muted);">
               Runs PostgreSQL 16, NewsApi, AdminDashboard, Scraper, and TtsWorker with shared persistent audio-data volume.
             </p>
             <pre class="code-block">
-# Launch all microservices + PostgreSQL
+# Launch all microservices + PostgreSQL via script
+.\run-services.ps1 -Docker
+
+# Or run direct Docker Compose
 docker-compose up -d --build
 
-# View live container logs
+# View container logs
 docker-compose logs -f
-
-# Shut down and remove containers
-docker-compose down
             </pre>
           </div>
 
           <div class="sim-box">
-            <h3 style="font-size: 1rem; color: var(--accent-amber);">Method 3: Local .NET CLI Debugging</h3>
+            <h3 style="font-size: 1rem; color: var(--accent-rose);">Method 3: NBomber Load & Stress Testing</h3>
             <p style="font-size: 0.8rem; color: var(--text-muted);">
-              Run individual projects directly for active development in Visual Studio, VS Code, or terminal.
+              Execute high-concurrency benchmarks and stress scenarios with detailed latency exports.
             </p>
             <pre class="code-block">
-# Start Web API (Port 56193)
-dotnet run --project src/NewsApi
+# 1. Run baseline test against port 5000 (Docker)
+dotnet run --project tests/NewsApi.StressTests
 
-# Start Admin Dashboard (Port 56192)
-dotnet run --project src/AdminDashboard
+# 2. Target standalone NewsApi (Port 56193)
+dotnet run --project tests/NewsApi.StressTests -- --url http://localhost:56193
 
-# Start Scraper Worker
-dotnet run --project src/NewsScraperService
-
-# Start Tri-Tier TTS Worker
-dotnet run --project src/TtsWorker
+# 3. Read spike test (300 RPS, bypassing rate limit)
+dotnet run --project tests/NewsApi.StressTests -- --scenario feed --rate 300 --bypass-rate-limit
             </pre>
           </div>
 
@@ -1622,11 +1753,18 @@ dotnet run --project src/TtsWorker
               </thead>
               <tbody>
                 <tr style="border-bottom: 1px solid var(--border-color);">
-                  <td style="padding: 0.5rem; font-weight: 600;">NewsApi</td>
+                  <td style="padding: 0.5rem; font-weight: 600;">NewsApi (Core)</td>
                   <td style="padding: 0.5rem;"><span class="code-pill">56193</span></td>
                   <td style="padding: 0.5rem;"><span class="code-pill">5000:8080</span></td>
                   <td style="padding: 0.5rem;"><span class="badge-pill badge-purple">X-Api-Key Header</span></td>
                   <td style="padding: 0.5rem;"><a href="http://localhost:56193/swagger" target="_blank" style="color: var(--accent-cyan);">http://localhost:56193/swagger</a></td>
+                </tr>
+                <tr style="border-bottom: 1px solid var(--border-color);">
+                  <td style="padding: 0.5rem; font-weight: 600;">Modernist Web App</td>
+                  <td style="padding: 0.5rem;"><span class="code-pill">5173</span></td>
+                  <td style="padding: 0.5rem;"><span class="code-pill">Host / Vite</span></td>
+                  <td style="padding: 0.5rem;"><span class="badge-pill badge-blue">Public Frontend</span></td>
+                  <td style="padding: 0.5rem;"><a href="http://localhost:5173" target="_blank" style="color: var(--accent-cyan);">http://localhost:5173</a></td>
                 </tr>
                 <tr style="border-bottom: 1px solid var(--border-color);">
                   <td style="padding: 0.5rem; font-weight: 600;">Admin Dashboard</td>
@@ -1661,7 +1799,7 @@ dotnet run --project src/TtsWorker
 
   <!-- Footer -->
   <footer>
-    Nigerian News Grid Architecture Map v3.1 • Tri-Tier Neural Audio, Enterprise API Hardening & MVVM Client • 237 Passing Tests • September 2026
+    News Stand NG Architecture Map v4.0 • On-Device SQLite Cache (WAL), Tri-Tier Neural Audio & NBomber Stress Engine • 260 Passing Tests • September 2026
   </footer>
 
   <!-- Interactive Logic -->
@@ -1691,22 +1829,26 @@ dotnet run --project src/TtsWorker
         summary: "Hardened high-performance ASP.NET Core 9 Web API serving aggregated Nigerian news, ML classification metadata, audio narration with HTTP 206 range seeking, sponsored PR campaigns, video stories, and analytics.",
         responsibility: [
           "RESTful HTTP endpoints for article ingestion, category briefings, search, and publisher feeds",
+          "Hardened batch ingestion endpoint (POST /api/v1/articles/ingest) with duplicate checking and high throughput",
           "Audio streaming with HTTP 206 Partial Content (Range processing) for smooth mobile playback seeking",
           "Full-Text Search (ArticleSearchService) using SQLite FTS5 triggers or PostgreSQL tsvector/GIN",
+          "Frontline sliding-window 120 req/min rate limiter with health check exemptions and X-Bypass-Rate-Limit key",
           "Fail-closed API Key authentication (ApiKeyMiddleware) and RFC 9457 Problem Details standardization",
+          "Cooperative CancellationToken propagation through all controller actions and EF Core queries",
           "Hardened 50MB audio upload endpoint with strict file extension whitelisting and path traversal defense",
-          "Decoupled Clean Architecture DTO responses protecting database entities from client leaks",
-          "Direct sponsorship monetization engine with CTR analytics & impression tracking",
+          "Centralized CategoryImageMap infrastructure resolving curated fallback imagery across all categories including International",
           "EF Core database context with SQLite (development) and PostgreSQL 16 (production) with EnsureTablesExistAsync auto-provisioning"
         ],
         files: [
-          { name: "Program.cs", desc: "Dependency injection, middleware pipeline, security headers, CORS, and health checks" },
-          { name: "Controllers/ArticlesController.cs", desc: "CRUD, search, pagination, sponsored story endpoints, and telemetry" },
+          { name: "Program.cs", desc: "Dependency injection, middleware pipeline, security headers, rate limiting, and health checks" },
+          { name: "Controllers/ArticlesController.cs", desc: "CRUD, search, pagination, batch ingest, sponsored stories, and telemetry" },
           { name: "Controllers/AudioController.cs", desc: "HTTP 206 seekable Range delivery & hardened audio file uploads (50MB limit)" },
           { name: "Controllers/FeedbackController.cs", desc: "User feedback & bug reporting endpoints (public submission, auth review)" },
           { name: "Controllers/SocialPostsController.cs", desc: "Curated social media discussion posts and verified handles" },
+          { name: "Controllers/SourcesController.cs", desc: "Registered news outlets with cooperative CancellationToken support" },
           { name: "Middleware/ApiKeyMiddleware.cs", desc: "Fail-closed API key verification & unauthorized protection" },
-          { name: "Middleware/GlobalExceptionMiddleware.cs", desc: "RFC 9457 Problem Details with traceId correlation" },
+          { name: "Middleware/GlobalExceptionMiddleware.cs", desc: "RFC 9457 Problem Details with Response.HasStarted defensive guard" },
+          { name: "Infrastructure/CategoryImageMap.cs", desc: "Centralized fallback image resolution across all categories" },
           { name: "Services/ArticleSearchService.cs", desc: "Full-text search engine with FTS5 and LINQ fallback" },
           { name: "Models/ResponseDtos.cs", desc: "Clean Architecture response contracts decoupled from EF Core entities" }
         ],
@@ -1720,23 +1862,24 @@ dotnet run --project src/TtsWorker
         title: "🕷️ NewsScraperService (Ingestion Engine)",
         tier: "Ingestion Tier",
         badgeColor: "var(--accent-purple)",
-        summary: "Autonomous .NET Background Service executing continuous 15-minute scraping loops across 18+ leading Nigerian publications with byline extraction and heuristic opinion detection.",
+        summary: "Autonomous .NET Background Service executing continuous 15-minute scraping loops across 18+ leading Nigerian publications with byline extraction, heuristic opinion detection, and international geopolitical filtering.",
         responsibility: [
           "Dual strategy scrapers: SitemapScraperBase (XML sitemaps) & RssScraperBase (RSS feeds)",
+          "International news regex classifier detecting world leaders, foreign regions, and global institutions",
           "Heuristic Opinion Detection (OpinionDetector.cs) identifying op-eds, columnists, and editorial pieces",
           "Author Byline Extraction (ArticleContentExtractor.cs) sanitizing journalist and writer credits from JSON-LD schema",
-          "Deduplicates against NewsApi before making authenticated POST /api/v1/articles ingest calls",
+          "Deduplicates against NewsApi before making authenticated POST /api/v1/articles/ingest calls",
           "Throttled HTTP requests with SemaphoreSlim to respect publisher rate limits"
         ],
         files: [
           { name: "ScraperWorker.cs", desc: "BackgroundService orchestrating the recurring crawl schedule" },
+          { name: "Services/MlCategorizerEngine.cs", desc: "Entity and keyword detection engine with International regex matching" },
           { name: "Services/OpinionDetector.cs", desc: "High-precision URL, title, and topic opinion detection" },
           { name: "Services/ArticleContentExtractor.cs", desc: "HTML body cleaning, JSON-LD author extraction, and image resolution" },
           { name: "Services/ArticleEnricher.cs", desc: "Article metadata enrichment before API ingestion" },
           { name: "Scrapers/BusinessDayScraper.cs", desc: "Dedicated financial and opinion extractor for BusinessDay" },
-          { name: "Scrapers/VanguardSitemapScraper.cs", desc: "Specialized extractor for Vanguard News" },
           { name: "Scrapers/PunchSitemapScraper.cs", desc: "Specialized extractor for The Punch" },
-          { name: "Scrapers/LindaIkejiScraper.cs", desc: "Specialized entertainment extractor for Linda Ikeji Blog" }
+          { name: "Scrapers/VanguardSitemapScraper.cs", desc: "Specialized extractor for Vanguard News" }
         ],
         env: [
           "NewsApi:BaseUrl = http://localhost:56193",
@@ -1748,19 +1891,19 @@ dotnet run --project src/TtsWorker
         title: "🧠 NewsCategorizer.Trainer (ML Engine)",
         tier: "Machine Learning Tier",
         badgeColor: "var(--accent-amber)",
-        summary: "Machine learning trainer built on ML.NET 5.0 to automatically classify raw news stories into 7 primary categories with high accuracy.",
+        summary: "Machine learning trainer built on ML.NET 5.0 to automatically classify raw news stories into 8 primary categories (including International) with high accuracy.",
         responsibility: [
           "Featurizes article titles and summaries using n-gram text transformation",
           "Trains Multiclass Maximum Entropy (L-BFGS) classification models",
+          "Classifies 8 categories: Politics, Business, Tech, Sports, Entertainment, Lifestyle, Opinion, International",
           "Evaluates Log-loss, Macro-accuracy, and Micro-accuracy",
-          "Preserves orthogonal ContentType (News vs Opinion) alongside topical categorization",
-          "Provides seed dataset and category feed configurations"
+          "Curated ground-truth SeedDataset including international foreign affairs and diplomacy samples"
         ],
         files: [
           { name: "Program.cs", desc: "ML pipeline definition, training execution, and model evaluation" },
           { name: "ArticleTrainingData.cs", desc: "Input features and predicted category label schemas" },
-          { name: "SeedDataset.cs", desc: "Curated dataset of verified Nigerian news headlines" },
-          { name: "CategoryFeedConfig.cs", desc: "Category heuristics and classification thresholds" }
+          { name: "SeedDataset.cs", desc: "Curated dataset of verified Nigerian and international news headlines" },
+          { name: "CategoryFeedConfig.cs", desc: "Category heuristics, feed endpoints, and classification thresholds" }
         ],
         env: [
           "Output Model: MLModels/NewsCategorizerModel.zip"
@@ -1776,7 +1919,8 @@ dotnet run --project src/TtsWorker
           "Tier 2 (Microsoft Edge Neural TTS — Default $0 Cost): Authentic Nigerian voices (en-NG-EzinneNeural & en-NG-AbeoNeural) streamed over TLS WebSockets",
           "Tier 3 (Local Offline Safety Net): Compliant RIFF WAVE container generation during network outages",
           "Cross-Source Story Deduplication (StoryDeduplicationHelper) preventing repetitive reading of identical news events across outlets",
-          "Shared persistent Docker volume (audio-data:/app/data/audio) for instant NewsApi delivery"
+          "Shared persistent Docker volume (audio-data:/app/data/audio) for instant NewsApi delivery",
+          "Aligned fallback port to 56193 for seamless local development"
         ],
         files: [
           { name: "Program.cs", desc: "Host builder and background worker registration" },
@@ -1793,34 +1937,60 @@ dotnet run --project src/TtsWorker
         ]
       },
       maui: {
-        title: "📱 NigerianNewGrid (.NET MAUI App)",
+        title: "📱 News Stand NG (.NET MAUI Mobile App)",
         tier: "Client Tier",
         badgeColor: "var(--accent-cyan)",
-        summary: "Cross-platform mobile and desktop application for Android, Windows, and iOS built with .NET MAUI, Clean MVVM architecture, and first-run onboarding wizard.",
+        summary: "Cross-platform mobile and desktop application for Android, Windows, and iOS built with .NET MAUI, Clean MVVM architecture, 14-day on-device SQLite cache, and enlarged home screen widget.",
         responsibility: [
-          "First-run Onboarding Setup Wizard configuring language (English, Yoruba, Igbo, Hausa), alerts, and topic chips",
-          "Clean MVVM Architecture (MainViewModel, DiscoverViewModel) with dynamic endpoint racing (82% code-behind reduction)",
-          "Background Audio Briefing Scheduler (AudioBriefingReceiver & BootCompletedReceiver) fetching 8am & 6pm WAT audio",
-          "Cross-Platform Notifications (Android NotificationChannels, iOS UNUserNotificationCenter, Windows Toast)",
-          "Interactive voice narration player with segmented story playback and Play / Pause / Resume controls",
+          "On-device 14-Day SQLite Cache (NewsPersistenceService) with WAL mode for instant 0ms app start-up and offline reading",
+          "Stale-While-Revalidate UI acceleration (MainViewModel) displaying cached stories instantly while updating in background",
+          "Enlarged Android Home Screen Widget with +20% typography (16sp title, 17sp headline) and 77dp rounded thumbnails via WidgetImageHelper",
+          "Autonomous Background Sync (BackgroundSyncService & NewsSyncReceiver) running via AlarmManager.SetAndAllowWhileIdle with battery saver opt-out",
+          "Sonic Feedback Engine (SonicFeedbackService) playing vintage NewspaperHorn.mp3 audio chimes on pull-to-refresh",
+          "AppOpenAdManager handling non-intrusive full-screen ad placement during cold and warm starts",
+          "DiscoverPage MVVM refactoring with compiled XAML DataTemplates, infinite scrolling, and International category filter",
           "Brand typography enforcement using bundled TrueType fonts (Legacy Serif Bold & Legacy Sans Book)",
-          "Android scroll stabilization (fixed 140px card dimensions, horizontal ScrollView, ARGB overlays, 2-day image caching)",
-          "Offline-capable SQLite bookmarks vault and recently read history (RecentlyReadService)"
+          "Zero-jitter Android scrolling optimization (fixed dimensions, horizontal ScrollView, ARGB overlays, 2-day image cache)"
         ],
         files: [
-          { name: "App.xaml.cs", desc: "First-run onboarding gateway and initial window swap routing" },
-          { name: "OnboardingPage.xaml", desc: "Language selection, notification schedule, and topic interest chips" },
-          { name: "ViewModels/MainViewModel.cs", desc: "Home feed MVVM state, audio play/pause/resume, and endpoint resolution" },
-          { name: "ViewModels/DiscoverViewModel.cs", desc: "Exploration hub state, op-eds, and video feed bindings" },
-          { name: "Platforms/Android/AudioBriefingReceiver.cs", desc: "AlarmManager broadcast receiver downloading 8am/6pm WAT briefings" },
-          { name: "Platforms/Android/NotificationService.cs", desc: "Android NotificationChannel manager and intent builder" },
-          { name: "Platforms/iOS/NotificationService.cs", desc: "iOS UNUserNotificationCenter delegate and badge manager" },
-          { name: "ArticleWebPage.xaml.cs", desc: "Full article reader, custom typography, audio player, and impression telemetry" },
-          { name: "Services/RecentlyReadService.cs", desc: "Local reading history tracking and recents manager" }
+          { name: "Services/NewsPersistenceService.cs", desc: "On-device SQLite database service with WAL mode and 14-day eviction" },
+          { name: "Models/CachedStoryEntity.cs", desc: "Indexed SQLite entity for stories, categories, and bookmark states" },
+          { name: "Platforms/Android/NewsWidgetService.cs", desc: "Android RemoteViews factory with 77dp thumbnails and instant SQLite reads" },
+          { name: "Platforms/Android/WidgetImageHelper.cs", desc: "Downsamples and rounds thumbnails while respecting the 1MB IPC limit" },
+          { name: "Platforms/Android/BackgroundSyncService.cs", desc: "Autonomous AlarmManager background sync with Doze-mode execution" },
+          { name: "Services/SonicFeedbackService.cs", desc: "Haptic and sound engine for newspaper delivery horn chimes" },
+          { name: "ViewModels/DiscoverViewModel.cs", desc: "Clean MVVM hub for search, videos, and International filtering" },
+          { name: "ViewModels/MainViewModel.cs", desc: "Stale-While-Revalidate home feed state and audio playback controls" },
+          { name: "Platforms/Android/AudioBriefingReceiver.cs", desc: "8am & 6pm WAT scheduled briefing receiver and alert generator" }
         ],
         env: [
           "Consumes NigerianNewsGrid.Client portable SDK",
-          "Dynamic API URL racing: localhost / 10.0.2.2 / LAN / Cloud Run"
+          "Dynamic API URL racing: localhost / 10.0.2.2 / LAN / Cloud Run",
+          "SQLite Cache: news_cache.db3"
+        ]
+      },
+      web: {
+        title: "🌐 NigerianNewsGrid.Web (Modern Web Portal)",
+        tier: "Client Tier",
+        badgeColor: "var(--accent-blue)",
+        summary: "Modernist, responsive web application built with React, Vite, and Vanilla CSS providing a distraction-free news reading experience in any browser.",
+        responsibility: [
+          "High-performance client-side rendering with lightning-fast Vite bundling",
+          "Hero Breaking Story Carousel with smooth transitions and category badges",
+          "Reader Drawer with audio narration playback and distraction-free typography",
+          "Category filtering across Politics, Business, Tech, Sports, and International",
+          "Mobile-first responsive drawer layout and dark-mode glassmorphic styling"
+        ],
+        files: [
+          { name: "src/App.jsx", desc: "Main application layout, feed state, and category filtering" },
+          { name: "src/components/Navbar.jsx", desc: "Header navigation, branding, and category tab strip" },
+          { name: "src/components/HeroStory.jsx", desc: "Featured breaking story showcase with large visuals" },
+          { name: "src/components/ReaderDrawer.jsx", desc: "Slide-out reader drawer with font sizing and audio controls" },
+          { name: "src/components/Footer.jsx", desc: "News Stand NG branding, quick links, and platform badges" }
+        ],
+        env: [
+          "Development Port: 5173",
+          "VITE_API_URL = http://localhost:56193"
         ]
       },
       admin: {
@@ -1830,11 +2000,11 @@ dotnet run --project src/TtsWorker
         summary: "ASP.NET Core Razor web portal providing monitoring, scrape triggering, source management, real-time CTR analytics, and cookie authentication.",
         responsibility: [
           "Secure Cookie Authentication (Login/Logout) protecting administrative operations",
+          "Article categorization manager supporting all categories including International",
           "Direct Sponsor Management: Publish campaigns, set target URLs, pin to top, track live CTR",
           "Real-time System Analytics: Daily active impressions, click metrics, and popular category breakdown",
           "Source & Scrape Health Monitor: View last crawl timestamps, trigger manual syncs, and review logs",
-          "Social Handles & Curated Video Channel Management",
-          "Modern dark theme CSS dashboard with responsive layout"
+          "Social Handles & Curated Video Channel Management"
         ],
         files: [
           { name: "Pages/Login.cshtml", desc: "Secure administrator sign-in page with cookie session" },
@@ -1842,7 +2012,7 @@ dotnet run --project src/TtsWorker
           { name: "Pages/Sponsors.cshtml", desc: "Direct sponsorship publication & campaign analytics UI" },
           { name: "Pages/Videos.cshtml", desc: "Curated YouTube channel & video briefing manager" },
           { name: "Pages/Socials.cshtml", desc: "Social media handles and auto-syndication manager" },
-          { name: "Pages/Index.cshtml", desc: "System health overview and source status cards" }
+          { name: "Pages/Index.cshtml", desc: "System health overview, source cards, and category re-assignment" }
         ],
         env: [
           "ApiBaseUrl = http://localhost:56193",
@@ -1861,7 +2031,7 @@ dotnet run --project src/TtsWorker
           "Full-Text Search: Standalone Articles_fts index with synchronized AFTER UPDATE/DELETE triggers",
           "Schema auto-healing (DbInitializer.EnsureTablesExistAsync) for persistent volume resilience",
           "Legacy database baselining preventing duplicate column creation on pre-existing databases",
-          "Entities: Articles (Author, ContentType), Sources, VideoStories, SocialPosts, Feedbacks, AudioAssets"
+          "Entities: Articles (Author, ContentType, Category), Sources, VideoStories, SocialPosts, Feedbacks, AudioAssets"
         ],
         files: [
           { name: "Data/NewsDbContext.cs", desc: "EF Core DbContext, entity configurations, and composite indexes" },
@@ -1873,6 +2043,29 @@ dotnet run --project src/TtsWorker
           "PostgreSQL Port: 5432",
           "User: newsuser, DB: newsgrid",
           "SQLite Path: news.db"
+        ]
+      },
+      stress: {
+        title: "🔥 NewsApi.StressTests (NBomber Load Suite)",
+        tier: "Testing Tier",
+        badgeColor: "var(--accent-rose)",
+        summary: "Enterprise-grade high-concurrency stress testing project powered by NBomber 6.6 evaluating throughput thresholds, latency degradation, and service breaking points under load.",
+        responsibility: [
+          "feed_read_spike: Evaluates briefing feed cache performance under surges (300 RPS)",
+          "search_category_filter: Evaluates database indexing and query plans with randomized filters (100 RPS)",
+          "scraper_write_contention: Tests database write locks and commit latency under simulated scraper bursts (50 inserts/sec)",
+          "audio_discovery_streaming: Probes audio briefing discovery and stream availability under concurrent client polling (150 RPS)",
+          "Dual Testing Modes: Client Defense Mode (verifies clean HTTP 429 rate shedding) & Backend Saturation Mode (--bypass-rate-limit stresses hardware directly)",
+          "Exports HTML, Markdown, and TXT latency distribution summaries to reports/stress_tests/"
+        ],
+        files: [
+          { name: "Program.cs", desc: "NBomber scenario definitions, CLI argument parsing, and HTTP client wiring" },
+          { name: "Stress-Testing NBomber.md", desc: "Operational guide detailing failure points, parameters, and results" },
+          { name: "reports/stress_tests/", desc: "Generated latency percentile reports and execution graphs" }
+        ],
+        env: [
+          "Target Base URL: http://localhost:5000 (Docker) or http://localhost:56193 (Dev)",
+          "Rate Limit Bypass Header: X-Bypass-Rate-Limit"
         ]
       }
     };
@@ -1917,7 +2110,7 @@ dotnet run --project src/TtsWorker
         </div>
 
         <div class="info-section">
-          <span class="section-label">Key C# Files & Entry Points</span>
+          <span class="section-label">Key Files & Entry Points</span>
           <ul class="file-list">${filesHtml}</ul>
         </div>
 
@@ -1973,8 +2166,8 @@ dotnet run --project src/TtsWorker
       {
         title: "1. Web Scraping & Byline Extraction",
         component: "src/NewsScraperService",
-        status: "Step 1 of 6: Fetching RSS/Sitemaps & extracting author bylines",
-        desc: "The scraper loop queries 18+ publications (BusinessDay, Punch, Vanguard, The Guardian, etc.). OpinionDetector inspects URL paths and headline prefixes; ArticleContentExtractor parses JSON-LD metadata for author bylines.",
+        status: "Step 1 of 7: Fetching RSS/Sitemaps & extracting author bylines",
+        desc: "The scraper loop queries 18+ publications (BusinessDay, Punch, Vanguard, The Guardian, Daily Trust, Premium Times). OpinionDetector inspects URL paths and headline prefixes; ArticleContentExtractor parses JSON-LD metadata for author bylines.",
         classes: ["ScraperWorker.cs", "OpinionDetector.cs", "ArticleContentExtractor.cs", "BusinessDayScraper.cs"],
         payload: {
           "sourceName": "BusinessDay",
@@ -1983,15 +2176,15 @@ dotnet run --project src/TtsWorker
           "author": "Dr. Aminu Bello",
           "contentType": "Opinion",
           "summary": "While monetary tightening curtails currency volatility, structural credit expansion remains vital...",
-          "publishedAt": "2026-09-18T08:30:00Z",
+          "publishedAt": "2026-09-28T08:30:00Z",
           "imageUrl": "https://businessday.ng/wp-content/uploads/cbn_building.jpg"
         }
       },
       {
         title: "2. ML Text Categorization & Tagging",
         component: "src/NewsCategorizer.Trainer",
-        status: "Step 2 of 6: Evaluating ML.NET classification model & op-ed routing",
-        desc: "Raw text passes through ML.NET n-gram featurization. The L-BFGS Multiclass classifier identifies topical category ('Business'), while OpinionDetector retains orthogonal 'Opinion' ContentType.",
+        status: "Step 2 of 7: Evaluating ML.NET classification model across 8 categories",
+        desc: "Raw text passes through ML.NET n-gram featurization. The L-BFGS Multiclass classifier evaluates across 8 categories (Politics, Business, Tech, Sports, Entertainment, Lifestyle, Opinion, and International).",
         classes: ["Program.cs", "ArticleTrainingData.cs", "PredictionEngine<Article, CategoryPrediction>"],
         payload: {
           "inputTitle": "Opinion: CBN Rate Hikes and the Real Sector Outlook",
@@ -2001,15 +2194,15 @@ dotnet run --project src/TtsWorker
             "Business": 0.962,
             "Politics": 0.024,
             "Tech": 0.010,
-            "Sports": 0.004
+            "International": 0.002
           }
         }
       },
       {
         title: "3. Authenticated Ingestion & FTS5 Indexing",
         component: "src/NewsApi -> EF Core",
-        status: "Step 3 of 6: Ingesting into NewsApi with API key & FTS5 full-text indexing",
-        desc: "The scraper POSTs to /api/v1/articles with X-Api-Key. ApiKeyMiddleware verifies authorization. NewsApi validates the DTO, saves to EF Core, and triggers automatic synchronization into Articles_fts.",
+        status: "Step 3 of 7: Ingesting into NewsApi with API key & FTS5 full-text indexing",
+        desc: "The scraper POSTs to /api/v1/articles/ingest with X-Api-Key. ApiKeyMiddleware verifies authorization. NewsApi validates the DTO, saves to EF Core, and triggers automatic synchronization into Articles_fts.",
         classes: ["ArticlesController.cs", "ApiKeyMiddleware.cs", "ResponseDtos.cs", "NewsDbContext.cs", "Articles_fts Triggers"],
         payload: {
           "id": 1280,
@@ -2019,13 +2212,13 @@ dotnet run --project src/TtsWorker
           "category": "Business",
           "sourceName": "BusinessDay",
           "ftsStatus": "Synchronized (DELETE old.Id trigger)",
-          "createdAt": "2026-09-18T08:31:02Z"
+          "createdAt": "2026-09-28T08:31:02Z"
         }
       },
       {
         title: "4. Cross-Source Deduplication & Tri-Tier TTS",
         component: "src/TtsWorker",
-        status: "Step 4 of 6: Deduplicating stories & synthesizing Nigerian neural voice audio",
+        status: "Step 4 of 7: Deduplicating stories & synthesizing Nigerian neural voice audio",
         desc: "TtsWorker checks recent reports using StoryDeduplicationHelper to prevent redundant briefings. It then synthesizes narration via EdgeNeuralTtsSynthesizer streaming authentic Nigerian voice (en-NG-EzinneNeural).",
         classes: ["TtsWorker.cs", "StoryDeduplicationHelper.cs", "CompositeTtsSynthesizer.cs", "EdgeNeuralTtsSynthesizer.cs"],
         payload: {
@@ -2038,9 +2231,9 @@ dotnet run --project src/TtsWorker
         }
       },
       {
-        title: "5. Seekable Audio Delivery & Output Caching",
+        title: "5. Seekable Audio Delivery & HTTP 206 Streaming",
         component: "src/NewsApi (AudioController)",
-        status: "Step 5 of 6: Serving seekable audio with HTTP 206 Partial Content",
+        status: "Step 5 of 7: Serving seekable audio with HTTP 206 Partial Content",
         desc: "The client requests audio via GET /api/v1/audio/Business_1280.mp3. NewsApi processes HTTP Range headers and serves 206 Partial Content so mobile players can seek forward and backward instantly without downloading the whole file.",
         classes: ["AudioController.cs", "PhysicalFile(..., enableRangeProcessing: true)", "NewsApiClient.cs"],
         payload: {
@@ -2052,18 +2245,31 @@ dotnet run --project src/TtsWorker
         }
       },
       {
-        title: "6. User Consumption, Audio Controls & Alarms",
-        component: "NigerianNewGrid (.NET MAUI)",
-        status: "Step 6 of 6: Rendered in MAUI reader mode with Play/Pause/Resume & scheduled alarm",
-        desc: "The user opens the article in distraction-free Reader Mode styled with custom fonts (Legacy Serif Bold). Tapping Play streams narration with live Pause and Resume support. At 8am & 6pm WAT, AudioBriefingReceiver fetches the latest briefing.",
-        classes: ["OnboardingPage.xaml", "MainViewModel.cs", "ArticleWebPage.xaml.cs", "AudioBriefingReceiver.cs", "ITextToSpeechService.cs"],
+        title: "6. On-Device SQLite Caching & Stale-While-Revalidate",
+        component: "News Stand NG (NewsPersistenceService)",
+        status: "Step 6 of 7: Hydrated into on-device SQLite WAL store for instant 0ms cold start",
+        desc: "The MAUI client queries NewsApi and persists the article into the local on-device SQLite database (PRAGMA journal_mode=WAL;). Future app launches render cached stories immediately while background tasks revalidate fresh news.",
+        classes: ["NewsPersistenceService.cs", "CachedStoryEntity.cs", "BriefingCacheService.cs", "MainViewModel.cs"],
         payload: {
-          "userAction": "READER_MODE_OPENED",
-          "typography": "Legacy Serif Bold / Legacy Sans Book",
-          "audioPlayback": "Playing (0:34 / 2:22)",
-          "offlineSaved": true,
-          "scheduledAlarm": "8:00 AM WAT & 6:00 PM WAT Active",
-          "telemetry": "POST /api/v1/articles/1280/track [200 OK]"
+          "localDatabase": "news_cache.db3 (WAL Mode)",
+          "operation": "UPSERT CachedStoryEntity",
+          "isBookmarked": false,
+          "cacheRetentionDays": 14,
+          "coldStartTime": "0ms (Instant Cache Render)"
+        }
+      },
+      {
+        title: "7. Autonomous Background Sync & Widget Refresh",
+        component: "News Stand NG (Android Platform)",
+        status: "Step 7 of 7: Android AlarmManager background sync & home screen widget update",
+        desc: "AlarmManager.SetAndAllowWhileIdle executes Doze-mode background syncs every 30 minutes. Fresh headlines and 77dp rounded thumbnails hydrate the launcher widget via NotifyAppWidgetDataChanged, while NewspaperHorn.mp3 provides audio feedback.",
+        classes: ["BackgroundSyncService.cs", "NewsWidgetProvider.cs", "WidgetImageHelper.cs", "SonicFeedbackService.cs"],
+        payload: {
+          "syncTrigger": "AlarmManager.SetAndAllowWhileIdle",
+          "networkConstraint": "Internet Reachable",
+          "batteryConstraint": "EnergySaver Disabled",
+          "widgetAction": "NotifyAppWidgetDataChanged()",
+          "audioChime": "NewspaperHorn.mp3 Played"
         }
       }
     ];
@@ -2117,15 +2323,15 @@ dotnet run --project src/TtsWorker
       }
     }
 
-    // Endpoint Database (v3.1)
+    // Endpoint Database (v4.0)
     const apiEndpoints = {
       'get-articles': {
         method: 'GET',
         path: '/api/v1/articles',
-        auth: 'Public',
+        auth: 'Public (Rate Limited: 120/min)',
         desc: 'Returns paginated news articles filtered by category, search keyword, source publisher, or contentType (News vs Opinion).',
         params: [
-          { name: 'category', type: 'string', desc: 'Optional category filter (Politics, Business, Tech, etc.)' },
+          { name: 'category', type: 'string', desc: 'Optional category filter (Politics, Business, Tech, International, etc.)' },
           { name: 'contentType', type: 'string', desc: 'Optional content type: "News" or "Opinion"' },
           { name: 'sourceId', type: 'int', desc: 'Optional publisher source ID filter' },
           { name: 'page', type: 'int', desc: 'Page number (default: 1)' },
@@ -2143,10 +2349,55 @@ dotnet run --project src/TtsWorker
               "contentType": "News",
               "category": "Business",
               "sourceName": "Vanguard News",
-              "publishedAt": "2026-09-18T06:15:00Z",
+              "publishedAt": "2026-09-28T06:15:00Z",
               "imageUrl": "https://vanguardngr.com/uploads/cbn.jpg"
             }
           ]
+        }
+      },
+      'get-international': {
+        method: 'GET',
+        path: '/api/v1/articles?category=International',
+        auth: 'Public',
+        desc: 'Retrieves curated international and foreign affairs stories from outside Nigeria, featuring world leaders, global institutions, and foreign regions.',
+        params: [
+          { name: 'category', type: 'string', desc: 'Set to "International"' },
+          { name: 'page', type: 'int', desc: 'Page index' },
+          { name: 'pageSize', type: 'int', desc: 'Items per page' }
+        ],
+        sampleResponse: {
+          "page": 1,
+          "pageSize": 10,
+          "totalCount": 85,
+          "items": [
+            {
+              "id": 1342,
+              "title": "UN General Assembly Debates Global Security and Climate Resilience in New York",
+              "author": "Foreign Desk",
+              "contentType": "News",
+              "category": "International",
+              "sourceName": "Premium Times",
+              "publishedAt": "2026-09-28T07:20:00Z",
+              "imageUrl": "https://images.unsplash.com/photo-1541872703-74c5e44368f9?auto=format&fit=crop&w=800&q=80"
+            }
+          ]
+        }
+      },
+      'post-articles-ingest': {
+        method: 'POST',
+        path: '/api/v1/articles/ingest',
+        auth: 'Protected (X-Api-Key Required)',
+        desc: 'High-throughput batch and single article ingestion endpoint utilized by NewsScraperService and benchmarked by NBomber.',
+        params: [
+          { name: 'X-Api-Key', type: 'Header', desc: 'Secret API key for ingestion authorization' },
+          { name: 'X-Bypass-Rate-Limit', type: 'Header', desc: 'Optional key matching ApiKey to bypass sliding-window rate limits in load tests' },
+          { name: 'body', type: 'IngestArticlesRequest', desc: 'List of article objects containing title, url, summary, category, author, and source' }
+        ],
+        sampleResponse: {
+          "processed": 15,
+          "inserted": 12,
+          "duplicatesSkipped": 3,
+          "status": "Success"
         }
       },
       'get-opinions': {
@@ -2171,7 +2422,7 @@ dotnet run --project src/TtsWorker
               "contentType": "Opinion",
               "category": "Business",
               "sourceName": "BusinessDay",
-              "publishedAt": "2026-09-18T08:30:00Z",
+              "publishedAt": "2026-09-28T08:30:00Z",
               "imageUrl": "https://businessday.ng/uploads/bello.jpg"
             }
           ]
@@ -2202,9 +2453,9 @@ dotnet run --project src/TtsWorker
         desc: 'Automated discovery endpoint returning the most recently synthesized morning or evening audio news briefing metadata.',
         params: [],
         sampleResponse: {
-          "fileName": "Briefing_20260918_Morning.mp3",
-          "audioUrl": "/api/v1/audio/Briefing_20260918_Morning.mp3",
-          "generatedAt": "2026-09-18T07:00:00Z",
+          "fileName": "Briefing_20260928_Morning.mp3",
+          "audioUrl": "/api/v1/audio/Briefing_20260928_Morning.mp3",
+          "generatedAt": "2026-09-28T07:00:00Z",
           "durationSeconds": 180
         }
       },
@@ -2219,7 +2470,7 @@ dotnet run --project src/TtsWorker
         ],
         sampleResponse: {
           "status": "Uploaded",
-          "fileName": "Briefing_20260918_Evening.mp3",
+          "fileName": "Briefing_20260928_Evening.mp3",
           "sizeBytes": 2841920
         }
       },
@@ -2244,19 +2495,19 @@ dotnet run --project src/TtsWorker
         method: 'GET',
         path: '/api/v1/articles/briefings',
         auth: 'Public (Cached)',
-        desc: 'Curated home feed for the .NET MAUI client. Serves deduplicated top headlines, category briefings, and active sponsored announcements.',
+        desc: 'Curated home feed for mobile and web clients. Serves deduplicated top headlines, category briefings, and active sponsored announcements.',
         params: [
           { name: 'category', type: 'string', desc: 'Filter by category (optional)' }
         ],
         sampleResponse: {
-          "generatedAt": "2026-09-18T08:00:00Z",
+          "generatedAt": "2026-09-28T08:00:00Z",
           "pinnedSponsored": {
             "id": 990,
             "title": "Flutterwave Expands Cross-Border Remittance",
             "sponsorName": "Flutterwave",
             "isSponsored": true
           },
-          "categories": ["Politics", "Business", "Tech", "Sports", "Opinion"],
+          "categories": ["Politics", "Business", "Tech", "Sports", "Opinion", "International"],
           "heroArticles": []
         }
       },
@@ -2288,7 +2539,7 @@ dotnet run --project src/TtsWorker
         sampleResponse: {
           "id": 45,
           "status": "Feedback Received",
-          "receivedAt": "2026-09-18T08:35:00Z"
+          "receivedAt": "2026-09-28T08:35:00Z"
         }
       },
       'get-feedback': {
@@ -2301,7 +2552,7 @@ dotnet run --project src/TtsWorker
           { name: 'limit', type: 'int', desc: 'Maximum records (default: 50)' }
         ],
         sampleResponse: [
-          { "id": 45, "userEmail": "reader@example.ng", "message": "Love the offline audio player!", "createdAt": "2026-09-18T08:35:00Z" }
+          { "id": 45, "userEmail": "reader@example.ng", "message": "Love the offline audio player!", "createdAt": "2026-09-28T08:35:00Z" }
         ]
       },
       'get-socialposts': {
@@ -2313,7 +2564,7 @@ dotnet run --project src/TtsWorker
           { name: 'platform', type: 'string', desc: 'Optional platform filter (Twitter, YouTube)' }
         ],
         sampleResponse: [
-          { "id": 12, "handle": "@cenbank", "content": "MPC decisions for September 2026 released.", "postedAt": "2026-09-18T07:00:00Z" }
+          { "id": 12, "handle": "@cenbank", "content": "MPC decisions for September 2026 released.", "postedAt": "2026-09-28T07:00:00Z" }
         ]
       },
       'get-socialhandles': {
@@ -2378,7 +2629,7 @@ dotnet run --project src/TtsWorker
         method: 'GET',
         path: '/api/v1/sources',
         auth: 'Public',
-        desc: 'Returns all 18+ registered Nigerian news publisher sources and active scraping statuses.',
+        desc: 'Returns all 18+ registered news publisher sources with cooperative CancellationToken support.',
         params: [],
         sampleResponse: [
           { "id": 1, "name": "Vanguard", "url": "https://vanguardngr.com", "isActive": true },
@@ -2423,13 +2674,13 @@ dotnet run --project src/TtsWorker
       },
       'get-health': {
         method: 'GET',
-        path: '/healthz/liveness',
-        auth: 'Public',
-        desc: 'Liveness probe returning HTTP 200 OK used by Docker Compose and Google Cloud Run container health checks.',
+        path: '/healthz',
+        auth: 'Public (Exempt from Rate Limits)',
+        desc: 'Health probe returning HTTP 200 OK permanently exempted from rate limits for Docker, Kubernetes, and Cloud Run.',
         params: [],
         sampleResponse: {
           "status": "Healthy",
-          "uptime": "4d 12h 30m"
+          "uptime": "5d 14h 22m"
         }
       }
     };

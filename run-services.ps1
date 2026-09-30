@@ -4,6 +4,9 @@ param (
     [switch]$Docker,
     [switch]$Web,
     [switch]$Stop,
+    [switch]$Tabs,
+    [switch]$Separate,
+    [switch]$BuildAll,
     [int]$NewsApiPort = 56193,
     [int]$AdminPort = 56192,
     [switch]$NoPortCheck
@@ -30,10 +33,22 @@ if ($Stop) {
         Write-Host "Background jobs stopped." -ForegroundColor Green
     }
 
-    # 2. Stop dotnet processes running service assemblies/projects
+    # 2. Stop running dotnet service processes (apphosts and dotnet.exe instances)
     $projects = @("NewsApi", "AdminDashboard", "NewsScraperService", "TtsWorker")
-    Write-Host "`nStopping running dotnet service processes..." -ForegroundColor Yellow
+    Write-Host "`nStopping running service processes..." -ForegroundColor Yellow
     $stoppedCount = 0
+
+    # A. Stop by process name (e.g. NewsApi.exe)
+    foreach ($proj in $projects) {
+        $procs = Get-Process -Name $proj -ErrorAction SilentlyContinue
+        foreach ($p in $procs) {
+            Write-Host "  Stopping $proj process ID $($p.Id)..." -ForegroundColor Gray
+            Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue
+            $stoppedCount++
+        }
+    }
+
+    # B. Stop dotnet.exe running service assemblies
     try {
         $processes = Get-CimInstance Win32_Process -Filter "Name = 'dotnet.exe'" -ErrorAction SilentlyContinue
         foreach ($proc in $processes) {
@@ -46,14 +61,25 @@ if ($Stop) {
                 }
             }
         }
-    } catch {
-        # Fallback if Get-CimInstance is unavailable
+    } catch { }
+
+    # C. Free ports if still occupied
+    foreach ($p in @($NewsApiPort, $AdminPort)) {
+        try {
+            $tcp = Get-NetTCPConnection -LocalPort $p -ErrorAction SilentlyContinue
+            if ($tcp -and $tcp[0].OwningProcess) {
+                $ownerPid = $tcp[0].OwningProcess
+                Write-Host "  Stopping lingering process on port $p (PID $ownerPid)..." -ForegroundColor Gray
+                Stop-Process -Id $ownerPid -Force -ErrorAction SilentlyContinue
+                $stoppedCount++
+            }
+        } catch { }
     }
 
     if ($stoppedCount -gt 0) {
-        Write-Host "Stopped $stoppedCount dotnet process(es)." -ForegroundColor Green
+        Write-Host "Stopped $stoppedCount service process(es)." -ForegroundColor Green
     } else {
-        Write-Host "No matching dotnet service processes found." -ForegroundColor Gray
+        Write-Host "No matching running service processes found." -ForegroundColor Gray
     }
 
     # 3. Stop Docker containers if Docker flag set
@@ -185,17 +211,62 @@ $apiBaseUrl = "http://localhost:$resolvedNewsApiPort"
 $adminUrl   = "http://localhost:$resolvedAdminPort"
 $env:ApiBaseUrl = $apiBaseUrl
 
-# 1. Build the solution
-Write-Host "`n[1/5] Building solution..." -ForegroundColor Yellow
+# Helper to encode PowerShell script blocks into base64 (avoids quote/semicolon collisions with wt.exe)
+function ConvertTo-EncodedCommand([string]$scriptText) {
+    $bytes = [System.Text.Encoding]::Unicode.GetBytes($scriptText)
+    return [Convert]::ToBase64String($bytes)
+}
+
+# 1. Build the backend services
+$serviceProjects = @(
+    "src/NewsApi/NewsApi.csproj",
+    "src/AdminDashboard/AdminDashboard.csproj",
+    "src/NewsScraperService/NewsScraperService.csproj",
+    "src/TtsWorker/TtsWorker.csproj"
+)
+
 $env:MSBUILDDISABLENODEREUSE = "1"
-dotnet build NigerianNewGrid.slnx -nodeReuse:false
-if ($LASTEXITCODE -ne 0) {
-    Write-Host "Build encountered an issue (possibly locked files). Shutting down build servers and retrying..." -ForegroundColor Yellow
-    dotnet build-server shutdown
+if ($BuildAll) {
+    Write-Host "`n[1/5] Building entire solution (including mobile client)..." -ForegroundColor Yellow
     dotnet build NigerianNewGrid.slnx -nodeReuse:false
     if ($LASTEXITCODE -ne 0) {
-        Write-Host "Build failed! Please fix errors before starting services." -ForegroundColor Red
-        exit 1
+        Write-Host "Build encountered an issue. Shutting down build servers and retrying..." -ForegroundColor Yellow
+        dotnet build-server shutdown
+        dotnet build NigerianNewGrid.slnx -nodeReuse:false
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host "Build failed! Please fix errors before starting services." -ForegroundColor Red
+            exit 1
+        }
+    }
+} else {
+    Write-Host "`n[1/5] Building backend services (NewsApi, AdminDashboard, NewsScraperService, TtsWorker)..." -ForegroundColor Yellow
+    $buildFailed = $false
+    foreach ($proj in $serviceProjects) {
+        $projName = [System.IO.Path]::GetFileNameWithoutExtension($proj)
+        Write-Host "  Building $projName..." -ForegroundColor Gray
+        dotnet build $proj --nologo -v:q -nodeReuse:false
+        if ($LASTEXITCODE -ne 0) {
+            $buildFailed = $true
+            break
+        }
+    }
+    if ($buildFailed) {
+        Write-Host "Build encountered an issue (possibly locked files). Shutting down build servers and retrying..." -ForegroundColor Yellow
+        dotnet build-server shutdown
+        $buildFailed = $false
+        foreach ($proj in $serviceProjects) {
+            $projName = [System.IO.Path]::GetFileNameWithoutExtension($proj)
+            Write-Host "  Retrying build for $projName..." -ForegroundColor Gray
+            dotnet build $proj --nologo -v:q -nodeReuse:false
+            if ($LASTEXITCODE -ne 0) {
+                $buildFailed = $true
+                break
+            }
+        }
+        if ($buildFailed) {
+            Write-Host "Build failed! Please fix errors before starting services." -ForegroundColor Red
+            exit 1
+        }
     }
 }
 Write-Host "Build succeeded!" -ForegroundColor Green
@@ -208,7 +279,9 @@ if ($Background) {
         param($dir, $apiUrl) 
         Set-Location $dir
         $env:ApiBaseUrl = $apiUrl
-        dotnet run --project src/NewsApi/NewsApi.csproj --urls "$apiUrl"
+        $env:ApiKey = "AIzaSyAh7soVCbg-JfW-gUKVZIQkbd0sdlE34QI"
+        $env:ASPNETCORE_ENVIRONMENT = "Development"
+        dotnet run --no-build --project src/NewsApi/NewsApi.csproj --urls "$apiUrl"
     } -ArgumentList $rootDir, $apiBaseUrl
 
     Start-Sleep -Seconds 3
@@ -218,7 +291,9 @@ if ($Background) {
         param($dir, $admUrl, $apiUrl) 
         Set-Location $dir
         $env:ApiBaseUrl = $apiUrl
-        dotnet run --project src/AdminDashboard/AdminDashboard.csproj --urls "$admUrl" --ApiBaseUrl "$apiUrl"
+        $env:ApiKey = "AIzaSyAh7soVCbg-JfW-gUKVZIQkbd0sdlE34QI"
+        $env:ASPNETCORE_ENVIRONMENT = "Development"
+        dotnet run --no-build --project src/AdminDashboard/AdminDashboard.csproj --urls "$admUrl" --ApiBaseUrl "$apiUrl"
     } -ArgumentList $rootDir, $adminUrl, $apiBaseUrl
 
     Write-Host "Starting NewsScraperService..." -ForegroundColor Yellow
@@ -227,7 +302,8 @@ if ($Background) {
         Set-Location $dir
         $env:ApiBaseUrl = $apiUrl
         $env:ApiKey = "AIzaSyAh7soVCbg-JfW-gUKVZIQkbd0sdlE34QI"
-        dotnet run --project src/NewsScraperService/NewsScraperService.csproj --ApiBaseUrl "$apiUrl"
+        $env:ASPNETCORE_ENVIRONMENT = "Development"
+        dotnet run --no-build --project src/NewsScraperService/NewsScraperService.csproj --ApiBaseUrl "$apiUrl"
     } -ArgumentList $rootDir, $apiBaseUrl
 
     Write-Host "Starting TtsWorker..." -ForegroundColor Yellow
@@ -236,7 +312,8 @@ if ($Background) {
         Set-Location $dir
         $env:ApiBaseUrl = $apiUrl
         $env:ApiKey = "AIzaSyAh7soVCbg-JfW-gUKVZIQkbd0sdlE34QI"
-        dotnet run --project src/TtsWorker/TtsWorker.csproj --ApiBaseUrl "$apiUrl"
+        $env:ASPNETCORE_ENVIRONMENT = "Development"
+        dotnet run --no-build --project src/TtsWorker/TtsWorker.csproj --ApiBaseUrl "$apiUrl"
     } -ArgumentList $rootDir, $apiBaseUrl
 
     if ($Web) {
@@ -259,33 +336,160 @@ if ($Background) {
     Write-Host "Use '.\run-services.ps1 -Stop' or 'Get-Job' to view/stop jobs." -ForegroundColor Gray
 }
 else {
-    # Default: Open separate terminal windows for each service
-    Write-Host "`n[2/5] Starting NewsApi ($apiBaseUrl)..." -ForegroundColor Yellow
-    Start-Process powershell -ArgumentList "-NoExit", "-Command", "Set-Location '$rootDir'; `$env:ApiBaseUrl = '$apiBaseUrl'; `$env:ApiKey = 'AIzaSyAh7soVCbg-JfW-gUKVZIQkbd0sdlE34QI'; `$env:ASPNETCORE_ENVIRONMENT = 'Development'; Write-Host '--- NewsApi ($apiBaseUrl) ---' -ForegroundColor Cyan; dotnet run --project src/NewsApi/NewsApi.csproj --urls '$apiBaseUrl'"
+    # Check if Windows Terminal (wt.exe) is available on the system
+    $hasWindowsTerminal = [bool](Get-Command wt.exe -ErrorAction SilentlyContinue)
 
-    Start-Sleep -Seconds 3
-
-    Write-Host "`n[3/5] Starting AdminDashboard ($adminUrl)..." -ForegroundColor Yellow
-    Start-Process powershell -ArgumentList "-NoExit", "-Command", "Set-Location '$rootDir'; `$env:ApiBaseUrl = '$apiBaseUrl'; `$env:ApiKey = 'AIzaSyAh7soVCbg-JfW-gUKVZIQkbd0sdlE34QI'; `$env:ASPNETCORE_ENVIRONMENT = 'Development'; Write-Host '--- AdminDashboard ($adminUrl) ---' -ForegroundColor Cyan; dotnet run --project src/AdminDashboard/AdminDashboard.csproj --urls '$adminUrl' --ApiBaseUrl '$apiBaseUrl'"
-
-    Write-Host "`n[4/5] Starting NewsScraperService..." -ForegroundColor Yellow
-    Start-Process powershell -ArgumentList "-NoExit", "-Command", "Set-Location '$rootDir'; `$env:ApiBaseUrl = '$apiBaseUrl'; `$env:ApiKey = 'AIzaSyAh7soVCbg-JfW-gUKVZIQkbd0sdlE34QI'; `$env:ASPNETCORE_ENVIRONMENT = 'Development'; Write-Host '--- NewsScraperService ---' -ForegroundColor Cyan; dotnet run --project src/NewsScraperService/NewsScraperService.csproj --ApiBaseUrl '$apiBaseUrl'"
-
-    Write-Host "`n[5/5] Starting TtsWorker..." -ForegroundColor Yellow
-    Start-Process powershell -ArgumentList "-NoExit", "-Command", "Set-Location '$rootDir'; `$env:ApiBaseUrl = '$apiBaseUrl'; `$env:ApiKey = 'AIzaSyAh7soVCbg-JfW-gUKVZIQkbd0sdlE34QI'; `$env:ASPNETCORE_ENVIRONMENT = 'Development'; Write-Host '--- TtsWorker ---' -ForegroundColor Cyan; dotnet run --project src/TtsWorker/TtsWorker.csproj --ApiBaseUrl '$apiBaseUrl'"
-
-    if ($Web) {
-        Write-Host "`n[6/6] Starting Web Application (http://localhost:5173)..." -ForegroundColor Yellow
-        Start-Process powershell -ArgumentList "-NoExit", "-Command", "Set-Location '$rootDir\src\NigerianNewsGrid.Web'; Write-Host '--- Nigerian News Grid Web (http://localhost:5173) ---' -ForegroundColor Cyan; npm run dev"
+    $useTabs = $false
+    if ($Tabs) {
+        if (-not $hasWindowsTerminal) {
+            Write-Host "`n[Notice] -Tabs requested, but Windows Terminal (wt.exe) was not found. Falling back to separate windows." -ForegroundColor Yellow
+            $useTabs = $false
+        } else {
+            $useTabs = $true
+        }
+    } elseif (-not $Separate -and $hasWindowsTerminal) {
+        $useTabs = $true
     }
 
-    Write-Host "`n==================================================" -ForegroundColor Green
-    Write-Host " All services launched in separate windows!" -ForegroundColor Green
-    Write-Host "   Admin Dashboard : $adminUrl" -ForegroundColor Cyan
-    Write-Host "   News API        : $apiBaseUrl" -ForegroundColor Cyan
-    if ($Web) {
-        Write-Host "   Web Application : http://localhost:5173" -ForegroundColor Cyan
+    # Prepare command scripts for each service
+    $scriptNewsApi = @"
+`$Host.UI.RawUI.WindowTitle = 'NewsApi ($apiBaseUrl)'
+[Console]::Title = 'NewsApi ($apiBaseUrl)'
+Set-Location '$rootDir'
+`$env:ApiBaseUrl = '$apiBaseUrl'
+`$env:ApiKey = 'AIzaSyAh7soVCbg-JfW-gUKVZIQkbd0sdlE34QI'
+`$env:ASPNETCORE_ENVIRONMENT = 'Development'
+Write-Host '==================================================' -ForegroundColor Cyan
+Write-Host '             NewsApi ($apiBaseUrl)' -ForegroundColor Green
+Write-Host '==================================================' -ForegroundColor Cyan
+dotnet run --no-build --project src/NewsApi/NewsApi.csproj --urls '$apiBaseUrl'
+"@
+
+    $scriptAdmin = @"
+`$Host.UI.RawUI.WindowTitle = 'AdminDashboard ($adminUrl)'
+[Console]::Title = 'AdminDashboard ($adminUrl)'
+Start-Sleep -Seconds 2
+Set-Location '$rootDir'
+`$env:ApiBaseUrl = '$apiBaseUrl'
+`$env:ApiKey = 'AIzaSyAh7soVCbg-JfW-gUKVZIQkbd0sdlE34QI'
+`$env:ASPNETCORE_ENVIRONMENT = 'Development'
+Write-Host '==================================================' -ForegroundColor Cyan
+Write-Host '          AdminDashboard ($adminUrl)' -ForegroundColor Green
+Write-Host '==================================================' -ForegroundColor Cyan
+dotnet run --no-build --project src/AdminDashboard/AdminDashboard.csproj --urls '$adminUrl' --ApiBaseUrl '$apiBaseUrl'
+"@
+
+    $scriptScraper = @"
+`$Host.UI.RawUI.WindowTitle = 'NewsScraperService'
+[Console]::Title = 'NewsScraperService'
+Start-Sleep -Seconds 3
+Set-Location '$rootDir'
+`$env:ApiBaseUrl = '$apiBaseUrl'
+`$env:ApiKey = 'AIzaSyAh7soVCbg-JfW-gUKVZIQkbd0sdlE34QI'
+`$env:ASPNETCORE_ENVIRONMENT = 'Development'
+Write-Host '==================================================' -ForegroundColor Cyan
+Write-Host '            NewsScraperService' -ForegroundColor Green
+Write-Host '==================================================' -ForegroundColor Cyan
+dotnet run --no-build --project src/NewsScraperService/NewsScraperService.csproj --ApiBaseUrl '$apiBaseUrl'
+"@
+
+    $scriptTts = @"
+`$Host.UI.RawUI.WindowTitle = 'TtsWorker'
+[Console]::Title = 'TtsWorker'
+Start-Sleep -Seconds 4
+Set-Location '$rootDir'
+`$env:ApiBaseUrl = '$apiBaseUrl'
+`$env:ApiKey = 'AIzaSyAh7soVCbg-JfW-gUKVZIQkbd0sdlE34QI'
+`$env:ASPNETCORE_ENVIRONMENT = 'Development'
+Write-Host '==================================================' -ForegroundColor Cyan
+Write-Host '                TtsWorker' -ForegroundColor Green
+Write-Host '==================================================' -ForegroundColor Cyan
+dotnet run --no-build --project src/TtsWorker/TtsWorker.csproj --ApiBaseUrl '$apiBaseUrl'
+"@
+
+    $scriptWeb = @"
+`$Host.UI.RawUI.WindowTitle = 'NigerianNewsGrid Web (http://localhost:5173)'
+[Console]::Title = 'NigerianNewsGrid Web (http://localhost:5173)'
+Set-Location '$rootDir\src\NigerianNewsGrid.Web'
+Write-Host '==================================================' -ForegroundColor Cyan
+Write-Host '    Nigerian News Grid Web (http://localhost:5173)' -ForegroundColor Green
+Write-Host '==================================================' -ForegroundColor Cyan
+npm run dev
+"@
+
+    $encNewsApi = ConvertTo-EncodedCommand $scriptNewsApi
+    $encAdmin   = ConvertTo-EncodedCommand $scriptAdmin
+    $encScraper = ConvertTo-EncodedCommand $scriptScraper
+    $encTts     = ConvertTo-EncodedCommand $scriptTts
+    $encWeb     = ConvertTo-EncodedCommand $scriptWeb
+
+    $launchSucceeded = $false
+
+    if ($useTabs) {
+        Write-Host "`nLaunching all services in a single tabbed Windows Terminal window..." -ForegroundColor Cyan
+
+        $tabCommands = @(
+            "new-tab --title NewsApi-$resolvedNewsApiPort --tabColor #0ea5e9 -d `"$rootDir`" powershell.exe -NoExit -EncodedCommand $encNewsApi",
+            "new-tab --title AdminDashboard-$resolvedAdminPort --tabColor #8b5cf6 -d `"$rootDir`" powershell.exe -NoExit -EncodedCommand $encAdmin",
+            "new-tab --title NewsScraperService --tabColor #10b981 -d `"$rootDir`" powershell.exe -NoExit -EncodedCommand $encScraper",
+            "new-tab --title TtsWorker --tabColor #f59e0b -d `"$rootDir`" powershell.exe -NoExit -EncodedCommand $encTts"
+        )
+
+        if ($Web) {
+            $webDir = Join-Path $rootDir "src\NigerianNewsGrid.Web"
+            $tabCommands += "new-tab --title Web-5173 --tabColor #ec4899 -d `"$webDir`" powershell.exe -NoExit -EncodedCommand $encWeb"
+        }
+
+        $wtArgString = $tabCommands -join " ; "
+
+        try {
+            Start-Process wt.exe -ArgumentList $wtArgString
+            $launchSucceeded = $true
+
+            Write-Host "`n==================================================" -ForegroundColor Green
+            Write-Host " All services launched in 1 tabbed Windows Terminal window!" -ForegroundColor Green
+            Write-Host "   Admin Dashboard : $adminUrl" -ForegroundColor Cyan
+            Write-Host "   News API        : $apiBaseUrl" -ForegroundColor Cyan
+            if ($Web) {
+                Write-Host "   Web Application : http://localhost:5173" -ForegroundColor Cyan
+            }
+            Write-Host "==================================================" -ForegroundColor Green
+            Write-Host "Tip: Use '.\run-services.ps1 -Separate' to open individual windows instead." -ForegroundColor Gray
+        } catch {
+            Write-Host "`n[Notice] Windows Terminal launch failed ($($_.Exception.Message)). Falling back to separate windows..." -ForegroundColor Yellow
+            $launchSucceeded = $false
+        }
     }
-    Write-Host "==================================================" -ForegroundColor Green
+
+    if (-not $launchSucceeded) {
+        # Fallback or explicit -Separate: Open separate terminal windows for each service
+        Write-Host "`n[2/5] Starting NewsApi ($apiBaseUrl)..." -ForegroundColor Yellow
+        Start-Process powershell -ArgumentList "-NoExit", "-EncodedCommand", $encNewsApi
+
+        Start-Sleep -Seconds 2
+
+        Write-Host "`n[3/5] Starting AdminDashboard ($adminUrl)..." -ForegroundColor Yellow
+        Start-Process powershell -ArgumentList "-NoExit", "-EncodedCommand", $encAdmin
+
+        Write-Host "`n[4/5] Starting NewsScraperService..." -ForegroundColor Yellow
+        Start-Process powershell -ArgumentList "-NoExit", "-EncodedCommand", $encScraper
+
+        Write-Host "`n[5/5] Starting TtsWorker..." -ForegroundColor Yellow
+        Start-Process powershell -ArgumentList "-NoExit", "-EncodedCommand", $encTts
+
+        if ($Web) {
+            Write-Host "`n[6/6] Starting Web Application (http://localhost:5173)..." -ForegroundColor Yellow
+            Start-Process powershell -ArgumentList "-NoExit", "-EncodedCommand", $encWeb
+        }
+
+        Write-Host "`n==================================================" -ForegroundColor Green
+        Write-Host " All services launched in separate windows!" -ForegroundColor Green
+        Write-Host "   Admin Dashboard : $adminUrl" -ForegroundColor Cyan
+        Write-Host "   News API        : $apiBaseUrl" -ForegroundColor Cyan
+        if ($Web) {
+            Write-Host "   Web Application : http://localhost:5173" -ForegroundColor Cyan
+        }
+        Write-Host "==================================================" -ForegroundColor Green
+    }
 }
 

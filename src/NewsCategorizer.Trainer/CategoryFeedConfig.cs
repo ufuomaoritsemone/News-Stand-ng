@@ -54,6 +54,13 @@ public static class CategoryFeedConfig
         new CategoryFeedEndpoint { Category = "General", Source = "Punch Education", FeedUrl = "https://punchng.com/topics/education/feed/" },
         new CategoryFeedEndpoint { Category = "General", Source = "Guardian Features", FeedUrl = "https://guardian.ng/category/features/feed/" },
         new CategoryFeedEndpoint { Category = "General", Source = "DailyTrust Health", FeedUrl = "https://dailytrust.com/category/health/feed/" },
-        new CategoryFeedEndpoint { Category = "General", Source = "DailyTrust Education", FeedUrl = "https://dailytrust.com/category/education/feed/" }
+        new CategoryFeedEndpoint { Category = "General", Source = "DailyTrust Education", FeedUrl = "https://dailytrust.com/category/education/feed/" },
+
+        // 8. International (World news, global conflicts, diplomacy, and foreign affairs)
+        new CategoryFeedEndpoint { Category = "International", Source = "Punch World", FeedUrl = "https://punchng.com/topics/world/feed/" },
+        new CategoryFeedEndpoint { Category = "International", Source = "Guardian World", FeedUrl = "https://guardian.ng/category/world/feed/" },
+        new CategoryFeedEndpoint { Category = "International", Source = "Vanguard World", FeedUrl = "https://www.vanguardngr.com/category/world/feed/" },
+        new CategoryFeedEndpoint { Category = "International", Source = "DailyTrust World", FeedUrl = "https://dailytrust.com/category/world-news/feed/" },
+        new CategoryFeedEndpoint { Category = "International", Source = "Premium Times Foreign", FeedUrl = "https://www.premiumtimesng.com/category/foreign/feed" }
     };
 }

@@ -32,6 +32,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ISocialFeedService,     SocialFeedService>();
         services.AddScoped<IFeedbackService,       FeedbackService>();
         services.AddScoped<IArticleSearchService,   ArticleSearchService>();
+        services.AddSingleton<ICategorizerTrainingService, CategorizerTrainingService>();
 
         // Background services
         services.AddHostedService<BackgroundMediaSyncService>();
@@ -81,21 +82,45 @@ public static class ServiceCollectionExtensions
     /// <summary>
     /// Adds rate limiting — sliding window policy at 60 req/min per IP for writes (Fix #4).
     /// </summary>
-    public static IServiceCollection AddApiRateLimiting(this IServiceCollection services)
+    public static IServiceCollection AddApiRateLimiting(this IServiceCollection services, IConfiguration? configuration = null)
     {
+        var permitLimit = configuration?.GetValue<int>("RateLimiting:PermitLimit") ?? 120;
+        if (permitLimit <= 0)
+        {
+            permitLimit = 120;
+        }
+
+        var configuredApiKey = configuration?["ApiKey"];
+
         services.AddRateLimiter(options =>
         {
             options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(ctx =>
-                RateLimitPartition.GetSlidingWindowLimiter(
+            {
+                // Never throttle container or cluster health probes
+                if (ctx.Request.Path.StartsWithSegments("/health") || ctx.Request.Path.StartsWithSegments("/healthz"))
+                {
+                    return RateLimitPartition.GetNoLimiter("health_probe");
+                }
+
+                // Allow authorized stress testing or internal batch workers to bypass if header matches ApiKey
+                if (!string.IsNullOrEmpty(configuredApiKey) &&
+                    ctx.Request.Headers.TryGetValue("X-Bypass-Rate-Limit", out var bypassKey) &&
+                    string.Equals(bypassKey, configuredApiKey, StringComparison.Ordinal))
+                {
+                    return RateLimitPartition.GetNoLimiter("authorized_bypass");
+                }
+
+                return RateLimitPartition.GetSlidingWindowLimiter(
                     partitionKey: ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown",
                     factory: _ => new SlidingWindowRateLimiterOptions
                     {
-                        PermitLimit          = 120,
+                        PermitLimit          = permitLimit,
                         Window               = TimeSpan.FromMinutes(1),
                         SegmentsPerWindow    = 6,
                         QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
                         QueueLimit           = 0
-                    }));
+                    });
+            });
 
             options.OnRejected = async (ctx, ct) =>
             {

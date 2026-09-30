@@ -10,7 +10,10 @@ namespace NigerianNewGrid.Services;
 /// Fix #37: Uses ILogger instead of Debug.WriteLine.
 /// Fix #24: Uses AppPreferenceKeys constant instead of magic string.
 /// </summary>
-public class BriefingCacheService(ILogger<BriefingCacheService> logger) : IBriefingCacheService
+public class BriefingCacheService(
+    ILogger<BriefingCacheService> logger,
+    INewsPersistenceService newsPersistenceService,
+    IBackgroundSyncService? backgroundSyncService = null) : IBriefingCacheService
 {
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -18,44 +21,55 @@ public class BriefingCacheService(ILogger<BriefingCacheService> logger) : IBrief
         PropertyNameCaseInsensitive = true
     };
 
-    public Task<List<BriefingCategory>> GetCachedBriefingAsync()
+    public async Task<List<BriefingCategory>> GetCachedBriefingAsync(int topPerCategory = 0)
     {
         try
         {
+            var sqliteCategories = await newsPersistenceService.GetCachedBriefingAsync(days: 14, topPerCategory: topPerCategory);
+            if (sqliteCategories is { Count: > 0 })
+                return sqliteCategories;
+
+            // Fallback check to legacy preferences if migration not completed yet
             var cachedJson = Preferences.Get(AppPreferenceKeys.LastBriefing, string.Empty);
             if (!string.IsNullOrWhiteSpace(cachedJson))
             {
                 var categories = JsonSerializer.Deserialize<List<BriefingCategory>>(cachedJson, JsonOptions);
                 if (categories is { Count: > 0 })
-                    return Task.FromResult(categories);
+                {
+                    await newsPersistenceService.SaveBriefingAsync(categories);
+                    Preferences.Remove(AppPreferenceKeys.LastBriefing);
+                    return categories;
+                }
             }
         }
         catch (Exception ex)
         {
-            // Fix #37 — structured log via ILogger instead of Debug.WriteLine
             logger.LogWarning(ex, "Cache deserialization error reading briefing.");
         }
 
-        return Task.FromResult(new List<BriefingCategory>());
+        return [];
     }
 
-    public Task SaveBriefingAsync(List<BriefingCategory> categories)
+    public async Task SaveBriefingAsync(List<BriefingCategory> categories)
     {
         try
         {
             if (categories is { Count: > 0 })
             {
-                var json = JsonSerializer.Serialize(categories, JsonOptions);
-                Preferences.Set(AppPreferenceKeys.LastBriefing, json);
+                Preferences.Set(AppPreferenceKeys.LastBriefingReceivedUtc, DateTime.UtcNow.ToString("O"));
+                var newCount = await newsPersistenceService.SaveBriefingAsync(categories);
+                backgroundSyncService?.TriggerWidgetRefresh();
+
+                if (newCount > 0)
+                {
+                    AppNotificationBridge.NotifyNewStoriesAvailable(newCount);
+                }
             }
         }
         catch (Exception ex)
         {
-            // Fix #37 — structured log via ILogger
-            logger.LogWarning(ex, "Cache write error saving briefing.");
+            logger.LogWarning(ex, "Cache write error saving briefing to SQLite.");
         }
-
-        return Task.CompletedTask;
     }
 
     public List<BriefingCategory> GetFallbackSampleBriefing(string language)
@@ -118,6 +132,16 @@ public class BriefingCacheService(ILogger<BriefingCacheService> logger) : IBrief
                         "Venture capital investments in Nigerian fintech and artificial intelligence startups reached new record milestones this quarter.",
                         "https://punchng.com/tech/startup-growth", "Punch Newspaper", "Technology")
                 ]
+            },
+            new BriefingCategory
+            {
+                Category = "International",
+                Top =
+                [
+                    MakeItem("United Nations Security Council Convenes Summit on Global Diplomatic Treaties",
+                        "World leaders and international envoys assemble at UN headquarters to negotiate multilateral regional agreements.",
+                        "https://guardian.ng/news/un-global-security-summit", "The Guardian Nigeria", "International")
+                ]
             }
         ];
     }
@@ -130,6 +154,7 @@ public class BriefingCacheService(ILogger<BriefingCacheService> logger) : IBrief
         ["Sports"]        = "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=600&auto=format&fit=crop&q=80",
         ["Technology"]    = "https://images.unsplash.com/photo-1518770660439-4636190af475?w=600&auto=format&fit=crop&q=80",
         ["Entertainment"] = "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=600&auto=format&fit=crop&q=80",
+        ["International"] = "https://images.unsplash.com/photo-1526778548025-fa2f459cd5c1?w=600&auto=format&fit=crop&q=80",
     };
 
     private static string ResolveCategory(string category) =>

@@ -18,7 +18,7 @@
                             StrokeThickness="0"
                             HorizontalOptions="Start"
                             Padding="12,4">
-                        <Label Text="WELCOME TO NIGERIAN NEWS"
+                        <Label Text="WELCOME TO NEWS STAND NG"
                                FontFamily="LegacySansBook"
                                FontSize="11"
                                FontAttributes="Bold"

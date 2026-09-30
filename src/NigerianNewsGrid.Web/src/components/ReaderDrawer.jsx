@@ -180,7 +180,7 @@ export default function ReaderDrawer({
               {article.category || 'National'}
             </span>
             <span style={{ color: 'var(--emerald-bright)', fontWeight: 700, fontSize: '0.85rem' }}>
-              {article.source || 'Nigerian News Grid'}
+              {article.source || 'News Stand NG'}
             </span>
             {article.isSponsored && (
               <span className="sponsored-badge">Sponsored · {article.sponsorName || 'Partner'}</span>

@@ -21,11 +21,13 @@ public class ArticlePredictionOutput
     public float[] Score { get; set; } = Array.Empty<float>();
 }
 
-public class MlCategorizerEngine
+public class MlCategorizerEngine : IDisposable
 {
     private readonly ILogger<MlCategorizerEngine> _logger;
-    private readonly PredictionEngine<ArticleInputData, ArticlePredictionOutput>? _predictionEngine;
+    private PredictionEngine<ArticleInputData, ArticlePredictionOutput>? _predictionEngine;
     private readonly object _lock = new();
+    private FileSystemWatcher? _watcher;
+    private string? _loadedModelPath;
 
     private const float ConfidenceThreshold = 0.40f;
 
@@ -54,8 +56,12 @@ public class MlCategorizerEngine
         @"\b(fintech|startup|series [a-d]|seed funding|venture capital|\bvc\b|flutterwave|paystack|moniepoint|opay|piggyvest|kuda bank|andela|interswitch|chowdeck|moove|\bai\b|artificial intelligence|machine learning|large language model|generative ai|cloud computing|azure|google cloud|\baws\b|data center|starlink|satellite internet|\b5g\b|broadband|telecoms|\bnitda\b|\bncc\b|cybersecurity|software engineering|developer ecosystem|app store|play store|mobile app|web3|blockchain|crypto exchange)\b",
         RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
+    private static readonly Regex InternationalRegex = new(
+        @"\b(white house|pentagon|capitol hill|biden|joe biden|trump|donald trump|kamala harris|us congress|state department|us election|american election|justin trudeau|downing street|keir starmer|rishi sunak|westminster|house of commons|kremlin|putin|vladimir putin|moscow|zelensky|volodymyr zelensky|kyiv|ukraine war|emmanuel macron|elysee|scholz|olaf scholz|bundestag|european union|middle east|gaza|gaza strip|hamas|hezbollah|beirut|netanyahu|benjamin netanyahu|tel aviv|\bidf\b|tehran|ayatollah|khamenei|damascus|saudi arabia|riyadh|emirati|abu dhabi|qatar|doha|houthis?|beijing|xi jinping|taiwan strait|south china sea|tokyo|new delhi|narendra modi|islamabad|pyongyang|kim jong un|south africa|cyril ramaphosa|johannesburg|pretoria|\banc\b|kenya|william ruto|nairobi|ghanaian|ghana election|john mahama|nana akufo-addo|sudan war|sudan conflict|khartoum|\brsf\b|rapid support forces|burkina faso|ibrahim traore|mali junta|assimi goita|niger junta|abdourahamane tiani|congo|kinshasa|rwanda|paul kagame|somalia|al-shabaab|united nations|un general assembly|\bunga\b|un security council|\bunsc\b|antonio guterres|security council|\bnato\b|\bg7\b|\bg20\b|\bbrics\b|african union|\bau commission\b|international criminal court|\bicc\b|international court of justice|\bicj\b|world leaders|ceasefire talks|ballistic missile|foreign ministry|peace summit|airstrike|bilateral summit)\b",
+        RegexOptions.Compiled | RegexOptions.IgnoreCase);
+
     private static readonly Regex GeneralRegex = new(
-        @"\b(frsc|road safety|road crash|fatal accident|highway collision|cholera outbreak|lassa fever|ncdc|yellow fever|immunization|public health|teaching hospital|ministry of education|\bwaec\b|\bjamb\b|\butme\b|\bneco\b|\basuu\b|nelfund|student loan|nema|flood disaster|earth tremor|seismic|weather forecast|nimet|rainstorm|nlc|tuc|warning strike|minimum wage|salary arrears|christian association of nigeria|catholic bishops|nscia|sultan of sokoto|ooni of ife|traditional ruler|public holiday|united nations|\bun\b|visas? category|visa categories|visa application|embassy)\b",
+        @"\b(frsc|road safety|road crash|fatal accident|highway collision|cholera outbreak|lassa fever|ncdc|yellow fever|immunization|public health|teaching hospital|ministry of education|\bwaec\b|\bjamb\b|\butme\b|\bneco\b|\basuu\b|nelfund|student loan|nema|flood disaster|earth tremor|seismic|weather forecast|nimet|rainstorm|nlc|tuc|warning strike|minimum wage|salary arrears|christian association of nigeria|catholic bishops|nscia|sultan of sokoto|ooni of ife|traditional ruler|public holiday|visas? category|visa categories|visa application|embassy)\b",
         RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
     public MlCategorizerEngine(ILogger<MlCategorizerEngine> logger)
@@ -77,10 +83,10 @@ public class MlCategorizerEngine
 
             if (foundPath != null)
             {
-                var mlContext = new MLContext();
-                ITransformer model = mlContext.Model.Load(foundPath, out _);
-                _predictionEngine = mlContext.Model.CreatePredictionEngine<ArticleInputData, ArticlePredictionOutput>(model);
-                _logger.LogInformation("Successfully loaded ML.NET categorizer model from {ModelPath}", foundPath);
+                _loadedModelPath = foundPath;
+                ReloadModel(foundPath);
+                SetupModelWatcher(foundPath);
+                _logger.LogInformation("Successfully initialized ML.NET categorizer model from {ModelPath}", foundPath);
             }
             else
             {
@@ -91,6 +97,70 @@ public class MlCategorizerEngine
         {
             _logger.LogError(ex, "Failed to initialize ML.NET prediction engine. Falling back to high-precision rule-based categorizer.");
         }
+    }
+
+    private void SetupModelWatcher(string modelPath)
+    {
+        try
+        {
+            string? dir = Path.GetDirectoryName(modelPath);
+            if (string.IsNullOrEmpty(dir) || !Directory.Exists(dir)) return;
+
+            string fileName = Path.GetFileName(modelPath);
+            _watcher?.Dispose();
+            _watcher = new FileSystemWatcher(dir, fileName)
+            {
+                NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.FileName | NotifyFilters.Size
+            };
+
+            _watcher.Changed += OnModelFileChanged;
+            _watcher.Created += OnModelFileChanged;
+            _watcher.EnableRaisingEvents = true;
+
+            _logger.LogInformation("Installed hot-reload FileSystemWatcher for categorizer model at {Dir}/{File}", dir, fileName);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to install FileSystemWatcher for model hot-reloading.");
+        }
+    }
+
+    private void OnModelFileChanged(object sender, FileSystemEventArgs e)
+    {
+        // Debounce to allow write file stream to close
+        Task.Delay(500).ContinueWith(_ =>
+        {
+            ReloadModel(e.FullPath);
+        });
+    }
+
+    public bool ReloadModel(string? path = null)
+    {
+        path ??= _loadedModelPath;
+        if (string.IsNullOrEmpty(path) || !File.Exists(path)) return false;
+
+        lock (_lock)
+        {
+            try
+            {
+                var mlContext = new MLContext();
+                ITransformer model = mlContext.Model.Load(path, out _);
+                _predictionEngine = mlContext.Model.CreatePredictionEngine<ArticleInputData, ArticlePredictionOutput>(model);
+                _loadedModelPath = path;
+                _logger.LogInformation("⚡ [HOT-RELOAD] ML.NET Categorizer model successfully reloaded from {Path}!", path);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to hot-reload categorizer model from {Path}", path);
+                return false;
+            }
+        }
+    }
+
+    public void Dispose()
+    {
+        _watcher?.Dispose();
     }
 
     public string Categorize(string title, string? summary = null)
@@ -172,6 +242,7 @@ public class MlCategorizerEngine
             { "Crime", CountMatches(CrimeRegex, title) * 3 + CountMatches(CrimeRegex, summary) },
             { "Entertainment", CountMatches(EntertainmentRegex, title) * 3 + CountMatches(EntertainmentRegex, summary) },
             { "Technology", CountMatches(TechnologyRegex, title) * 3 + CountMatches(TechnologyRegex, summary) },
+            { "International", CountMatches(InternationalRegex, title) * 3 + CountMatches(InternationalRegex, summary) },
             { "General", CountMatches(GeneralRegex, title) * 3 + CountMatches(GeneralRegex, summary) }
         };
 

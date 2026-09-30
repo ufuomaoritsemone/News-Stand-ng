@@ -803,3 +803,52 @@ h1, h2, h3, h4, h5, h6, .brand-font {
   display: inline-block !important;
   color: #f59e0b;
 }
+
+/* ══════════════════════════════════════════════════════════════════
+   FEEDBACK CARDS & CONTROLS
+   ══════════════════════════════════════════════════════════════════ */
+.btn-xs {
+  font-size: 0.72rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 6px;
+  line-height: 1.2;
+}
+
+.feedback-quote-box {
+  background: rgba(15, 23, 42, 0.55);
+  color: var(--text-main);
+  border-left: 3px solid var(--accent-cyan);
+}
+
+[data-bs-theme="light"] .feedback-quote-box {
+  background: rgba(241, 245, 249, 0.9) !important;
+  color: #0f172a !important;
+  border-left-color: #0284c7 !important;
+}
+
+[data-bs-theme="light"] .feedback-card-surface {
+  background: rgba(255, 255, 255, 0.95);
+}
+
+.text-purple {
+  color: var(--accent-purple) !important;
+}
+
+.bg-purple {
+  background-color: var(--accent-purple) !important;
+  color: #ffffff !important;
+}
+
+.btn-outline-purple {
+  color: var(--accent-purple);
+  border-color: var(--accent-purple);
+  background: transparent;
+}
+
+.btn-outline-purple:hover {
+  color: #ffffff;
+  background-color: var(--accent-purple);
+  border-color: var(--accent-purple);
+}
+
+

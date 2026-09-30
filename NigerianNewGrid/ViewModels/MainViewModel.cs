@@ -26,6 +26,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
     private readonly IBriefingCacheService _cacheService;
     private readonly ITextToSpeechService _ttsService;
     private readonly IAnalyticsService _analyticsService;
+    private readonly ISonicFeedbackService _sonicService;
     private readonly ILogger<MainViewModel> _logger;
 
     private List<BriefingCategory> _allCategories = [];
@@ -54,6 +55,13 @@ public partial class MainViewModel : ObservableObject, IDisposable
     [ObservableProperty] public partial int DisplayedCount { get; set; } = PageSize;
     [ObservableProperty] public partial int TotalAvailableStories { get; set; }
 
+    // Floating pill notification properties when background worker saves fresh stories
+    [ObservableProperty] public partial bool HasNewStoriesAvailable { get; set; }
+    [ObservableProperty] public partial int NewStoriesCount { get; set; }
+    [ObservableProperty] public partial string NewStoriesPillText { get; set; } = string.Empty;
+
+    public event Action? ScrollToTopRequested;
+
     public MainViewModel(
         NewsApiClient apiClient,
         IHttpClientFactory httpClientFactory,
@@ -63,8 +71,10 @@ public partial class MainViewModel : ObservableObject, IDisposable
         IBriefingCacheService cacheService,
         ITextToSpeechService ttsService,
         IAnalyticsService analyticsService,
+        ISonicFeedbackService sonicService,
         ILogger<MainViewModel> logger)
     {
+        Console.WriteLine(">>> [DIAGNOSTIC] MainViewModel constructor START");
         _apiClient               = apiClient;
         _httpClientFactory       = httpClientFactory;
         _keywordMatchingService  = keywordMatchingService;
@@ -73,15 +83,25 @@ public partial class MainViewModel : ObservableObject, IDisposable
         _cacheService            = cacheService;
         _ttsService              = ttsService;
         _analyticsService        = analyticsService;
+        _sonicService            = sonicService;
         _logger                  = logger;
 
         _bookmarkService.BookmarksChanged += OnBookmarkServiceChanged;
         AppNotificationBridge.PlayAudioBriefingRequested += OnPlayAudioBriefingRequested;
+        AppNotificationBridge.NewStoriesAvailable += OnNewStoriesAvailable;
+        AppNotificationBridge.AppResumed += OnAppResumedFromBridge;
+        Connectivity.Current.ConnectivityChanged += OnConnectivityChanged;
 
         if (NotificationPreferences.AudioBriefingsEnabled)
         {
+#if ANDROID
+            Android.Util.Log.Info("APP_DEBUG", "MainViewModel ScheduleAudioBriefings");
+#endif
             _notificationService.ScheduleAudioBriefings();
         }
+#if ANDROID
+        Android.Util.Log.Info("APP_DEBUG", "MainViewModel constructor FINISHED");
+#endif
     }
 
     // ── Commands ──────────────────────────────────────────────────
@@ -90,54 +110,117 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
     public async Task InitializeAsync()
     {
+#if ANDROID
+        Android.Util.Log.Info("APP_DEBUG", $"MainViewModel.InitializeAsync START (hasLoadedOnce={_hasLoadedOnce})");
+#endif
         if (_hasLoadedOnce) return;
         _hasLoadedOnce = true;
         await LoadBriefingAsync();
+#if ANDROID
+        Android.Util.Log.Info("APP_DEBUG", "MainViewModel.InitializeAsync END");
+#endif
     }
 
     [RelayCommand]
-    public async Task LoadBriefingAsync()
+    public async Task LoadBriefingAsync(bool isPullToRefresh = false)
     {
+#if ANDROID
+        Android.Util.Log.Info("APP_DEBUG", "MainViewModel.LoadBriefingAsync START");
+#endif
         _loadCts?.Cancel();
         _loadCts?.Dispose();
         _loadCts = new CancellationTokenSource();
+
+        // Hard 10-second deadline so the spinner is GUARANTEED to stop even if
+        // the network hangs or the URL probe waterfall takes too long.
+        _loadCts.CancelAfter(TimeSpan.FromSeconds(10));
         var ct = _loadCts.Token;
 
         try
         {
-            IsLoading    = true;
-            IsRefreshing = true;
+            var language = Preferences.Get(AppPreferenceKeys.PreferredLanguage, "English");
+#if ANDROID
+            Android.Util.Log.Info("APP_DEBUG", $"MainViewModel.LoadBriefingAsync language={language}, checking cache");
+#endif
+
+            // 1. Instant Cache-First Display (Stale-While-Revalidate)
+            if (_allCategories.Count == 0)
+            {
+#if ANDROID
+                Android.Util.Log.Info("APP_DEBUG", "MainViewModel.LoadBriefingAsync calling GetCachedBriefingAsync");
+#endif
+                var cached = await _cacheService.GetCachedBriefingAsync();
+#if ANDROID
+                Android.Util.Log.Info("APP_DEBUG", $"MainViewModel.LoadBriefingAsync GetCachedBriefingAsync returned {cached?.Count ?? 0} categories");
+#endif
+                if (cached.Count > 0)
+                {
+                    _allCategories = cached;
+                    DisplayedCount = PageSize;
+                    RefreshDisplayedStories();
+                    IsSkeletonVisible = false;
+                    IsCategoriesVisible = true;
+                    UpdateTimestampStatus();
+                }
+                else
+                {
+                    IsSkeletonVisible = true;
+                    IsCategoriesVisible = false;
+                    StatusText = $"Loading {language}…";
+                }
+            }
+            else
+            {
+                IsSkeletonVisible = false;
+                IsCategoriesVisible = true;
+            }
+
+            IsLoading = true;
+            if (isPullToRefresh)
+            {
+                IsRefreshing = true;
+            }
 
             var endpoint = await ResolveApiBaseUrlAsync(ct);
             _apiClient.BaseUrl = endpoint;
 
-            var language = Preferences.Get(AppPreferenceKeys.PreferredLanguage, "English");
-            StatusText        = $"Loading {language}…";
-            IsSkeletonVisible = true;
-            IsEmptyStateVisible = false;
-            IsCategoriesVisible = false;
+            List<BriefingCategory> categories;
+            try
+            {
+                categories = await _apiClient.GetDailyBriefingAsync(language, ct);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Network error fetching daily briefing, maintaining cached stories.");
+                categories = [];
+            }
 
-            var categories = await _apiClient.GetDailyBriefingAsync(language, ct);
             if (categories.Count == 0)
             {
-                categories = await _cacheService.GetCachedBriefingAsync();
-                if (categories.Count == 0)
-                    categories = _cacheService.GetFallbackSampleBriefing(language);
+                if (_allCategories.Count == 0)
+                {
+                    categories = await _cacheService.GetCachedBriefingAsync();
+                    if (categories.Count == 0)
+                        categories = _cacheService.GetFallbackSampleBriefing(language);
+                    _allCategories = categories;
+                    await _cacheService.SaveBriefingAsync(_allCategories);
+                }
             }
             else
             {
                 await _cacheService.SaveBriefingAsync(categories);
                 Preferences.Set(AppPreferenceKeys.ApiBaseUrl, _apiClient.BaseUrl);
+                _allCategories = categories;
             }
 
             ct.ThrowIfCancellationRequested();
-            _allCategories = categories;
             DisplayedCount = PageSize;
 
             RefreshDisplayedStories();
             EvaluateKeywordAlerts(_allCategories);
             UpdateTimestampStatus();
-            await LoadVideoFeedsAsync(ct);
+            HasNewStoriesAvailable = false;
+            NewStoriesCount = 0;
 
             if (_pendingAudioBriefingAutoPlay)
             {
@@ -147,19 +230,31 @@ public partial class MainViewModel : ObservableObject, IDisposable
         }
         catch (OperationCanceledException)
         {
-            // Cancelled cleanly — no user-facing error needed
+            // Cancelled cleanly (user cancelled, new refresh started, or 10s deadline hit)
+            // If we have cached categories, keep them shown so the user isn't left with blank screen
+            if (_allCategories.Count > 0)
+            {
+                RefreshDisplayedStories();
+                UpdateTimestampStatus();
+            }
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error loading briefing.");
-            StatusText = $"Error loading briefing: {ex.Message}";
+            StatusText = $"Error: {ex.Message}";
         }
         finally
         {
+            // Reset spinner state BEFORE firing the video load so the UI is
+            // responsive immediately. Videos load silently in the background.
             IsLoading           = false;
             IsRefreshing        = false;
             IsSkeletonVisible   = false;
             IsCategoriesVisible = true;
+
+            // Fire video load as a background task — never blocks refresh completion.
+            // Uses a fresh token so a subsequent pull-to-refresh can cancel it cleanly.
+            _ = LoadVideoFeedsAsync(CancellationToken.None);
         }
     }
 
@@ -179,8 +274,112 @@ public partial class MainViewModel : ObservableObject, IDisposable
         });
     }
 
+    private DateTime _lastResumeUtc = DateTime.UtcNow;
+
+    private void OnAppResumedFromBridge()
+    {
+        OnAppResumed();
+    }
+
+    public void OnAppResumed()
+    {
+        _lastResumeUtc = DateTime.UtcNow;
+        _ = CheckForNewStoriesAsync();
+    }
+
+    private void OnNewStoriesAvailable(int count)
+    {
+        _ = CheckForNewStoriesAsync();
+    }
+
+    private async Task CheckForNewStoriesAsync()
+    {
+        // Don't show pill if currently loading or if initial load hasn't completed
+        if (_allCategories.Count == 0 || IsLoading || IsRefreshing) return;
+
+        try
+        {
+            var cached = await _cacheService.GetCachedBriefingAsync(topPerCategory: 10);
+            if (cached.Count > 0)
+            {
+                var displayedIds = new HashSet<string>(
+                    _allCategories.SelectMany(c => c.Top)
+                                  .Select(s => s.Id)
+                                  .Where(id => !string.IsNullOrEmpty(id))
+                );
+
+                int newCount = cached.SelectMany(c => c.Top)
+                    .Count(s => !string.IsNullOrEmpty(s.Id) && !displayedIds.Contains(s.Id));
+
+                MainThread.BeginInvokeOnMainThread(() =>
+                {
+                    if (newCount > 0)
+                    {
+                        NewStoriesCount = newCount;
+                        NewStoriesPillText = newCount == 1 ? "1 new story available" : $"{newCount} new stories available";
+                        HasNewStoriesAvailable = true;
+                    }
+                    else
+                    {
+                        HasNewStoriesAvailable = false;
+                        NewStoriesCount = 0;
+                    }
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to inspect cached briefing for new stories.");
+        }
+    }
+
     [RelayCommand]
-    public async Task RefreshAsync() => await LoadBriefingAsync();
+    public async Task ApplyNewStoriesAsync()
+    {
+        if (IsLoading || IsRefreshing) return;
+
+        HasNewStoriesAvailable = false;
+        NewStoriesCount = 0;
+
+        _ = _sonicService.PlayRefreshChimeAsync();
+
+        // Stale-while-revalidate reload from SQLite cache (capped at top 10 per category)
+        var cached = await _cacheService.GetCachedBriefingAsync(topPerCategory: 10);
+        if (cached.Count > 0)
+        {
+            _allCategories = cached;
+            DisplayedCount = PageSize;
+            RefreshDisplayedStories();
+            UpdateTimestampStatus();
+        }
+        else
+        {
+            await LoadBriefingAsync(isPullToRefresh: true);
+        }
+
+        ScrollToTopRequested?.Invoke();
+    }
+
+    [RelayCommand]
+    public async Task RefreshAsync()
+    {
+        // Re-entrancy guard: if already refreshing or loading, bail out
+        if (IsRefreshing || IsLoading)
+        {
+            IsRefreshing = false; // ensure spinner doesn't get stuck from a prior stale state
+            return;
+        }
+
+        // Ignore spurious refresh commands fired during phone wake-up or resume layout recalculations
+        if (DateTime.UtcNow - _lastResumeUtc < TimeSpan.FromSeconds(2.5))
+        {
+            IsRefreshing = false;
+            return;
+        }
+
+        _ = _sonicService.PlayRefreshChimeAsync();
+        await LoadBriefingAsync(isPullToRefresh: true);
+    }
 
     [RelayCommand]
     public void LoadMoreStories()
@@ -328,10 +527,11 @@ public partial class MainViewModel : ObservableObject, IDisposable
             .ToList();
 
         // 2. Arrange feed with deterministic placement (Special slots 1-3, in-feed 5-30, and AdMob placeholders)
+        var isOnline = Connectivity.Current.NetworkAccess == NetworkAccess.Internet;
         var allUniqueStories = FeedSlotPlacementHelper.ArrangeFeed(
             uniqueOrganic,
             uniqueSponsored,
-            includeAdMobPlaceholders: true);
+            includeAdMobPlaceholders: isOnline);
 
         TotalAvailableStories = allUniqueStories.Count;
         var paginated = allUniqueStories.Take(DisplayedCount).ToList();
@@ -375,15 +575,38 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
     private void UpdateTimestampStatus()
     {
-        var topTime = _allCategories
-            .SelectMany(c => c.Top)
-            .Where(i => i.PublishedAt.HasValue && i.PublishedAt.Value > DateTime.MinValue)
-            .Select(i => i.PublishedAt!.Value)
-            .OrderByDescending(d => d)
-            .FirstOrDefault();
+        DateTime receivedTime = DateTime.MinValue;
 
-        var dt = topTime > DateTime.MinValue ? topTime.ToLocalTime() : DateTime.Now;
-        StatusText = $"Updated as at {dt:d MMM yyyy, h:mm tt}";
+        var storedUtcStr = Preferences.Get(AppPreferenceKeys.LastBriefingReceivedUtc, string.Empty);
+        if (!string.IsNullOrWhiteSpace(storedUtcStr) &&
+            DateTime.TryParse(storedUtcStr, null, System.Globalization.DateTimeStyles.RoundtripKind, out var parsedUtc))
+        {
+            receivedTime = parsedUtc.ToLocalTime();
+        }
+        else
+        {
+            // Fallback for pre-existing caches without LastBriefingReceivedUtc recorded yet:
+            // Extract the latest story publication time that is in the past
+            var latestStoryUtc = _allCategories
+                .SelectMany(c => c.Top)
+                .Where(i => i.PublishedAt.HasValue && i.PublishedAt.Value <= DateTime.UtcNow)
+                .Select(i => i.PublishedAt!.Value)
+                .OrderByDescending(d => d)
+                .FirstOrDefault();
+
+            if (latestStoryUtc > DateTime.MinValue)
+            {
+                receivedTime = latestStoryUtc.ToLocalTime();
+            }
+        }
+
+        // Defensive guard: never display a time in the future or an uninitialized min value
+        if (receivedTime == DateTime.MinValue || receivedTime > DateTime.Now)
+        {
+            receivedTime = DateTime.Now;
+        }
+
+        StatusText = $"Updated as at {receivedTime:d MMM yyyy, h:mm tt}";
         SemanticScreenReader.Announce(StatusText);
     }
 
@@ -443,38 +666,53 @@ public partial class MainViewModel : ObservableObject, IDisposable
     // ── API Base URL Resolution (kept in VM so navigation code stays thin) ──
     private async Task<string> ResolveApiBaseUrlAsync(CancellationToken ct = default)
     {
+#if ANDROID
+        Android.Util.Log.Info("APP_DEBUG", "MainViewModel.ResolveApiBaseUrlAsync START");
+#endif
         var saved = Preferences.Get(AppPreferenceKeys.ApiBaseUrl, string.Empty);
         var probe = _httpClientFactory.CreateClient("ProbeClient");
 
+        // Fast path: if we already have a working URL, verify it quickly (1.5s timeout)
+        // and return immediately on success. Only fall through to the full probe waterfall
+        // if the saved URL fails — avoids the 8-10s probe delay on every pull-to-refresh.
         if (!string.IsNullOrWhiteSpace(saved))
         {
             try
             {
-                var resp = await probe.GetAsync($"{saved.TrimEnd('/')}/healthz/liveness", ct);
+                using var quickCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+                quickCts.CancelAfter(TimeSpan.FromMilliseconds(1500));
+                var resp = await probe.GetAsync($"{saved.TrimEnd('/')}/healthz/liveness", quickCts.Token);
                 if (resp.IsSuccessStatusCode) return saved;
-                Preferences.Remove(AppPreferenceKeys.ApiBaseUrl);
             }
-            catch (Exception ex) when (ex is not OperationCanceledException)
+            catch (Exception ex) when (ex is not OperationCanceledException { CancellationToken.IsCancellationRequested: true } oce || oce.CancellationToken == ct)
             {
                 _logger.LogDebug("Health probe failed for saved URL {Url}: {Error}", saved, ex.Message);
-                Preferences.Remove(AppPreferenceKeys.ApiBaseUrl);
             }
+            Preferences.Remove(AppPreferenceKeys.ApiBaseUrl);
         }
 
-        string[] candidates =
-        [
-            "http://localhost:56193",
-            "http://10.0.2.2:56193",
-            "http://127.0.0.1:56193",
-            "http://host.docker.internal:56193",
-            "http://10.0.2.2:5000",
-            "http://localhost:5000",
-            "http://127.0.0.1:5000",
-            "http://host.docker.internal:5000",
-            "http://10.0.2.2:8080",
-            "http://localhost:8080",
-            "http://host.docker.internal:8080"
-        ];
+        string[] candidates = DeviceInfo.Platform == DevicePlatform.Android
+            ? [
+                "http://localhost:56193",
+                "http://127.0.0.1:56193",
+                "http://10.0.2.2:56193",
+                "http://localhost:5000",
+                "http://127.0.0.1:5000",
+                "http://10.0.2.2:5000",
+                "http://host.docker.internal:56193",
+                "http://host.docker.internal:5000",
+                "http://localhost:8080",
+                "http://10.0.2.2:8080"
+              ]
+            : [
+                "http://localhost:56193",
+                "http://127.0.0.1:56193",
+                "http://localhost:5000",
+                "http://127.0.0.1:5000",
+                "http://host.docker.internal:56193",
+                "http://host.docker.internal:5000",
+                "http://localhost:8080"
+              ];
 
         string? resolved = null;
         using var probeCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
@@ -513,7 +751,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         try
         {
             using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-            timeoutCts.CancelAfter(TimeSpan.FromMilliseconds(1500));
+            timeoutCts.CancelAfter(TimeSpan.FromMilliseconds(800));
             var response = await client.GetAsync($"{candidate.TrimEnd('/')}/healthz/liveness", timeoutCts.Token);
             return response.IsSuccessStatusCode ? candidate : null;
         }
@@ -615,11 +853,25 @@ public partial class MainViewModel : ObservableObject, IDisposable
         MainThread.BeginInvokeOnMainThread(OnBookmarksChanged);
     }
 
+    private void OnConnectivityChanged(object? sender, ConnectivityChangedEventArgs e)
+    {
+        MainThread.BeginInvokeOnMainThread(() =>
+        {
+            if (_allCategories.Count > 0)
+            {
+                RefreshDisplayedStories();
+            }
+        });
+    }
+
     public void Dispose()
     {
         _ttsService.Cancel();
         _bookmarkService.BookmarksChanged -= OnBookmarkServiceChanged;
         AppNotificationBridge.PlayAudioBriefingRequested -= OnPlayAudioBriefingRequested;
+        AppNotificationBridge.NewStoriesAvailable -= OnNewStoriesAvailable;
+        AppNotificationBridge.AppResumed -= OnAppResumedFromBridge;
+        Connectivity.Current.ConnectivityChanged -= OnConnectivityChanged;
         _loadCts?.Cancel();
         _loadCts?.Dispose();
     }

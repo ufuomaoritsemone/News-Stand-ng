@@ -1,0 +1,525 @@
+@page
+@model AdminDashboard.Pages.FeedbackModel
+@{
+    ViewData["Title"] = "User Feedback & Reports | News Stand NG";
+}
+
+<div class="container-fluid px-4 py-3">
+
+    <!-- Top Dashboard Header -->
+    <div class="dashboard-header d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
+        <div>
+            <div class="d-flex align-items-center gap-3">
+                <h1 class="h2 mb-0 text-white brand-font">💬 User Feedback &amp; Reports</h1>
+                <span class="badge bg-primary rounded-pill px-3 py-1 text-uppercase" style="font-size: 0.72rem; letter-spacing: 0.5px;">
+                    <i class="bi bi-chat-heart-fill me-1"></i> USER EXPERIENCE
+                </span>
+            </div>
+            <p class="text-muted mb-0 mt-1">Review live mobile client ratings, bug reports, feature suggestions, and device diagnostics</p>
+        </div>
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+            <a href="/" class="btn btn-outline-light btn-sm"><i class="bi bi-newspaper me-1"></i> Articles</a>
+            <a href="/Videos" class="btn btn-outline-danger btn-sm"><i class="bi bi-youtube me-1"></i> Videos</a>
+            <a href="/Socials" class="btn btn-outline-info btn-sm"><i class="bi bi-twitter-x me-1"></i> Socials</a>
+            <a href="/Analytics" class="btn btn-outline-success btn-sm"><i class="bi bi-bar-chart-fill me-1"></i> Analytics</a>
+            <a href="/Sponsors" class="btn btn-outline-warning btn-sm"><i class="bi bi-megaphone me-1"></i> Sponsored</a>
+            <a href="/Categorizer" class="btn btn-outline-purple btn-sm"><i class="bi bi-cpu-fill me-1"></i> ML Categorizer</a>
+            <button type="button" class="theme-toggle-btn" onclick="toggleAdminTheme()" title="Toggle Light / Dark Theme">
+                <i class="bi bi-moon-stars-fill theme-icon-dark"></i>
+                <i class="bi bi-sun-fill theme-icon-light"></i>
+                <span class="theme-toggle-label">Dark</span>
+            </button>
+            <a href="/Feedback" class="btn btn-gradient btn-sm"><i class="bi bi-arrow-clockwise me-1"></i> Refresh</a>
+        </div>
+    </div>
+
+    <!-- Alert Notifications -->
+    @if (TempData["Message"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show glass-card border-success text-white mb-4" role="alert">
+            <i class="bi bi-check-circle-fill me-2"></i> @TempData["Message"]
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show glass-card border-danger text-white mb-4" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i> @TempData["Error"]
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    <!-- ── Key Feedback Stat Cards ── -->
+    <div class="row g-3 mb-4">
+        <!-- Total Feedbacks -->
+        <div class="col-6 col-md-4 col-xl">
+            <div class="glass-card stat-card">
+                <div class="text-muted small text-uppercase font-weight-bold">Total Received</div>
+                <div class="stat-value text-white">@Model.TotalFeedbacksCount</div>
+                <div class="small text-info mt-1">
+                    <i class="bi bi-inbox-fill me-1"></i> @Model.Feedbacks.Count shown
+                </div>
+            </div>
+        </div>
+
+        <!-- Average Rating -->
+        <div class="col-6 col-md-4 col-xl">
+            <div class="glass-card stat-card">
+                <div class="text-muted small text-uppercase font-weight-bold">Average Rating</div>
+                <div class="stat-value text-warning">
+                    @Model.AverageRating.ToString("0.0") <span style="font-size: 1.1rem;">⭐</span>
+                </div>
+                <div class="small text-muted mt-1">
+                    <span class="text-warning">
+                        @for (int i = 1; i <= 5; i++)
+                        {
+                            if (i <= Math.Round(Model.AverageRating))
+                            {
+                                <i class="bi bi-star-fill"></i>
+                            }
+                            else
+                            {
+                                <i class="bi bi-star"></i>
+                            }
+                        }
+                    </span>
+                    <span class="ms-1">(@Model.RatingCounts[5] 5★)</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bugs Reported -->
+        <div class="col-6 col-md-4 col-xl">
+            <div class="glass-card stat-card">
+                <div class="text-muted small text-uppercase font-weight-bold">Bug Reports</div>
+                <div class="stat-value text-danger">@Model.BugCount</div>
+                <div class="small text-danger mt-1">
+                    <i class="bi bi-bug-fill me-1"></i> Needs dev review
+                </div>
+            </div>
+        </div>
+
+        <!-- Feature Suggestions -->
+        <div class="col-6 col-md-6 col-xl">
+            <div class="glass-card stat-card">
+                <div class="text-muted small text-uppercase font-weight-bold">Feature Ideas</div>
+                <div class="stat-value text-primary">@Model.FeatureCount</div>
+                <div class="small text-primary mt-1">
+                    <i class="bi bi-lightbulb-fill me-1"></i> Product roadmap
+                </div>
+            </div>
+        </div>
+
+        <!-- Email Notifications -->
+        <div class="col-12 col-md-6 col-xl">
+            <div class="glass-card stat-card">
+                <div class="text-muted small text-uppercase font-weight-bold">Email Dispatched</div>
+                <div class="stat-value text-success">@Model.EmailDispatchedCount</div>
+                <div class="small text-success mt-1">
+                    <i class="bi bi-envelope-check-fill me-1"></i> Sent to support inbox
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Filter & Search Toolbar ── -->
+    <div class="glass-card p-3 mb-4">
+        <form method="get" class="row g-2 align-items-center">
+            <!-- Search keyword -->
+            <div class="col-12 col-md-4 col-lg-3">
+                <div class="input-group input-group-sm">
+                    <span class="input-group-text bg-transparent border-glass text-muted"><i class="bi bi-search"></i></span>
+                    <input type="text" name="searchQuery" value="@Model.SearchQuery" class="form-control form-control-glass" placeholder="Search message, email, name..." />
+                </div>
+            </div>
+
+            <!-- Category Filter -->
+            <div class="col-6 col-md-2 col-lg-2">
+                <select name="selectedCategory" class="form-select form-select-sm form-control-glass">
+                    <option value="" selected="@(string.IsNullOrEmpty(Model.SelectedCategory))">All Categories</option>
+                    <option value="General" selected="@(string.Equals(Model.SelectedCategory, "General", StringComparison.OrdinalIgnoreCase))">General</option>
+                    <option value="Bug" selected="@(string.Equals(Model.SelectedCategory, "Bug", StringComparison.OrdinalIgnoreCase))">Bugs 🐛</option>
+                    <option value="Feature" selected="@(string.Equals(Model.SelectedCategory, "Feature", StringComparison.OrdinalIgnoreCase))">Features 💡</option>
+                    <option value="Content" selected="@(string.Equals(Model.SelectedCategory, "Content", StringComparison.OrdinalIgnoreCase))">Content 📰</option>
+                </select>
+            </div>
+
+            <!-- Rating Filter -->
+            <div class="col-6 col-md-2 col-lg-2">
+                <select name="selectedRating" class="form-select form-select-sm form-control-glass">
+                    <option value="" selected="@(!Model.SelectedRating.HasValue || Model.SelectedRating == 0)">All Ratings</option>
+                    <option value="5" selected="@(Model.SelectedRating == 5)">5 Stars ⭐⭐⭐⭐⭐</option>
+                    <option value="4" selected="@(Model.SelectedRating == 4)">4 Stars ⭐⭐⭐⭐</option>
+                    <option value="3" selected="@(Model.SelectedRating == 3)">3 Stars ⭐⭐⭐</option>
+                    <option value="2" selected="@(Model.SelectedRating == 2)">2 Stars ⭐⭐</option>
+                    <option value="1" selected="@(Model.SelectedRating == 1)">1 Star ⭐</option>
+                </select>
+            </div>
+
+            <!-- Platform Filter -->
+            <div class="col-6 col-md-2 col-lg-2">
+                <select name="selectedPlatform" class="form-select form-select-sm form-control-glass">
+                    <option value="" selected="@(string.IsNullOrEmpty(Model.SelectedPlatform))">All Platforms</option>
+                    @foreach (var plat in Model.AvailablePlatforms)
+                    {
+                        <option value="@plat" selected="@(string.Equals(Model.SelectedPlatform, plat, StringComparison.OrdinalIgnoreCase))">@plat</option>
+                    }
+                </select>
+            </div>
+
+            <!-- Limit selector -->
+            <div class="col-6 col-md-2 col-lg-1">
+                <select name="limit" class="form-select form-select-sm form-control-glass">
+                    <option value="50" selected="@(Model.Limit == 50)">50</option>
+                    <option value="100" selected="@(Model.Limit == 100)">100</option>
+                    <option value="200" selected="@(Model.Limit == 200)">200</option>
+                </select>
+            </div>
+
+            <!-- Action buttons -->
+            <div class="col-12 col-md-auto ms-md-auto d-flex gap-2">
+                <button type="submit" class="btn btn-primary btn-sm px-3"><i class="bi bi-funnel-fill me-1"></i> Filter</button>
+                @if (!string.IsNullOrEmpty(Model.SearchQuery) || !string.IsNullOrEmpty(Model.SelectedCategory) || (Model.SelectedRating.HasValue && Model.SelectedRating > 0) || !string.IsNullOrEmpty(Model.SelectedPlatform))
+                {
+                    <a href="/Feedback" class="btn btn-outline-secondary btn-sm" title="Clear Filters"><i class="bi bi-x-circle me-1"></i> Reset</a>
+                }
+                <!-- View Toggle Buttons -->
+                <div class="btn-group btn-group-sm" role="group" aria-label="View toggle">
+                    <button type="button" class="btn btn-outline-light active" id="btnCardsView" onclick="switchFeedbackView('cards')" title="Card View">
+                        <i class="bi bi-grid-fill"></i>
+                    </button>
+                    <button type="button" class="btn btn-outline-light" id="btnTableView" onclick="switchFeedbackView('table')" title="Table View">
+                        <i class="bi bi-list-ul"></i>
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- ── Category Breakdown Pills ── -->
+    <div class="d-flex align-items-center gap-2 mb-3 flex-wrap">
+        <span class="text-muted small text-uppercase fw-bold me-1">Quick Filter:</span>
+        <a href="/Feedback" class="badge text-decoration-none @(string.IsNullOrEmpty(Model.SelectedCategory) ? "bg-primary text-white" : "bg-secondary text-light") px-3 py-2 rounded-pill">
+            All (@Model.TotalFeedbacksCount)
+        </a>
+        <a href="/Feedback?selectedCategory=General" class="badge text-decoration-none @(string.Equals(Model.SelectedCategory, "General", StringComparison.OrdinalIgnoreCase) ? "bg-info text-dark font-weight-bold" : "bg-dark border border-secondary text-info") px-3 py-2 rounded-pill">
+            General (@Model.GeneralCount)
+        </a>
+        <a href="/Feedback?selectedCategory=Bug" class="badge text-decoration-none @(string.Equals(Model.SelectedCategory, "Bug", StringComparison.OrdinalIgnoreCase) ? "bg-danger text-white" : "bg-dark border border-secondary text-danger") px-3 py-2 rounded-pill">
+            Bugs (@Model.BugCount)
+        </a>
+        <a href="/Feedback?selectedCategory=Feature" class="badge text-decoration-none @(string.Equals(Model.SelectedCategory, "Feature", StringComparison.OrdinalIgnoreCase) ? "bg-purple text-white" : "bg-dark border border-secondary text-light") px-3 py-2 rounded-pill" style="@(string.Equals(Model.SelectedCategory, "Feature", StringComparison.OrdinalIgnoreCase) ? "background-color: #a855f7 !important;" : "")">
+            Features (@Model.FeatureCount)
+        </a>
+        <a href="/Feedback?selectedCategory=Content" class="badge text-decoration-none @(string.Equals(Model.SelectedCategory, "Content", StringComparison.OrdinalIgnoreCase) ? "bg-success text-white" : "bg-dark border border-secondary text-success") px-3 py-2 rounded-pill">
+            Content (@Model.ContentCount)
+        </a>
+    </div>
+
+    <!-- ── Feedback Feed / Results ── -->
+    @if (!Model.Feedbacks.Any())
+    {
+        <!-- Empty State -->
+        <div class="glass-card p-5 text-center my-4">
+            <div class="mb-3 text-muted" style="font-size: 3.5rem;">
+                <i class="bi bi-chat-square-heart"></i>
+            </div>
+            <h3 class="h4 text-white mb-2">No Feedback Records Found</h3>
+            @if (!string.IsNullOrEmpty(Model.SearchQuery) || !string.IsNullOrEmpty(Model.SelectedCategory) || Model.SelectedRating.HasValue)
+            {
+                <p class="text-muted mb-4">No feedback items match your current filter parameters. Try loosening your search criteria.</p>
+                <a href="/Feedback" class="btn btn-outline-light btn-sm"><i class="bi bi-arrow-counterclockwise me-1"></i> Clear All Filters</a>
+            }
+            else
+            {
+                <p class="text-muted mb-0">No user feedback has been submitted yet. When users submit feedback from the mobile app settings page, submissions will automatically appear here.</p>
+            }
+        </div>
+    }
+    else
+    {
+        <!-- CARDS VIEW (Default) -->
+        <div id="feedbackCardsContainer" class="row g-3">
+            @foreach (var item in Model.Feedbacks)
+            {
+                var categoryBadgeClass = item.Category?.ToLowerInvariant() switch
+                {
+                    "bug" => "bg-danger text-white",
+                    "feature" => "bg-purple text-white",
+                    "content" => "bg-success text-white",
+                    _ => "bg-info text-dark"
+                };
+
+                var platformIcon = item.Platform?.ToLowerInvariant() switch
+                {
+                    "android" => "bi-android2 text-success",
+                    "ios" => "bi-apple text-light",
+                    "winui" or "windows" => "bi-windows text-info",
+                    _ => "bi-phone text-muted"
+                };
+
+                var timeAgo = GetRelativeTime(item.CreatedAt);
+
+                <div class="col-12 col-md-6 col-xl-4 feedback-item-card">
+                    <div class="glass-card h-100 d-flex flex-column p-3 feedback-card-surface">
+                        <!-- Card Header -->
+                        <div class="d-flex align-items-start justify-content-between gap-2 mb-2">
+                            <div>
+                                <span class="badge @categoryBadgeClass rounded-pill px-2 py-1 small fw-bold" style="@(item.Category?.Equals("Feature", StringComparison.OrdinalIgnoreCase) == true ? "background-color: #a855f7 !important;" : "")">
+                                    @item.Category
+                                </span>
+                                <span class="ms-1 text-warning small fw-bold">
+                                    @for (int i = 1; i <= 5; i++)
+                                    {
+                                        if (i <= item.Rating)
+                                        {
+                                            <i class="bi bi-star-fill"></i>
+                                        }
+                                        else
+                                        {
+                                            <i class="bi bi-star text-muted opacity-50"></i>
+                                        }
+                                    }
+                                </span>
+                            </div>
+                            <span class="text-muted small" title="@item.CreatedAt.ToString("MMMM dd, yyyy HH:mm:ss 'UTC'")">
+                                <i class="bi bi-clock me-1"></i>@timeAgo
+                            </span>
+                        </div>
+
+                        <!-- Feedback Message -->
+                        <div class="feedback-quote-box flex-grow-1 my-2 p-3 rounded" style="background: rgba(15, 23, 42, 0.45); border-left: 3px solid var(--accent-cyan); font-size: 0.95rem; line-height: 1.5; white-space: pre-wrap; word-break: break-word;">
+                            @item.Message
+                        </div>
+
+                        <!-- Submitter Info & Metadata -->
+                        <div class="pt-2 mt-auto border-top border-glass small">
+                            <div class="d-flex align-items-center justify-content-between mb-2">
+                                <div class="text-truncate me-2">
+                                    @if (!string.IsNullOrWhiteSpace(item.UserEmail))
+                                    {
+                                        <a href="mailto:@item.UserEmail?subject=Re:%20Your%20feedback%20on%20News%20Stand%20NG" class="text-info text-decoration-none fw-semibold" title="Email user: @item.UserEmail">
+                                            <i class="bi bi-envelope me-1"></i>@(item.UserName ?? item.UserEmail)
+                                        </a>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted"><i class="bi bi-person me-1"></i>@(item.UserName ?? "Anonymous User")</span>
+                                    }
+                                </div>
+                                <div>
+                                    @if (item.IsEmailSent)
+                                    {
+                                        <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill" title="Email dispatched to team inbox">
+                                            <i class="bi bi-check2-all me-1"></i>Email Sent
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle rounded-pill" title="Logged in database; SMTP not configured">
+                                            <i class="bi bi-database me-1"></i>DB Logged
+                                        </span>
+                                    }
+                                </div>
+                            </div>
+
+                            <!-- Device & App Details -->
+                            <div class="d-flex align-items-center justify-content-between text-muted" style="font-size: 0.8rem;">
+                                <span>
+                                    <i class="bi @platformIcon me-1"></i>@(item.Platform ?? "Unknown") · v@(item.AppVersion ?? "1.0.0")
+                                </span>
+                                <div class="d-flex align-items-center gap-1">
+                                    @if (!string.IsNullOrWhiteSpace(item.UserEmail))
+                                    {
+                                        <a href="mailto:@item.UserEmail?subject=Re:%20Feedback%20on%20News%20Stand%20NG" class="btn btn-outline-info btn-xs py-0 px-2" title="Direct Reply">
+                                            <i class="bi bi-reply"></i> Reply
+                                        </a>
+                                    }
+                                    <form method="post" asp-page-handler="Delete" asp-route-id="@item.Id" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this feedback item?');">
+                                        <input type="hidden" name="searchQuery" value="@Model.SearchQuery" />
+                                        <input type="hidden" name="selectedCategory" value="@Model.SelectedCategory" />
+                                        <input type="hidden" name="selectedRating" value="@Model.SelectedRating" />
+                                        <input type="hidden" name="selectedPlatform" value="@Model.SelectedPlatform" />
+                                        <input type="hidden" name="limit" value="@Model.Limit" />
+                                        <button type="submit" class="btn btn-outline-danger btn-xs py-0 px-2" title="Delete Feedback">
+                                            <i class="bi bi-trash3"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+
+        <!-- TABLE VIEW (Alternative compact display) -->
+        <div id="feedbackTableContainer" class="glass-card p-0 overflow-hidden d-none">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0" style="color: var(--text-main);">
+                    <thead style="background: rgba(15, 23, 42, 0.6); border-bottom: 1px solid var(--border-glass);">
+                        <tr class="small text-uppercase text-muted">
+                            <th class="ps-3" style="width: 110px;">Rating</th>
+                            <th style="width: 110px;">Category</th>
+                            <th>Feedback Message</th>
+                            <th style="width: 200px;">Submitter</th>
+                            <th style="width: 140px;">Platform</th>
+                            <th style="width: 130px;">Received</th>
+                            <th style="width: 110px;">Status</th>
+                            <th class="text-end pe-3" style="width: 100px;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model.Feedbacks)
+                        {
+                            var catBadgeClass = item.Category?.ToLowerInvariant() switch
+                            {
+                                "bug" => "bg-danger text-white",
+                                "feature" => "bg-purple text-white",
+                                "content" => "bg-success text-white",
+                                _ => "bg-info text-dark"
+                            };
+
+                            var platIcon = item.Platform?.ToLowerInvariant() switch
+                            {
+                                "android" => "bi-android2 text-success",
+                                "ios" => "bi-apple text-light",
+                                "winui" or "windows" => "bi-windows text-info",
+                                _ => "bi-phone text-muted"
+                            };
+
+                            <tr>
+                                <td class="ps-3">
+                                    <span class="text-warning fw-bold small">
+                                        @for (int i = 1; i <= 5; i++)
+                                        {
+                                            if (i <= item.Rating)
+                                            {
+                                                <i class="bi bi-star-fill"></i>
+                                            }
+                                            else
+                                            {
+                                                <i class="bi bi-star text-muted opacity-50"></i>
+                                            }
+                                        }
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="badge @catBadgeClass rounded-pill px-2 py-1 small" style="@(item.Category?.Equals("Feature", StringComparison.OrdinalIgnoreCase) == true ? "background-color: #a855f7 !important;" : "")">
+                                        @item.Category
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="text-truncate" style="max-width: 420px;" title="@item.Message">
+                                        @item.Message
+                                    </div>
+                                </td>
+                                <td>
+                                    @if (!string.IsNullOrWhiteSpace(item.UserEmail))
+                                    {
+                                        <a href="mailto:@item.UserEmail" class="text-info text-decoration-none small text-truncate d-block" style="max-width: 190px;" title="@item.UserEmail">
+                                            @(item.UserName ?? item.UserEmail)
+                                        </a>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted small">@(item.UserName ?? "Anonymous")</span>
+                                    }
+                                </td>
+                                <td class="small text-muted">
+                                    <i class="bi @platIcon me-1"></i>@(item.Platform ?? "Unknown") <span class="opacity-75">v@(item.AppVersion ?? "1.0")</span>
+                                </td>
+                                <td class="small text-muted" title="@item.CreatedAt.ToString("u")">
+                                    @GetRelativeTime(item.CreatedAt)
+                                </td>
+                                <td>
+                                    @if (item.IsEmailSent)
+                                    {
+                                        <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill small">
+                                            <i class="bi bi-check2 me-1"></i>Sent
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle rounded-pill small">
+                                            <i class="bi bi-database me-1"></i>Logged
+                                        </span>
+                                    }
+                                </td>
+                                <td class="text-end pe-3">
+                                    <div class="d-flex align-items-center justify-content-end gap-1">
+                                        @if (!string.IsNullOrWhiteSpace(item.UserEmail))
+                                        {
+                                            <a href="mailto:@item.UserEmail?subject=Re:%20Feedback%20on%20News%20Stand%20NG" class="btn btn-outline-info btn-xs py-0 px-2" title="Reply to user">
+                                                <i class="bi bi-reply"></i>
+                                            </a>
+                                        }
+                                        <form method="post" asp-page-handler="Delete" asp-route-id="@item.Id" class="d-inline" onsubmit="return confirm('Delete this feedback?');">
+                                            <input type="hidden" name="searchQuery" value="@Model.SearchQuery" />
+                                            <input type="hidden" name="selectedCategory" value="@Model.SelectedCategory" />
+                                            <input type="hidden" name="selectedRating" value="@Model.SelectedRating" />
+                                            <input type="hidden" name="selectedPlatform" value="@Model.SelectedPlatform" />
+                                            <input type="hidden" name="limit" value="@Model.Limit" />
+                                            <button type="submit" class="btn btn-outline-danger btn-xs py-0 px-2" title="Delete">
+                                                <i class="bi bi-trash3"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="d-flex align-items-center justify-content-between text-muted small mt-3 px-1">
+            <span>Showing @Model.Feedbacks.Count of @Model.TotalFeedbacksCount feedback entries (Limit: @Model.Limit)</span>
+            <span>Live from NewsApi database</span>
+        </div>
+    }
+
+</div>
+
+@functions {
+    public static string GetRelativeTime(DateTimeOffset dto)
+    {
+        var span = DateTimeOffset.UtcNow - dto;
+        if (span.TotalSeconds < 60) return "just now";
+        if (span.TotalMinutes < 60) return $"{(int)span.TotalMinutes}m ago";
+        if (span.TotalHours < 24) return $"{(int)span.TotalHours}h ago";
+        if (span.TotalDays < 7) return $"{(int)span.TotalDays}d ago";
+        if (span.TotalDays < 30) return $"{(int)(span.TotalDays / 7)}w ago";
+        return dto.ToString("MMM dd, yyyy");
+    }
+}
+
+@section Scripts {
+    <script>
+        function switchFeedbackView(view) {
+            const cards = document.getElementById('feedbackCardsContainer');
+            const table = document.getElementById('feedbackTableContainer');
+            const btnCards = document.getElementById('btnCardsView');
+            const btnTable = document.getElementById('btnTableView');
+
+            if (view === 'cards') {
+                if (cards) cards.classList.remove('d-none');
+                if (table) table.classList.add('d-none');
+                btnCards.classList.add('active');
+                btnTable.classList.remove('active');
+                localStorage.setItem('feedback_view', 'cards');
+            } else {
+                if (cards) cards.classList.add('d-none');
+                if (table) table.classList.remove('d-none');
+                btnCards.classList.remove('active');
+                btnTable.classList.add('active');
+                localStorage.setItem('feedback_view', 'table');
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const savedView = localStorage.getItem('feedback_view') || 'cards';
+            switchFeedbackView(savedView);
+        });
+    </script>
+}

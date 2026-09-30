@@ -9,7 +9,7 @@ using NigerianNewsGrid.Client.Models;
 namespace NigerianNewGrid.Services;
 
 /// <summary>
-/// Architecture Component: Client-Side Mobile Text-to-Speech & Neural Audio Delivery Service.
+/// Architecture Component: Client-Side Mobile Text-to-Speech and Neural Audio Delivery Service.
 /// 
 /// Multi-Tier Playback Architecture:
 /// 1. Server-Synthesized Neural Audio Stream:
@@ -112,7 +112,7 @@ public class MauiTextToSpeechService : ITextToSpeechService
             count++;
         }
 
-        _briefingSegments.Add("That concludes your news summary from the Nigerian News Grid.");
+        _briefingSegments.Add("That concludes your news summary from News Stand NG.");
 
         _currentSegmentIndex = 0;
         _currentBriefingLanguage = language;

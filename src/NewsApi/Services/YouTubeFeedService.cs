@@ -617,6 +617,9 @@ public class YouTubeFeedService : IYouTubeFeedService
         if (Regex.IsMatch(text, @"\b(efcc|police|court|judge|arrest|fraud|dss|bandit|kidnap|terrorism|crime|trial|naptip)\b"))
             return "Crime";
 
+        if (Regex.IsMatch(text, @"\b(biden|trump|kamala|white house|putin|kremlin|zelensky|ukraine|russia|gaza|israel|hezbollah|hamas|middle east|beirut|united nations|unsc|starmer|downing street|beijing|xi jinping|taiwan|nato|ramaphosa|kenya|ruto|ghana)\b"))
+            return "International";
+
         return "General";
     }
 

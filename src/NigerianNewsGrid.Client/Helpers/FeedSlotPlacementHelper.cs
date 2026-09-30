@@ -29,7 +29,7 @@ public static class FeedSlotPlacementHelper
     /// <param name="organicStories">The deduplicated organic news articles.</param>
     /// <param name="sponsoredStories">Active sponsored campaigns with target placement requests.</param>
     /// <param name="includeAdMobPlaceholders">Whether to backfill unoccupied benchmark slots with Native AdMob ads.</param>
-    /// <param name="adMobBenchmarkSlots">Benchmark slots for Native AdMob ads (default: 10, 20).</param>
+    /// <param name="adMobBenchmarkSlots">Benchmark slots for Native AdMob ads (default: 8, 16, 24).</param>
     /// <param name="minSeparation">Minimum number of organic stories between two ads in the in-feed zone.</param>
     /// <returns>A unified list of BriefingItem representing the ordered feed.</returns>
     public static List<BriefingItem> ArrangeFeed(
@@ -42,7 +42,7 @@ public static class FeedSlotPlacementHelper
         ArgumentNullException.ThrowIfNull(organicStories);
         ArgumentNullException.ThrowIfNull(sponsoredStories);
 
-        adMobBenchmarkSlots ??= [10, 20];
+        adMobBenchmarkSlots ??= [8, 16, 24];
 
         // 1. Separate organic stories (ensure no sponsored or ad placeholders are mixed in)
         var pureOrganic = organicStories

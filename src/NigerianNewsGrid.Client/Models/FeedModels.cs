@@ -23,6 +23,20 @@ public sealed record VideoStoryItem
     public long ViewCount { get; init; } = 0;
     public long LikeCount { get; init; } = 0;
 
+    [JsonIgnore]
+    public string ViewCountText
+    {
+        get
+        {
+            if (ViewCount > 0)
+            {
+                var formatted = ViewCount >= 1000 ? $"{ViewCount / 1000.0:F1}K" : ViewCount.ToString();
+                return IsTrending ? $"🔥 {formatted} views" : $"📺 {formatted} views";
+            }
+            return IsTrending ? "🔥 Trending" : "📺 Latest Broadcast";
+        }
+    }
+
     /// <summary>
     /// Computes the best available thumbnail URL: returns ThumbnailUrl if present and HTTP(S),
     /// otherwise falls back to deterministic YouTube CDN (hqdefault.jpg), or a high-quality fallback image.
@@ -117,4 +131,15 @@ public sealed record FeedbackResponseDto(
     string Message,
     string? FeedbackId = null
 );
+
+/// <summary>
+/// Lightweight delta record for reconciling out-of-band article changes (such as category reclassifications in Admin Dashboard)
+/// between the central server and client SQLite databases.
+/// </summary>
+public sealed record ArticleDeltaDto
+{
+    public string Id { get; init; } = string.Empty;
+    public string Category { get; init; } = "General";
+    public DateTime UpdatedAt { get; init; } = DateTime.UtcNow;
+}
 

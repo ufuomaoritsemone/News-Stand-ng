@@ -4,7 +4,8 @@ using NigerianNewsGrid.Client.Models;
 
 namespace NigerianNewGrid.Services;
 
-public class RecentlyReadService : IRecentlyReadService
+public class RecentlyReadService(
+    INewsPersistenceService? persistenceService = null) : IRecentlyReadService
 {
     private const string RecentlyReadKey = "recently_read_articles";
     private const int MaxRecentlyRead = 50;
@@ -51,6 +52,10 @@ public class RecentlyReadService : IRecentlyReadService
             }
 
             Save();
+            if (persistenceService != null && !string.IsNullOrWhiteSpace(item.Id))
+            {
+                _ = persistenceService.MarkAsReadAsync(item.Id);
+            }
         }
 
         RecentlyReadChanged?.Invoke(this, EventArgs.Empty);
@@ -105,6 +110,30 @@ public class RecentlyReadService : IRecentlyReadService
                         _recentlyRead.Clear();
                         _recentlyRead.AddRange(items);
                     }
+                }
+
+                if (persistenceService != null)
+                {
+                    _ = Task.Run(async () =>
+                    {
+                        try
+                        {
+                            var dbRead = await persistenceService.GetRecentlyReadAsync(MaxRecentlyRead);
+                            if (dbRead is { Count: > 0 })
+                            {
+                                lock (_lock)
+                                {
+                                    _recentlyRead.Clear();
+                                    _recentlyRead.AddRange(dbRead);
+                                }
+                                RecentlyReadChanged?.Invoke(this, EventArgs.Empty);
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            Debug.WriteLine($"[RecentlyReadService] Background SQLite load error: {ex.Message}");
+                        }
+                    });
                 }
             }
             catch (Exception ex)

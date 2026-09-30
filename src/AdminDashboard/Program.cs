@@ -30,6 +30,7 @@ public class Program
         })
         .AddRazorRuntimeCompilation();
 
+        builder.Services.AddMemoryCache();
         builder.Services.AddControllers();
         builder.Services.AddHttpClient();
         builder.Services.AddHttpClient("NewsApiClient", (sp, client) =>

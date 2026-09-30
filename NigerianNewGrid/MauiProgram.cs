@@ -52,25 +52,33 @@ namespace NigerianNewGrid
                 client.Timeout = TimeSpan.FromSeconds(5);
             });
 
-            // Register Core Architecture Services (TTS, Bookmarks, Caching, Recently Read)
+            // Register Core Architecture Services (Persistence, TTS, Bookmarks, Caching, Recently Read)
+            builder.Services.AddSingleton<NigerianNewGrid.Services.INewsPersistenceService, NigerianNewGrid.Services.NewsPersistenceService>();
             builder.Services.AddSingleton<NigerianNewGrid.Services.ITextToSpeechService, NigerianNewGrid.Services.MauiTextToSpeechService>();
             builder.Services.AddSingleton<NigerianNewGrid.Services.IBookmarkService, NigerianNewGrid.Services.BookmarkService>();
             builder.Services.AddSingleton<NigerianNewGrid.Services.IRecentlyReadService, NigerianNewGrid.Services.RecentlyReadService>();
             builder.Services.AddSingleton<NigerianNewGrid.Services.IBriefingCacheService, NigerianNewGrid.Services.BriefingCacheService>();
             builder.Services.AddSingleton<NigerianNewGrid.Services.IAnalyticsService, NigerianNewGrid.Services.AnalyticsService>();
+            builder.Services.AddSingleton<NigerianNewGrid.Services.IAppOpenAdManager, NigerianNewGrid.Services.AppOpenAdManager>();
+            builder.Services.AddSingleton<NigerianNewGrid.Services.ISonicFeedbackService, NigerianNewGrid.Services.SonicFeedbackService>();
 
             // Register On-Device Notification and Keyword Matching Services
             builder.Services.AddSingleton<NigerianNewGrid.Services.IKeywordMatchingService, NigerianNewGrid.Services.KeywordMatchingService>();
 #if ANDROID
             builder.Services.AddSingleton<NigerianNewGrid.Services.INotificationService, Platforms.Android.NotificationService>();
+            builder.Services.AddSingleton<NigerianNewGrid.Services.IBackgroundSyncService, Platforms.Android.BackgroundSyncService>();
 #elif IOS
             builder.Services.AddSingleton<NigerianNewGrid.Services.INotificationService, Platforms.iOS.NotificationService>();
+            builder.Services.AddSingleton<NigerianNewGrid.Services.IBackgroundSyncService, NigerianNewGrid.Services.NullBackgroundSyncService>();
 #elif MACCATALYST
             builder.Services.AddSingleton<NigerianNewGrid.Services.INotificationService, Platforms.MacCatalyst.NotificationService>();
+            builder.Services.AddSingleton<NigerianNewGrid.Services.IBackgroundSyncService, NigerianNewGrid.Services.NullBackgroundSyncService>();
 #elif WINDOWS
             builder.Services.AddSingleton<NigerianNewGrid.Services.INotificationService, Platforms.Windows.NotificationService>();
+            builder.Services.AddSingleton<NigerianNewGrid.Services.IBackgroundSyncService, NigerianNewGrid.Services.NullBackgroundSyncService>();
 #else
             builder.Services.AddSingleton<NigerianNewGrid.Services.INotificationService, NigerianNewGrid.Services.NullNotificationService>();
+            builder.Services.AddSingleton<NigerianNewGrid.Services.IBackgroundSyncService, NigerianNewGrid.Services.NullBackgroundSyncService>();
 #endif
 
             // Register UI ViewModels (Fix #32, #33)

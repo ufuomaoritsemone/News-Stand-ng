@@ -68,6 +68,12 @@ public class AnalyticsSummaryDto
     public int AudioListensStarted { get; set; }
     public int AudioListensCompleted { get; set; }
     public double AudioCompletionRate { get; set; }
+    // Widget adoption metrics
+    public int WidgetInstalls { get; set; }
+    public int WidgetRemovals { get; set; }
+    public int WidgetRefreshes { get; set; }
+    public int WidgetClicks { get; set; }
+    public int NetWidgetDeployments { get; set; }
     public int PeriodDays { get; set; }
     public List<TopArticleDto> TopArticles { get; set; } = [];
     public List<DailyCountDto> DailyBreakdown { get; set; } = [];

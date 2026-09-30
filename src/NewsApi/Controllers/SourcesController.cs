@@ -21,9 +21,9 @@ public class SourcesController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetSources()
+    public async Task<IActionResult> GetSources(CancellationToken cancellationToken = default)
     {
-        var sources = await _db.Sources.AsNoTracking().ToListAsync();
+        var sources = await _db.Sources.AsNoTracking().ToListAsync(cancellationToken);
 
         if (!sources.Any())
         {
@@ -53,7 +53,7 @@ public class SourcesController : ControllerBase
     }
 
     [HttpPost]
-    public async Task<IActionResult> AddSource([FromBody] SourceInput input)
+    public async Task<IActionResult> AddSource([FromBody] SourceInput input, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(input.Name))
         {
@@ -70,7 +70,7 @@ public class SourcesController : ControllerBase
         };
 
         _db.Sources.Add(source);
-        await _db.SaveChangesAsync();
+        await _db.SaveChangesAsync(cancellationToken);
 
         int scrapedCount = 0;
         if (!string.IsNullOrWhiteSpace(source.RssUrl))
@@ -78,7 +78,7 @@ public class SourcesController : ControllerBase
             try
             {
                 var client = _clientFactory.CreateClient();
-                scrapedCount = await RssScraperHelper.ScrapeAndSaveFeedAsync(_db, client, source.Name, source.RssUrl);
+                scrapedCount = await RssScraperHelper.ScrapeAndSaveFeedAsync(_db, client, source.Name, source.RssUrl, cancellationToken);
             }
             catch
             {
@@ -90,9 +90,9 @@ public class SourcesController : ControllerBase
     }
 
     [HttpPost("{id}/scrape")]
-    public async Task<IActionResult> ScrapeSource(string id)
+    public async Task<IActionResult> ScrapeSource(string id, CancellationToken cancellationToken = default)
     {
-        var source = await _db.Sources.FirstOrDefaultAsync(s => s.Id == id);
+        var source = await _db.Sources.FirstOrDefaultAsync(s => s.Id == id, cancellationToken);
         if (source == null) return NotFound(new { message = "Source not found." });
 
         if (string.IsNullOrWhiteSpace(source.RssUrl) && string.IsNullOrWhiteSpace(source.SitemapUrl))
@@ -104,20 +104,20 @@ public class SourcesController : ControllerBase
         if (!string.IsNullOrWhiteSpace(source.RssUrl))
         {
             var client = _clientFactory.CreateClient();
-            scrapedCount = await RssScraperHelper.ScrapeAndSaveFeedAsync(_db, client, source.Name, source.RssUrl);
+            scrapedCount = await RssScraperHelper.ScrapeAndSaveFeedAsync(_db, client, source.Name, source.RssUrl, cancellationToken);
         }
 
         return Ok(new { source.Id, source.Name, ScrapedCount = scrapedCount });
     }
 
     [HttpDelete("{id}")]
-    public async Task<IActionResult> DeleteSource(string id)
+    public async Task<IActionResult> DeleteSource(string id, CancellationToken cancellationToken = default)
     {
-        var source = await _db.Sources.FirstOrDefaultAsync(s => s.Id == id);
+        var source = await _db.Sources.FirstOrDefaultAsync(s => s.Id == id, cancellationToken);
         if (source != null)
         {
             _db.Sources.Remove(source);
-            await _db.SaveChangesAsync();
+            await _db.SaveChangesAsync(cancellationToken);
         }
 
         return NoContent();

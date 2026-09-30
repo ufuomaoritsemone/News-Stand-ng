@@ -54,6 +54,14 @@ public class CategorizerTests
     [InlineData("Five US work visa categories and application requirements for skilled immigrants", "General")]
     [InlineData("NCDC issues public health advisory on preventive measures against cholera outbreak", "General")]
     [InlineData("JAMB announces official cut-off marks and registration dates for 2026 UTME exams", "General")]
+
+    // 8. INTERNATIONAL
+    [InlineData("United Nations Security Council votes on immediate ceasefire resolution in Gaza conflict", "International")]
+    [InlineData("US Presidential election: Trump and Harris clash during televised debate in Philadelphia", "International")]
+    [InlineData("Kremlin warns Western allies over missile supplies to Ukraine as Kyiv peace talks stall", "International")]
+    [InlineData("British Prime Minister Keir Starmer unveils UK bilateral trade deal at European summit", "International")]
+    [InlineData("South Africa Parliament approves government of national unity cabinet under Cyril Ramaphosa", "International")]
+    [InlineData("Kenyan President William Ruto dissolves cabinet following youth demonstrations in Nairobi", "International")]
     public void CategorizeByLexicon_ClassifiesCorrectly(string headline, string expectedCategory)
     {
         var (category, confidence) = MlCategorizerEngine.CategorizeByLexicon(headline, string.Empty);

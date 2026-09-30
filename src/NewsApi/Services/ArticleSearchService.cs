@@ -110,7 +110,8 @@ public class ArticleSearchService : IArticleSearchService
         var sql = """
             SELECT a."Id", a."Title", a."Summary", a."Content", a."Url", a."ImageUrl", a."Source",
                    a."Category", a."PublishedAt", a."AudioUrl", a."Author", a."ContentType", a."IsSponsored", a."SponsorName",
-                   a."SponsorUrl", a."CampaignExpiresAt", a."IsPinned", a."TargetPosition", a."PriorityWeight", a."ImpressionCount", a."ClickCount"
+                   a."SponsorUrl", a."CampaignExpiresAt", a."IsPinned", a."TargetPosition", a."PriorityWeight", a."ImpressionCount", a."ClickCount",
+                   a."UpdatedAt"
             FROM "Articles" a
             INNER JOIN "Articles_fts" fts ON a."Id" = fts."Id"
             WHERE "Articles_fts" MATCH @ftsQuery
@@ -118,7 +119,7 @@ public class ArticleSearchService : IArticleSearchService
               AND (@source IS NULL OR lower(a."Source") LIKE '%' || @source || '%')
               AND (@contentType IS NULL OR lower(a."ContentType") = @contentType)
               AND (@cutoff IS NULL OR a."PublishedAt" >= @cutoff)
-            ORDER BY bm25("Articles_fts", 5.0, 2.0, 1.0)
+            ORDER BY bm25("Articles_fts", 0.0, 10.0, 5.0, 1.0)
             LIMIT @limit OFFSET @offset;
             """;
 
@@ -181,7 +182,8 @@ public class ArticleSearchService : IArticleSearchService
         var sql = """
             SELECT a."Id", a."Title", a."Summary", a."Content", a."Url", a."ImageUrl", a."Source",
                    a."Category", a."PublishedAt", a."AudioUrl", a."Author", a."ContentType", a."IsSponsored", a."SponsorName",
-                   a."SponsorUrl", a."CampaignExpiresAt", a."IsPinned", a."TargetPosition", a."PriorityWeight", a."ImpressionCount", a."ClickCount"
+                   a."SponsorUrl", a."CampaignExpiresAt", a."IsPinned", a."TargetPosition", a."PriorityWeight", a."ImpressionCount", a."ClickCount",
+                   a."UpdatedAt"
             FROM "Articles" a
             WHERE a."SearchVector" @@ websearch_to_tsquery('english', @query)
               AND (@category IS NULL OR lower(a."Category") = @category)

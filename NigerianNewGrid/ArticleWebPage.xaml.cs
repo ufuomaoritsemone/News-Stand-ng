@@ -549,7 +549,7 @@ public partial class ArticleWebPage : ContentPage
             // Fallback: If backend returned no related items (e.g. offline / disconnected), compute from local cache
             if (items.Count == 0)
             {
-                items = GetLocalFallbackRelatedStories(title, category);
+                items = await GetLocalFallbackRelatedStoriesAsync(title, category);
             }
 
             _allRelatedItems = items;
@@ -559,7 +559,7 @@ public partial class ArticleWebPage : ContentPage
         catch (Exception ex)
         {
             Debug.WriteLine($"[ArticleWebPage] Failed to load related stories: {ex.Message}");
-            var localItems = GetLocalFallbackRelatedStories(title, category);
+            var localItems = await GetLocalFallbackRelatedStoriesAsync(title, category);
             if (localItems.Count > 0)
             {
                 _allRelatedItems = localItems;
@@ -708,16 +708,28 @@ public partial class ArticleWebPage : ContentPage
     // Local / Offline Fallback Helpers
     // ──────────────────────────────────────────────────────────
 
-    private List<RelatedStoryDisplayItem> GetLocalFallbackRelatedStories(string? title, string? category)
+    private async Task<List<RelatedStoryDisplayItem>> GetLocalFallbackRelatedStoriesAsync(string? title, string? category)
     {
         var list = new List<RelatedStoryDisplayItem>();
         try
         {
-            var cached = Preferences.Get(AppPreferenceKeys.LastBriefing, string.Empty);
-            if (!string.IsNullOrWhiteSpace(cached))
+            List<BriefingItem> allArticles = [];
+            var persistenceService = IPlatformApplication.Current?.Services.GetService<INewsPersistenceService>();
+            if (persistenceService != null)
             {
-                var categories = JsonSerializer.Deserialize<List<BriefingCategory>>(cached, JsonOptions);
-                var allArticles = categories?.SelectMany(c => c.Top).ToList() ?? [];
+                var categories = await persistenceService.GetCachedBriefingAsync(days: 14);
+                allArticles = categories.SelectMany(c => c.Top).ToList();
+            }
+
+            if (allArticles.Count == 0)
+            {
+                var cached = Preferences.Get(AppPreferenceKeys.LastBriefing, string.Empty);
+                if (!string.IsNullOrWhiteSpace(cached))
+                {
+                    var legacyCategories = JsonSerializer.Deserialize<List<BriefingCategory>>(cached, JsonOptions);
+                    allArticles = legacyCategories?.SelectMany(c => c.Top).ToList() ?? [];
+                }
+            }
 
                 var targetCategory = category?.Trim().ToLowerInvariant() ?? "";
                 var matched = allArticles
@@ -744,7 +756,6 @@ public partial class ArticleWebPage : ContentPage
                         TimeAgo = FormatTimeAgo(art.PublishedAt ?? DateTime.UtcNow)
                     });
                 }
-            }
 
             // Add sample fallback video story
             list.Add(new RelatedStoryDisplayItem
@@ -823,11 +834,11 @@ public partial class ArticleWebPage : ContentPage
     }
 
     /// <summary>
-    /// Tagline appended to every share so recipients know where to follow Nigerian news.
+    /// Tagline appended to every share so recipients know where to follow news.
     /// Update this string once the app store listing is live.
     /// </summary>
     private const string AppShareTagline =
-        "\n\n📲 Follow Nigerian news as it breaks — download Nigerian News and never miss a story.";
+        "\n\n📲 Follow news as it breaks — download News Stand NG and never miss a story.";
 
     private async void OnShareClicked(object? sender, EventArgs e)
     {

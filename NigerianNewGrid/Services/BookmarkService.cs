@@ -4,7 +4,8 @@ using NigerianNewsGrid.Client.Models;
 
 namespace NigerianNewGrid.Services;
 
-public class BookmarkService : IBookmarkService
+public class BookmarkService(
+    INewsPersistenceService? persistenceService = null) : IBookmarkService
 {
     private const string BookmarksKey = "bookmarks";
     private readonly List<BriefingItem> _bookmarks = [];
@@ -50,6 +51,11 @@ public class BookmarkService : IBookmarkService
         }
 
         Save();
+        if (persistenceService != null)
+        {
+            _ = persistenceService.ToggleBookmarkAsync(item);
+        }
+
         BookmarksChanged?.Invoke(this, EventArgs.Empty);
         return wasAdded;
     }
@@ -63,6 +69,10 @@ public class BookmarkService : IBookmarkService
         if (removed > 0)
         {
             Save();
+            if (persistenceService != null)
+            {
+                _ = persistenceService.RemoveBookmarkAsync(articleId);
+            }
             BookmarksChanged?.Invoke(this, EventArgs.Empty);
         }
     }
@@ -74,6 +84,10 @@ public class BookmarkService : IBookmarkService
 
         _bookmarks.Clear();
         Save();
+        if (persistenceService != null)
+        {
+            _ = persistenceService.ClearAllBookmarksAsync();
+        }
         BookmarksChanged?.Invoke(this, EventArgs.Empty);
     }
 
@@ -94,10 +108,34 @@ public class BookmarkService : IBookmarkService
                     _bookmarks.AddRange(list);
                 }
             }
+
+            if (persistenceService != null)
+            {
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        var dbList = await persistenceService.GetBookmarksAsync();
+                        if (dbList is { Count: > 0 })
+                        {
+                            MainThread.BeginInvokeOnMainThread(() =>
+                            {
+                                _bookmarks.Clear();
+                                _bookmarks.AddRange(dbList);
+                                BookmarksChanged?.Invoke(this, EventArgs.Empty);
+                            });
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.WriteLine($"[BookmarkService] Background SQLite load error: {ex.Message}");
+                    }
+                });
+            }
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"[BookmarkService] Failed to load bookmarks from Preferences: {ex.Message}");
+            Debug.WriteLine($"[BookmarkService] Failed to load bookmarks: {ex.Message}");
         }
     }
 

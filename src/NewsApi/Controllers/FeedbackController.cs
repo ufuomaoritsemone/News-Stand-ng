@@ -46,4 +46,19 @@ public class FeedbackController : ControllerBase
         var list = await _feedbackService.GetRecentFeedbacksAsync(limit, cancellationToken);
         return Ok(list);
     }
+
+    /// <summary>
+    /// Deletes a user feedback entry (administrative action).
+    /// </summary>
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> DeleteFeedback([FromRoute] string id, CancellationToken cancellationToken = default)
+    {
+        var deleted = await _feedbackService.DeleteFeedbackAsync(id, cancellationToken);
+        if (!deleted)
+        {
+            return NotFound(new { error = new { code = "NOT_FOUND", message = "Feedback item not found." } });
+        }
+
+        return Ok(new { success = true, message = "Feedback deleted successfully." });
+    }
 }

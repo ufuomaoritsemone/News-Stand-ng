@@ -43,6 +43,8 @@ The $300 Google Cloud Free Trial credit (valid for 90 days) will easily cover 10
 
 This setup is fully serverless, highly available, and autoscaling. Google Cloud automatically provisions and renews SSL/TLS certificates for custom domains and Cloud Run URLs.
 
+### 3.1 Architecture Diagram
+
 ```
                    ┌──────────────────────────────────────┐
                    │       .NET MAUI Mobile App           │
@@ -61,7 +63,7 @@ This setup is fully serverless, highly available, and autoscaling. Google Cloud 
 │     Cloud SQL (PostgreSQL 16)   │   │ Google Cloud Storage (Audio)    │
 │  - News Articles & Categories   │   │  - Daily Briefing MP3/WAV       │
 │  - Video Stories & Sources      │   │  - Audio Transcripts            │
-└─────────────────────────────────┘   └────────────────┬────────────────┘
+│  └──────────────────────────────┘   └────────────────┬────────────────┘
                                                        │
                            ┌───────────────────────────┴──┐
                            │   Cloud Run: tts-worker      │
@@ -82,7 +84,234 @@ This setup is fully serverless, highly available, and autoscaling. Google Cloud 
 
 ---
 
-### Step 1: Google Cloud SDK Setup & API Activation
+### Option 1: Google Cloud Console (Web GUI Walkthrough — Zero Local CLI)
+
+Follow these browser-based steps in the [Google Cloud Console](https://console.cloud.google.com/) to deploy the entire stack visually.
+
+---
+
+#### Step 1: Create Project & Enable APIs
+
+1. Open the [Google Cloud Console](https://console.cloud.google.com/).
+2. In the top navigation bar, click the project dropdown and click **New Project**.
+   - **Project Name:** `nigerian-news-grid` (or your preferred name).
+   - Click **Create** and ensure it is selected in the top bar.
+3. Open the **Navigation Menu** (top-left ☰) > **APIs & Services** > **Library**.
+4. Search for and click **Enable** for each of the following APIs:
+   - **Cloud Run Admin API** (`run.googleapis.com`)
+   - **Cloud SQL Admin API** (`sqladmin.googleapis.com`)
+   - **Artifact Registry API** (`artifactregistry.googleapis.com`)
+   - **Cloud Build API** (`cloudbuild.googleapis.com`)
+   - **Cloud Scheduler API** (`cloudscheduler.googleapis.com`)
+
+---
+
+#### Step 2: Build & Store Container Images in Artifact Registry
+
+You can store images in Artifact Registry using either **Cloud Shell** (in-browser terminal) or **Continuous Deployment from GitHub**:
+
+##### Method A: In-Browser Cloud Shell (Fastest & Simplest)
+1. Click the **Activate Cloud Shell** button (`>_`) in the top-right header of the console.
+2. In the bottom terminal window that opens, run:
+   ```bash
+   # 1. Clone repository
+   git clone https://github.com/YOUR_GITHUB_USERNAME/NigerianNewGrid.git
+   cd NigerianNewGrid
+
+   # 2. Create Artifact Registry repository
+   gcloud artifacts repositories create newsgrid-repo \
+       --repository-format=docker \
+       --location=us-central1 \
+       --description="Nigerian News Grid Docker Repository"
+
+   # 3. Build & push all 4 service container images via Cloud Build
+   gcloud builds submit --tag us-central1-docker.pkg.dev/$DEVSHELL_PROJECT_ID/newsgrid-repo/news-api:latest -f src/NewsApi/Dockerfile .
+   gcloud builds submit --tag us-central1-docker.pkg.dev/$DEVSHELL_PROJECT_ID/newsgrid-repo/admin-dashboard:latest -f src/AdminDashboard/Dockerfile .
+   gcloud builds submit --tag us-central1-docker.pkg.dev/$DEVSHELL_PROJECT_ID/newsgrid-repo/news-scraper:latest -f src/NewsScraperService/Dockerfile .
+   gcloud builds submit --tag us-central1-docker.pkg.dev/$DEVSHELL_PROJECT_ID/newsgrid-repo/tts-worker:latest -f src/TtsWorker/Dockerfile .
+   ```
+3. Minimize or close Cloud Shell.
+
+##### Method B: Via Artifact Registry Web GUI
+1. Navigate to ☰ > **Artifact Registry** > **Repositories**.
+2. Click **+ Create Repository**:
+   - **Name:** `newsgrid-repo`
+   - **Format:** `Docker`
+   - **Mode:** `Standard`
+   - **Location type:** `Region` > `us-central1 (Iowa)`
+   - Click **Create**.
+
+---
+
+#### Step 3: Provision Cloud SQL (Managed PostgreSQL 16)
+
+1. Navigate to ☰ > **SQL** > click **Create Instance**.
+2. Choose **PostgreSQL**.
+3. Configure Instance settings:
+   - **Instance ID:** `newsgrid-db`
+   - **Password:** Enter a strong password for the default `postgres` user.
+   - **Database version:** `PostgreSQL 16`.
+   - **Cloud SQL edition:** Select **Enterprise** > Preset: **Development** (Sandbox).
+   - Under **Customize your instance**:
+     - **Machine configuration:** Choose **Shared core** > `db-f1-micro` (1 vCPU, 0.614 GB RAM) to minimize cost within free trial credits.
+     - **Storage:** `10 GB SSD`, keep **Enable automatic storage increases** checked.
+     - **Connections:** Ensure **Public IP** is checked.
+4. Click **Create Instance** (provisioning takes ~3–5 minutes).
+5. **Create Application Database**:
+   - Once the instance status turns green, click into `newsgrid-db`.
+   - In the left sub-menu, select **Databases** > click **Create Database**.
+   - **Database name:** `newsgrid` > click **Create**.
+6. **Create Application User**:
+   - In the left sub-menu, select **Users** > click **Add User Account**.
+   - **User name:** `newsuser`
+   - **Password:** `newspassword123!` (or your chosen password).
+   - Click **Add**.
+7. **Copy Connection Name**:
+   - Return to the **Overview** tab of `newsgrid-db`.
+   - Locate and copy the **Instance connection name** (format: `YOUR_PROJECT_ID:us-central1:newsgrid-db`).
+
+---
+
+#### Step 4: Create Cloud Storage Bucket for Audio Briefings
+
+1. Navigate to ☰ > **Cloud Storage** > **Buckets** > click **+ Create**.
+2. Configure bucket:
+   - **Name:** `newsgrid-audio-briefings-YOUR_PROJECT_ID` (must be globally unique).
+   - **Location type:** `Region` > `us-central1`.
+   - **Storage class:** `Standard`.
+   - **Access control:** `Uniform` (enforce public access prevention).
+3. Click **Create**.
+
+---
+
+#### Step 5: Deploy News API (Cloud Run Service)
+
+1. Navigate to ☰ > **Cloud Run** > click **+ Create Service**.
+2. **Service Details**:
+   - Select **Deploy one revision from an existing container image**.
+   - Click **Select** > expand `newsgrid-repo` > select `news-api:latest`.
+   - **Service name:** `news-api`
+   - **Region:** `us-central1`
+   - **Authentication:** Select **Allow unauthenticated invocations**.
+3. Expand **Container(s), Volumes, Networking, Security**:
+   - **Container Tab**:
+     - **Container port:** `8080` (or `5000`).
+     - Under **Environment variables**, click **+ Add Variable** for each:
+       | Name | Value |
+       | :--- | :--- |
+       | `ConnectionStrings__NewsDb` | `Host=/cloudsql/YOUR_PROJECT_ID:us-central1:newsgrid-db;Database=newsgrid;Username=newsuser;Password=newspassword123!` |
+       | `DbProvider` | `postgres` |
+       | `ApiKey` | `YourSuperSecretProductionApiKey123!` |
+       | `ASPNETCORE_ENVIRONMENT` | `Production` |
+     - Under **Cloud SQL connections**:
+       - Click **+ Add Connection**.
+       - Select `newsgrid-db` from the dropdown.
+   - **Volumes Tab**:
+     - Click **+ Add Volume**.
+     - **Volume type:** `Cloud Storage bucket`.
+     - **Volume name:** `audio-vol`.
+     - **Bucket:** Browse and select your `newsgrid-audio-briefings-...` bucket.
+   - Under **Container Tab** > **Volume Mounts**:
+     - Click **+ Mount Volume**.
+     - **Volume:** `audio-vol`.
+     - **Mount path:** `/app/data/audio`.
+4. Click **Create**.
+5. Once deployment completes, copy the generated **Service URL** displayed at the top (e.g., `https://news-api-xyz-uc.a.run.app`).
+
+---
+
+#### Step 6: Deploy Admin Dashboard (Cloud Run Service)
+
+1. Navigate to ☰ > **Cloud Run** > click **+ Create Service**.
+2. **Service Details**:
+   - Container Image: Select `newsgrid-repo/admin-dashboard:latest`.
+   - **Service name:** `admin-dashboard`
+   - **Region:** `us-central1`
+   - **Authentication:** Select **Allow unauthenticated invocations**.
+3. Expand **Container(s), Volumes, Networking, Security**:
+   - Under **Environment variables**, click **+ Add Variable** for each:
+     | Name | Value |
+     | :--- | :--- |
+     | `ApiBaseUrl` | `https://news-api-xyz-uc.a.run.app` (from Step 5) |
+     | `NewsApi__BaseUrl` | `https://news-api-xyz-uc.a.run.app` |
+     | `ApiKey` | `YourSuperSecretProductionApiKey123!` |
+     | `ASPNETCORE_ENVIRONMENT` | `Production` |
+4. Click **Create**.
+5. Copy the generated **Admin Dashboard URL** (e.g., `https://admin-dashboard-xyz-uc.a.run.app`).
+6. *(Optional CORS update)*: Return to `news-api` service > click **Edit & Deploy New Revision** > add environment variable `AllowedOrigins__0` = `https://admin-dashboard-xyz-uc.a.run.app` > click **Deploy**.
+
+---
+
+#### Step 7: Deploy News Scraper Job & Schedule Triggers
+
+1. Navigate to ☰ > **Cloud Run** > click the **Jobs** tab at the top.
+2. Click **+ Create Job**:
+   - **Job name:** `news-scraper-job`
+   - **Region:** `us-central1`
+   - **Container image:** Select `newsgrid-repo/news-scraper:latest`.
+3. Expand **Container(s), Volumes, Networking, Security**:
+   - Under **Environment variables**, add:
+     | Name | Value |
+     | :--- | :--- |
+     | `ApiBaseUrl` | `https://news-api-xyz-uc.a.run.app` |
+     | `NewsApi__BaseUrl` | `https://news-api-xyz-uc.a.run.app` |
+     | `ApiKey` | `YourSuperSecretProductionApiKey123!` |
+     | `SCRAPER_RUN_ONCE` | `true` |
+     | `DOTNET_ENVIRONMENT` | `Production` |
+4. Click **Create**.
+5. **Add Scheduled Recurring Trigger**:
+   - On the `news-scraper-job` details page, click the **Triggers** tab.
+   - Click **+ Add Scheduler Trigger**.
+   - **Trigger name:** `news-scraper-cron`
+   - **Frequency:** `*/20 * * * *` (runs every 20 minutes).
+   - **Timezone:** Select `Africa/Lagos` (or your local timezone).
+   - Under **Configure the execution**, select your project's default Compute Engine service account.
+   - Click **Create**.
+
+---
+
+#### Step 8: Deploy TTS Audio Worker Job & Schedule Daily Briefings
+
+1. Navigate to ☰ > **Cloud Run** > **Jobs** tab > click **+ Create Job**:
+   - **Job name:** `tts-worker-job`
+   - **Region:** `us-central1`
+   - **Container image:** Select `newsgrid-repo/tts-worker:latest`.
+2. Expand **Container(s), Volumes, Networking, Security**:
+   - **Volumes Tab**:
+     - Click **+ Add Volume** > choose `Cloud Storage bucket`.
+     - Name: `audio-vol` > select `newsgrid-audio-briefings-...`.
+   - **Container Tab**:
+     - Under **Volume Mounts**, select `audio-vol` > Mount path: `/app/data/audio`.
+     - Under **Environment variables**, add:
+       | Name | Value |
+       | :--- | :--- |
+       | `ApiBaseUrl` | `https://news-api-xyz-uc.a.run.app` |
+       | `NewsApi__BaseUrl` | `https://news-api-xyz-uc.a.run.app` |
+       | `ApiKey` | `YourSuperSecretProductionApiKey123!` |
+       | `TTS_RUN_ONCE` | `true` |
+       | `DOTNET_ENVIRONMENT` | `Production` |
+3. Click **Create**.
+4. **Schedule Morning & Evening Briefings**:
+   - On the `tts-worker-job` page, click the **Triggers** tab > **+ Add Scheduler Trigger**.
+   - **Morning Trigger**:
+     - **Name:** `tts-morning-cron`
+     - **Frequency:** `0 8 * * *` (8:00 AM daily)
+     - **Timezone:** `Africa/Lagos`
+     - Click **Create**.
+   - **Evening Trigger**:
+     - Click **+ Add Scheduler Trigger** again.
+     - **Name:** `tts-evening-cron`
+     - **Frequency:** `0 18 * * *` (6:00 PM daily)
+     - **Timezone:** `Africa/Lagos`
+     - Click **Create**.
+
+---
+
+### Option 2: Google Cloud CLI (`gcloud`) Walkthrough
+
+If you prefer deploying via terminal commands and scripts, use the following `gcloud` automated commands:
+
+#### Step 1: Google Cloud SDK Setup & API Activation
 
 1. Install the [Google Cloud SDK (`gcloud`)](https://cloud.google.com/sdk/docs/install).
 2. Authenticate with your Google Cloud account and configure your project:
@@ -105,7 +334,7 @@ This setup is fully serverless, highly available, and autoscaling. Google Cloud 
 
 ---
 
-### Step 2: Create Artifact Registry for Docker Containers
+#### Step 2: Create Artifact Registry for Docker Containers
 
 Provision a regional Docker repository:
 ```bash
@@ -122,7 +351,7 @@ gcloud auth configure-docker us-central1-docker.pkg.dev
 
 ---
 
-### Step 3: Provision Managed PostgreSQL (Cloud SQL)
+#### Step 3: Provision Managed PostgreSQL (Cloud SQL)
 
 1. Create a lightweight, cost-optimized PostgreSQL 16 instance:
    ```bash
@@ -148,7 +377,7 @@ gcloud auth configure-docker us-central1-docker.pkg.dev
 
 ---
 
-### Step 4: Build & Push Container Images via Cloud Build
+#### Step 4: Build & Push Container Images via Cloud Build
 
 Execute Cloud Build from the repository root to containerize the services without needing local Docker:
 
@@ -168,9 +397,9 @@ gcloud builds submit --tag us-central1-docker.pkg.dev/YOUR_PROJECT_ID/newsgrid-r
 
 ---
 
-### Step 5: Deploy Services to Cloud Run
+#### Step 5: Deploy Services to Cloud Run via CLI
 
-#### 1. Deploy News API (Primary Backend)
+##### 1. Deploy News API (Primary Backend)
 
 The News API executes database migrations on startup (`DbInitializer.cs`), verifies API keys, and handles health probes at `/healthz/liveness` and `/healthz/readiness`.
 
@@ -189,7 +418,7 @@ gcloud run deploy news-api \
 
 *Take note of the service URL emitted by the command (e.g., `https://news-api-xyz-uc.a.run.app`).*
 
-#### 2. Deploy Admin Dashboard
+##### 2. Deploy Admin Dashboard
 
 Deploy the Razor Pages management portal, pointing it to the News API:
 
@@ -209,7 +438,7 @@ gcloud run services update news-api \
     --update-env-vars="AllowedOrigins__0=https://admin-dashboard-xyz-uc.a.run.app"
 ```
 
-#### 3. Deploy News Scraper as Cloud Run Job (Cost-Saving On-Demand Worker)
+##### 3. Deploy News Scraper as Cloud Run Job (Cost-Saving On-Demand Worker)
 
 Cloud Run Jobs run to completion and terminate, incurring **$0 idle cost**.
 
@@ -240,7 +469,7 @@ Cloud Run Jobs run to completion and terminate, incurring **$0 idle cost**.
        --oauth-service-account-email="newsgrid-scheduler-sa@YOUR_PROJECT_ID.iam.gserviceaccount.com"
    ```
 
-#### 4. Audio & Text-to-Speech (TTS) Architecture
+##### 4. Audio & Text-to-Speech (TTS) Architecture
 
 The application implements a dual-tier speech architecture:
 
@@ -255,7 +484,31 @@ The application implements a dual-tier speech architecture:
      - **Tier 1:** Google Cloud Text-to-Speech (`en-NG-Neural2-A`) when `GCP_TTS_API_KEY` is provided.
      - **Tier 2:** Microsoft Edge Neural TTS (`en-NG-EzinneNeural`), a **100% free**, authentic Nigerian voice requiring zero credentials.
      - **Tier 3:** Local offline safety net container ensuring 0% crash rate.
-   - In Cloud Run, mount a Cloud Storage bucket as a volume (`--add-volume=name=audio-vol,type=cloud-storage,bucket=YOUR_BUCKET --add-volume-mount=volume=audio-vol,mount-path=/app/data/audio`) to share synthesized audio files with `news-api`. Alternatively, running Approach B (Docker Compose) handles shared audio volumes out of the box.
+   - Deploy `tts-worker` as a Cloud Run Job that executes on-demand and exits cleanly via `TTS_RUN_ONCE=true`:
+     ```bash
+     # 1. Create TTS Worker Job with Cloud Storage volume mount for shared audio
+     gcloud run jobs create tts-worker-job \
+         --image=us-central1-docker.pkg.dev/YOUR_PROJECT_ID/newsgrid-repo/tts-worker:latest \
+         --region=us-central1 \
+         --add-volume=name=audio-vol,type=cloud-storage,bucket=YOUR_AUDIO_BUCKET \
+         --add-volume-mount=volume=audio-vol,mount-path=/app/data/audio \
+         --set-env-vars="ApiBaseUrl=https://news-api-xyz-uc.a.run.app,NewsApi__BaseUrl=https://news-api-xyz-uc.a.run.app,ApiKey=YourSuperSecretProductionApiKey123!,TTS_RUN_ONCE=true,DOTNET_ENVIRONMENT=Production"
+
+     # 2. Schedule Morning Briefing at 8:00 AM WAT (07:00 UTC)
+     gcloud scheduler jobs create http tts-morning-cron \
+         --schedule="0 7 * * *" \
+         --uri="https://us-central1-run.googleapis.com/v2/projects/YOUR_PROJECT_ID/locations/us-central1/jobs/tts-worker-job:run" \
+         --http-method=POST \
+         --oauth-service-account-email="newsgrid-scheduler-sa@YOUR_PROJECT_ID.iam.gserviceaccount.com"
+
+     # 3. Schedule Evening Briefing at 6:00 PM WAT (17:00 UTC)
+     gcloud scheduler jobs create http tts-evening-cron \
+         --schedule="0 17 * * *" \
+         --uri="https://us-central1-run.googleapis.com/v2/projects/YOUR_PROJECT_ID/locations/us-central1/jobs/tts-worker-job:run" \
+         --http-method=POST \
+         --oauth-service-account-email="newsgrid-scheduler-sa@YOUR_PROJECT_ID.iam.gserviceaccount.com"
+     ```
+   - In Cloud Run, mount the same Cloud Storage bucket as a volume on `news-api` (`--add-volume=name=audio-vol,type=cloud-storage,bucket=YOUR_AUDIO_BUCKET --add-volume-mount=volume=audio-vol,mount-path=/app/data/audio`) to serve synthesized audio files with seekable HTTP 206 streaming. Alternatively, Approach B (Docker Compose) handles shared audio volumes automatically on disk.
 
 ---
 

@@ -27,5 +27,13 @@ public class BootCompletedReceiver : BroadcastReceiver
 
             notificationService.ScheduleAudioBriefings();
         }
+
+        if (NotificationPreferences.BackgroundUpdatesEnabled)
+        {
+            var syncService = IPlatformApplication.Current?.Services?.GetService<IBackgroundSyncService>()
+                ?? new BackgroundSyncService();
+
+            syncService.ScheduleNewsSync(immediate: false);
+        }
     }
 }

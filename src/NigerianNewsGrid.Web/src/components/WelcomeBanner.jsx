@@ -1,6 +1,6 @@
 import React from 'react';
 
-export default function WelcomeBanner({ brandName = 'BULETIN' }) {
+export default function WelcomeBanner({ brandName = 'NEWS STAND NG' }) {
   return (
     <section className="welcome-banner-section app-container" aria-label="Welcome announcement">
       <div className="welcome-banner-card">

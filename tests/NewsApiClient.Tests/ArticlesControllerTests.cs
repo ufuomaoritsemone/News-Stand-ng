@@ -410,6 +410,194 @@ public class ArticlesControllerTests : IClassFixture<CustomWebApplicationFactory
         Assert.NotNull(updated);
         Assert.Equal("Technology", updated.Category);
     }
+
+    [Fact]
+    public async Task TrackImpression_IncrementsImpressionCountAtomically()
+    {
+        var title = $"Impression Test Article {Guid.NewGuid():N}";
+        var payload = new IngestArticlesRequest
+        {
+            Articles =
+            [
+                new ArticleIngestItem
+                {
+                    Title = title,
+                    Source = "Test Source",
+                    Category = "Business"
+                }
+            ]
+        };
+
+        var ingestReq = new HttpRequestMessage(HttpMethod.Post, "/api/v1/articles/ingest")
+        {
+            Content = JsonContent.Create(payload)
+        };
+        ingestReq.Headers.Add("X-Api-Key", CustomWebApplicationFactory.TestApiKey);
+        var ingestResp = await _client.SendAsync(ingestReq);
+        Assert.Equal(HttpStatusCode.OK, ingestResp.StatusCode);
+
+        var searchResp = await _client.GetAsync($"/api/v1/articles?search={Uri.EscapeDataString(title)}");
+        var list = await searchResp.Content.ReadFromJsonAsync<List<ArticleDto>>();
+        Assert.NotNull(list);
+        var article = Assert.Single(list);
+        var initialImpressions = article.ImpressionCount;
+
+        var trackResp = await _client.PostAsync($"/api/v1/articles/{article.Id}/track-impression", null);
+        Assert.Equal(HttpStatusCode.NoContent, trackResp.StatusCode);
+
+        var verifyResp = await _client.GetAsync($"/api/v1/articles/{article.Id}");
+        var updated = await verifyResp.Content.ReadFromJsonAsync<ArticleDto>();
+        Assert.NotNull(updated);
+        Assert.Equal(initialImpressions + 1, updated.ImpressionCount);
+    }
+
+    [Fact]
+    public async Task TrackClick_IncrementsClickCountAtomically()
+    {
+        var title = $"Click Test Article {Guid.NewGuid():N}";
+        var payload = new IngestArticlesRequest
+        {
+            Articles =
+            [
+                new ArticleIngestItem
+                {
+                    Title = title,
+                    Source = "Test Source",
+                    Category = "Sports"
+                }
+            ]
+        };
+
+        var ingestReq = new HttpRequestMessage(HttpMethod.Post, "/api/v1/articles/ingest")
+        {
+            Content = JsonContent.Create(payload)
+        };
+        ingestReq.Headers.Add("X-Api-Key", CustomWebApplicationFactory.TestApiKey);
+        var ingestResp = await _client.SendAsync(ingestReq);
+        Assert.Equal(HttpStatusCode.OK, ingestResp.StatusCode);
+
+        var searchResp = await _client.GetAsync($"/api/v1/articles?search={Uri.EscapeDataString(title)}");
+        var list = await searchResp.Content.ReadFromJsonAsync<List<ArticleDto>>();
+        Assert.NotNull(list);
+        var article = Assert.Single(list);
+        var initialClicks = article.ClickCount;
+
+        var trackResp = await _client.PostAsync($"/api/v1/articles/{article.Id}/track-click", null);
+        Assert.Equal(HttpStatusCode.NoContent, trackResp.StatusCode);
+
+        var verifyResp = await _client.GetAsync($"/api/v1/articles/{article.Id}");
+        var updated = await verifyResp.Content.ReadFromJsonAsync<ArticleDto>();
+        Assert.NotNull(updated);
+        Assert.Equal(initialClicks + 1, updated.ClickCount);
+    }
+
+    [Fact]
+    public async Task GetRelatedStories_ReturnsRelatedArticles_WithProjectedMetadata()
+    {
+        var category = "Technology";
+        var title1 = $"AI Tech Breakthrough {Guid.NewGuid():N}";
+        var title2 = $"AI Software Engineering {Guid.NewGuid():N}";
+
+        var payload = new IngestArticlesRequest
+        {
+            Articles =
+            [
+                new ArticleIngestItem
+                {
+                    Title = title1,
+                    Summary = "Artificial intelligence breakthrough in Nigeria",
+                    Content = "Heavy full article text body with extensive paragraphs...",
+                    Source = "Tech Cable",
+                    Category = category
+                },
+                new ArticleIngestItem
+                {
+                    Title = title2,
+                    Summary = "Artificial intelligence software engineering models",
+                    Content = "Another heavy full text article body...",
+                    Source = "Tech Cable",
+                    Category = category
+                }
+            ]
+        };
+
+        var ingestReq = new HttpRequestMessage(HttpMethod.Post, "/api/v1/articles/ingest")
+        {
+            Content = JsonContent.Create(payload)
+        };
+        ingestReq.Headers.Add("X-Api-Key", CustomWebApplicationFactory.TestApiKey);
+        var ingestResp = await _client.SendAsync(ingestReq);
+        Assert.Equal(HttpStatusCode.OK, ingestResp.StatusCode);
+
+        var searchResp = await _client.GetAsync($"/api/v1/articles?search={Uri.EscapeDataString(title1)}");
+        var list = await searchResp.Content.ReadFromJsonAsync<List<ArticleDto>>();
+        Assert.NotNull(list);
+        var article1 = Assert.Single(list);
+
+        var relatedResp = await _client.GetAsync($"/api/v1/articles/related?id={article1.Id}&category={category}&limit=2");
+        Assert.Equal(HttpStatusCode.OK, relatedResp.StatusCode);
+
+        var relatedDto = await relatedResp.Content.ReadFromJsonAsync<NewsApi.Services.RelatedStoriesDto>(
+            new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+        Assert.NotNull(relatedDto);
+        Assert.NotNull(relatedDto.Articles);
+        Assert.Contains(relatedDto.Articles, a => a.Title == title2);
+        // Ensure Content blob was omitted from candidate scoring and response
+        Assert.All(relatedDto.Articles, a => Assert.Null(a.Content));
+        var relatedArt = Assert.Single(relatedDto.Articles, a => a.Title == title2);
+        Assert.Equal(NewsApi.Infrastructure.CategoryImageMap.Resolve(null, category), relatedArt.ImageUrl);
+    }
+
+    [Fact]
+    public async Task GetBriefings_CustomParameters_AreAtomicallyInvalidatedOnIngest()
+    {
+        // 1. Initial call with custom topPerCategory = 25
+        var initialResp = await _client.GetAsync("/api/v1/articles/briefings?language=English&topPerCategory=25");
+        Assert.Equal(HttpStatusCode.OK, initialResp.StatusCode);
+
+        // 2. Second call should be a cache hit
+        var cachedResp = await _client.GetAsync("/api/v1/articles/briefings?language=English&topPerCategory=25");
+        Assert.Equal(HttpStatusCode.OK, cachedResp.StatusCode);
+        Assert.True(cachedResp.Headers.Contains("X-Cache"));
+        Assert.Equal("HIT", cachedResp.Headers.GetValues("X-Cache").First());
+
+        // 3. Ingest a new article (which calls InvalidateBriefingCache)
+        var newTitle = $"Briefing Cache Invalidation Test {Guid.NewGuid():N}";
+        var payload = new IngestArticlesRequest
+        {
+            Articles =
+            [
+                new ArticleIngestItem
+                {
+                    Title = newTitle,
+                    Summary = "Briefing invalidation test summary",
+                    Source = "Cache Invalidator",
+                    Category = "Politics"
+                }
+            ]
+        };
+
+        var ingestReq = new HttpRequestMessage(HttpMethod.Post, "/api/v1/articles/ingest")
+        {
+            Content = JsonContent.Create(payload)
+        };
+        ingestReq.Headers.Add("X-Api-Key", CustomWebApplicationFactory.TestApiKey);
+        var ingestResp = await _client.SendAsync(ingestReq);
+        Assert.Equal(HttpStatusCode.OK, ingestResp.StatusCode);
+
+        // 4. Third call should be a cache MISS and include the new article
+        var invalidatedResp = await _client.GetAsync("/api/v1/articles/briefings?language=English&topPerCategory=25");
+        Assert.Equal(HttpStatusCode.OK, invalidatedResp.StatusCode);
+        Assert.True(invalidatedResp.Headers.Contains("X-Cache"));
+        Assert.Equal("MISS", invalidatedResp.Headers.GetValues("X-Cache").First());
+
+        var categories = await invalidatedResp.Content.ReadFromJsonAsync<List<BriefingCategoryDto>>();
+        Assert.NotNull(categories);
+        var politicsCategory = categories.FirstOrDefault(c => c.Category == "Politics");
+        Assert.NotNull(politicsCategory);
+        Assert.Contains(politicsCategory.Top, a => a.Title == newTitle);
+    }
 }
 
 /// <summary>

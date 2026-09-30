@@ -45,6 +45,7 @@ public class DbInitializer(
         await EnsureSchemaColumnsUpdatedAsync(cancellationToken);
         await EnsureFullTextSearchCreatedAsync(db, logger, cancellationToken);
         await SeedSourcesAsync(cancellationToken);
+        await EnsureWorldSourcesAsync(cancellationToken);
         await SeedArticlesAsync(cancellationToken);
         await SeedSponsoredArticlesAsync(cancellationToken);
         await SeedVideoChannelsAsync(cancellationToken);
@@ -423,6 +424,7 @@ public class DbInitializer(
         await AddColumnIfMissingAsync("Articles", "ContentType", "TEXT NULL DEFAULT 'News'", ct);
         await AddColumnIfMissingAsync("Articles", "TargetPosition", "INTEGER NULL", ct);
         await AddColumnIfMissingAsync("Articles", "PriorityWeight", "INTEGER NOT NULL DEFAULT 1", ct);
+        await AddColumnIfMissingAsync("Articles", "UpdatedAt", isPostgres ? "timestamp with time zone NULL" : "TEXT NULL", ct);
     }
 
     private async Task AddColumnIfMissingAsync(string tableName, string columnName, string columnDefinition, CancellationToken ct)
@@ -701,6 +703,40 @@ public class DbInitializer(
         }
     }
 
+    private async Task EnsureWorldSourcesAsync(CancellationToken ct)
+    {
+        var worldSources = new (string Id, string Name, string? SitemapUrl, string RssUrl, string ScraperType)[]
+        {
+            ("punch_world", "Punch World", null, "https://punchng.com/topics/world/feed/", "Rss"),
+            ("vanguard_world", "Vanguard World", null, "https://www.vanguardngr.com/category/world/feed/", "Rss"),
+            ("guardian_world", "The Guardian World", null, "https://guardian.ng/category/world/feed/", "Rss"),
+            ("dailytrust_world", "Daily Trust World", null, "https://dailytrust.com/category/world-news/feed/", "Rss")
+        };
+
+        bool added = false;
+        foreach (var (id, name, sitemapUrl, rssUrl, scraperType) in worldSources)
+        {
+            if (!await db.Sources.AnyAsync(s => s.Id == id, ct))
+            {
+                db.Sources.Add(new Source
+                {
+                    Id = id,
+                    Name = name,
+                    SitemapUrl = sitemapUrl,
+                    RssUrl = rssUrl,
+                    ScraperType = scraperType
+                });
+                added = true;
+            }
+        }
+
+        if (added)
+        {
+            await db.SaveChangesAsync(ct);
+            logger.LogInformation("Dedicated international/world sources seeded successfully.");
+        }
+    }
+
     // ── Articles ─────────────────────────────────────────────────────────────
 
     private async Task SeedArticlesAsync(CancellationToken ct)
@@ -711,7 +747,8 @@ public class DbInitializer(
             new Article { Id = Guid.NewGuid().ToString("N"), Title = "Federal Government Unveils New Digital Economy Roadmap",   Summary = "The Ministry of Communications and Digital Economy announced a strategic initiative.", Url = "https://punchng.com/news/digital-roadmap",               Source = "Punch Newspaper",        Category = "Politics",     PublishedAt = DateTime.UtcNow },
             new Article { Id = Guid.NewGuid().ToString("N"), Title = "Super Eagles Prepare for Upcoming International Friendly", Summary = "Coaching staff confirm full squad training ahead of weekend clash.",               Url = "https://guardian.ng/sports/super-eagles-friendly",         Source = "The Guardian Nigeria",   Category = "Sports",       PublishedAt = DateTime.UtcNow.AddHours(-2) },
             new Article { Id = Guid.NewGuid().ToString("N"), Title = "Central Bank Highlights Monetary Policy Outlook for Q3",  Summary = "Key indicators show steady stabilization across foreign exchange markets.",          Url = "https://www.premiumtimesng.com/business/cbn-monetary-policy", Source = "Premium Times",        Category = "Business",     PublishedAt = DateTime.UtcNow.AddHours(-4) },
-            new Article { Id = Guid.NewGuid().ToString("N"), Title = "Tech Hub Ecosystem Grows Across Lagos and Abuja",         Summary = "Venture investments in Nigerian fintech startups reach record highs this quarter.",  Url = "https://punchng.com/tech/startup-growth",                  Source = "Punch Newspaper",        Category = "Technology",   PublishedAt = DateTime.UtcNow.AddHours(-6) }
+            new Article { Id = Guid.NewGuid().ToString("N"), Title = "Tech Hub Ecosystem Grows Across Lagos and Abuja",         Summary = "Venture investments in Nigerian fintech startups reach record highs this quarter.",  Url = "https://punchng.com/tech/startup-growth",                  Source = "Punch Newspaper",        Category = "Technology",   PublishedAt = DateTime.UtcNow.AddHours(-6) },
+            new Article { Id = Guid.NewGuid().ToString("N"), Title = "United Nations Security Council Convenes Summit on Global Diplomatic Treaties", Summary = "World leaders and international envoys assemble at UN headquarters to negotiate multilateral regional agreements.", Url = "https://guardian.ng/news/un-global-security-summit", Source = "The Guardian Nigeria", Category = "International", PublishedAt = DateTime.UtcNow.AddHours(-8) }
         );
         await db.SaveChangesAsync(ct);
         logger.LogInformation("Default sample articles seeded.");

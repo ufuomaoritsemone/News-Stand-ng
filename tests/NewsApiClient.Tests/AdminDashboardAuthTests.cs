@@ -59,6 +59,21 @@ public class AdminDashboardAuthTests : IClassFixture<AdminDashboardWebApplicatio
     }
 
     [Fact]
+    public async Task GetFeedback_WithoutAuthentication_RedirectsToLoginWithReturnUrl()
+    {
+        var client = _factory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            AllowAutoRedirect = false
+        });
+
+        var response = await client.GetAsync("/Feedback");
+
+        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+        Assert.NotNull(response.Headers.Location);
+        Assert.Contains("/Login?ReturnUrl=%2FFeedback", response.Headers.Location.ToString());
+    }
+
+    [Fact]
     public async Task GetLogin_Anonymous_Returns200OkWithLoginForm()
     {
         var client = _factory.CreateClient();

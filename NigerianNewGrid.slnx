@@ -9,6 +9,7 @@
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/NewsApiClient.Tests/NewsApiClient.Tests.csproj" />
+    <Project Path="tests/NewsApi.StressTests/NewsApi.StressTests.csproj" />
   </Folder>
   <Project Path="NigerianNewGrid/NigerianNewGrid.csproj" />
 </Solution>

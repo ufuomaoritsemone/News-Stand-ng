@@ -66,7 +66,7 @@ export default function HeroStory({ article, onSelectStory, isBookmarked, onTogg
           )}
 
           <div className="hero-meta">
-            <span className="hero-source">{article.source || 'Nigerian News Grid'}</span>
+            <span className="hero-source">{article.source || 'News Stand NG'}</span>
             <span>·</span>
             <span>{formattedDate}</span>
             <span>·</span>

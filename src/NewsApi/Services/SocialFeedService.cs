@@ -272,6 +272,8 @@ public class SocialFeedService : ISocialFeedService
             return "Technology";
         if (Regex.IsMatch(lower, @"\b(efcc|police|court|arrest|fraud|dss|crime|bandit|kidnap)\b"))
             return "Crime";
+        if (Regex.IsMatch(lower, @"\b(biden|trump|kamala|white house|putin|kremlin|zelensky|ukraine|russia|gaza|israel|hezbollah|hamas|middle east|beirut|united nations|unsc|starmer|downing street|beijing|xi jinping|taiwan|nato|ramaphosa|kenya|ruto|ghana)\b"))
+            return "International";
 
         return !string.IsNullOrWhiteSpace(fallback) ? fallback : "General";
     }

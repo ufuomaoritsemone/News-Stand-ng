@@ -1290,6 +1290,130 @@ public static class SeedDataset
             Title = "Hundreds gather for burial ceremony of prominent community elder and philanthropist in Ibadan",
             Summary = "Dignitaries from academia, commerce, and civil service paid their final respects to beloved community leader known for building free rural schools.",
             Source = "SeedData"
+        },
+
+        // ==========================================
+        // 8. INTERNATIONAL (25 samples)
+        // ==========================================
+        new NewsArticleRecord {
+            Category = "International",
+            Title = "United Nations Security Council votes on immediate ceasefire resolution in Gaza conflict",
+            Summary = "The UN Security Council convened an emergency session in New York with ambassadors urging immediate cessation of hostilities and unhindered humanitarian access.",
+            Source = "SeedData"
+        },
+        new NewsArticleRecord {
+            Category = "International",
+            Title = "US Presidential election: Trump and Harris intensify campaign across key battleground swing states",
+            Summary = "Democratic and Republican candidates held high-stakes campaign rallies in Pennsylvania and Wisconsin targeting independent voters ahead of November polls.",
+            Source = "SeedData"
+        },
+        new NewsArticleRecord {
+            Category = "International",
+            Title = "Kremlin warns NATO allies over long-range missile strikes as Kyiv peace summit stalls",
+            Summary = "Russian government spokesman Dmitry Peskov issued warnings to Western capitals against authorizing Ukrainian deep-strike operations against Russian targets.",
+            Source = "SeedData"
+        },
+        new NewsArticleRecord {
+            Category = "International",
+            Title = "British Prime Minister Keir Starmer unveils UK economic growth plan at European bilateral summit",
+            Summary = "The prime minister held talks with German Chancellor Olaf Scholz and French President Emmanuel Macron to rebuild post-Brexit trade links and joint security cooperation.",
+            Source = "SeedData"
+        },
+        new NewsArticleRecord {
+            Category = "International",
+            Title = "South Africa Parliament approves government of national unity cabinet under President Cyril Ramaphosa",
+            Summary = "The African National Congress ANC and Democratic Alliance formed a historic coalition government following parliamentary elections in Cape Town.",
+            Source = "SeedData"
+        },
+        new NewsArticleRecord {
+            Category = "International",
+            Title = "Middle East crisis: Israeli airstrikes target Hezbollah command facilities in southern Beirut suburbs",
+            Summary = "Lebanese authorities reported extensive damage across residential districts following heavy Israeli bombardments targeting armed group positions.",
+            Source = "SeedData"
+        },
+        new NewsArticleRecord {
+            Category = "International",
+            Title = "Kenyan President William Ruto dissolves cabinet and signs reformed finance appropriation bill",
+            Summary = "Following widespread youth demonstrations in Nairobi, the Kenyan presidency announced austerity measures and reconstituted executive leadership.",
+            Source = "SeedData"
+        },
+        new NewsArticleRecord {
+            Category = "International",
+            Title = "Sudan conflict: Warring generals reject peace accord as famine conditions spread across Darfur and Khartoum",
+            Summary = "Clashes between Sudanese Armed Forces and Rapid Support Forces paramilitary fighters displaced millions, prompting emergency international humanitarian alerts.",
+            Source = "SeedData"
+        },
+        new NewsArticleRecord {
+            Category = "International",
+            Title = "China conducts military exercises in Taiwan Strait as Beijing reaffirms reunification policy",
+            Summary = "Chinese naval and aerial forces staged coordinated drills around the island following diplomatic visits by foreign parliamentary delegations.",
+            Source = "SeedData"
+        },
+        new NewsArticleRecord {
+            Category = "International",
+            Title = "Ghana Electoral Commission prepares voter registers ahead of December presidential election",
+            Summary = "Former president John Mahama and Vice President Mahamudu Bawumia lead campaigns focused on cedi currency stabilization and debt restructuring.",
+            Source = "SeedData"
+        },
+        new NewsArticleRecord {
+            Category = "International",
+            Title = "European Union passes historic Artificial Intelligence Act setting landmark global tech regulation",
+            Summary = "Lawmakers in Brussels enacted comprehensive rules governing risk assessment, biometric surveillance, and transparency for frontier generative models.",
+            Source = "SeedData"
+        },
+        new NewsArticleRecord {
+            Category = "International",
+            Title = "White House announces new diplomatic engagement to de-escalate tensions across the Red Sea",
+            Summary = "US State Department officials met regional foreign ministers in Saudi Arabia to protect commercial shipping lanes from Houthi drone strikes.",
+            Source = "SeedData"
+        },
+        new NewsArticleRecord {
+            Category = "International",
+            Title = "G7 leaders pledge fifty billion dollar loan package to Ukraine backed by frozen Russian assets",
+            Summary = "Heads of state at the Italian summit agreed to utilize interest profits from sanctioned central bank assets to finance Kyiv defence and reconstruction.",
+            Source = "SeedData"
+        },
+        new NewsArticleRecord {
+            Category = "International",
+            Title = "International Criminal Court issues arrest warrants over alleged war crimes and crimes against humanity",
+            Summary = "The Hague-based tribunal prosecutor urged member states to fulfill statutory obligations regarding international justice and accountability.",
+            Source = "SeedData"
+        },
+        new NewsArticleRecord {
+            Category = "International",
+            Title = "Burkina Faso, Mali, and Niger military juntas finalize confederation treaties leaving ECOWAS bloc",
+            Summary = "Sahelian leaders convened in Niamey to establish regional joint security operations and withdraw formally from regional economic community agreements.",
+            Source = "SeedData"
+        },
+        new NewsArticleRecord {
+            Category = "International",
+            Title = "Japanese Prime Minister announces snap general election following ruling party leadership vote",
+            Summary = "Tokyo authorities scheduled parliamentary ballots amidst voter concerns over cost of living, yen depreciation, and political donation scandals.",
+            Source = "SeedData"
+        },
+        new NewsArticleRecord {
+            Category = "International",
+            Title = "Iran signs comprehensive strategic trade and energy partnership agreement with Eurasian alliance",
+            Summary = "Tehran officials expanded export agreements in crude oil, transit corridors, and financial clearing mechanisms to bypass unilateral economic sanctions.",
+            Source = "SeedData"
+        },
+        new NewsArticleRecord {
+            Category = "International",
+            Title = "United Nations Climate Summit COP delegates debate global loss and damage fund contributions",
+            Summary = "Developing nations and island states demanded accelerated payouts and transparent financing criteria from industrialized economies in Geneva.",
+            Source = "SeedData"
+        },
+        new NewsArticleRecord {
+            Category = "International",
+            Title = "French President Emmanuel Macron appoints new prime minister following snap parliamentary election deadlock",
+            Summary = "The Elysee Palace unveiled a coalition cabinet attempting to break weeks of political stalemate between left-wing and conservative blocs.",
+            Source = "SeedData"
+        },
+        new NewsArticleRecord {
+            Category = "International",
+            Title = "BRICS alliance summit expands membership to include major emerging oil economies and partners",
+            Summary = "Leaders gathered in Kazan to negotiate alternative cross-border payment currencies and reduce reliance on western correspondent banking systems.",
+            Source = "SeedData"
         }
     };
 }

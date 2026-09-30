@@ -13,41 +13,76 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:gravity="center_vertical"
-        android:layout_marginBottom="4dp">
+        android:gravity="center_vertical">
 
-        <TextView
-            android:id="@+id/widget_item_category"
-            android:layout_width="wrap_content"
+        <!-- Left Text Content -->
+        <LinearLayout
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:text="POLITICS"
-            android:textColor="#00E676"
-            android:textSize="9sp"
-            android:textStyle="bold"
-            android:background="@drawable/widget_pill_bg"
-            android:paddingLeft="6dp"
-            android:paddingRight="6dp"
-            android:paddingTop="2dp"
-            android:paddingBottom="2dp" />
+            android:layout_weight="1"
+            android:orientation="vertical">
 
-        <TextView
-            android:id="@+id/widget_item_meta"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginLeft="6dp"
-            android:text="Punch • 10m ago"
-            android:textColor="#999999"
-            android:textSize="10sp" />
-    </LinearLayout>
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="4dp">
 
-    <TextView
-        android:id="@+id/widget_item_title"
+                <TextView
+                    android:id="@+id/widget_item_category"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="POLITICS"
+                    android:textColor="#00E676"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    android:background="@drawable/widget_pill_bg"
+                    android:paddingLeft="8dp"
+                    android:paddingRight="8dp"
+                    android:paddingTop="3dp"
+                    android:paddingBottom="3dp" />
+
+                <TextView
+                    android:id="@+id/widget_item_meta"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginLeft="6dp"
+                    android:text="Punch • 10m ago"
+                    android:textColor="#A0A0A8"
+                    android:textSize="13sp" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/widget_item_title"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="News Title"
+                android:textColor="#FFFFFF"
+                android:textSize="17sp"
+                android:textStyle="bold"
+                android:maxLines="3"
+                android:ellipsize="end"
+                android:lineSpacingExtra="1.5dp" />
+        </LinearLayout>
+
+        <!-- Right Article Thumbnail (scaled +20% from 64dp to 77dp) -->
+        <ImageView
+            android:id="@+id/widget_item_image"
+            android:layout_width="77dp"
+            android:layout_height="77dp"
+            android:layout_marginLeft="12dp"
+            android:layout_gravity="center_vertical"
+            android:scaleType="centerCrop"
+            android:background="@drawable/widget_image_rounded_bg"
+            android:contentDescription="Article thumbnail"
+            android:visibility="gone" />
+        </LinearLayout>
+
+    <ImageView
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="News Title"
-        android:textColor="#F0F0F0"
-        android:textSize="12sp"
-        android:textStyle="bold"
-        android:maxLines="2"
-        android:ellipsize="end" />
+        android:layout_height="1dp"
+        android:layout_marginTop="8dp"
+        android:background="#22222A"
+        android:contentDescription="@null" />
 </LinearLayout>

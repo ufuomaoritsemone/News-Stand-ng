@@ -27,16 +27,19 @@ public partial class OnboardingPage : ContentPage
         "Tech/Startups",
         "CBN",
         "Politics",
-        "Business"
+        "Business",
+        "International"
     ];
 
     private readonly Dictionary<string, (Border card, Label check)> _langCards;
+    private readonly IBackgroundSyncService _backgroundSyncService;
 
-    public OnboardingPage(INotificationService notificationService, IServiceProvider serviceProvider)
+    public OnboardingPage(INotificationService notificationService, IServiceProvider serviceProvider, IBackgroundSyncService backgroundSyncService)
     {
         InitializeComponent();
         _notificationService = notificationService;
         _serviceProvider = serviceProvider;
+        _backgroundSyncService = backgroundSyncService;
 
         _langCards = new()
         {
@@ -184,11 +187,20 @@ public partial class OnboardingPage : ContentPage
                 _notificationService.CancelAudioBriefings();
             }
 
+            if (SwitchKeywordAlerts.IsToggled)
+            {
+                _backgroundSyncService.ScheduleNewsSync(immediate: false);
+            }
+            else
+            {
+                _backgroundSyncService.CancelNewsSync();
+            }
+
             // 3. Mark Onboarding as Completed
             Preferences.Set(AppPreferenceKeys.HasSeenOnboarding, true);
             Preferences.Set(AppPreferenceKeys.DailyReminderEnabled, SwitchMorningBriefing.IsToggled);
 
-            SemanticScreenReader.Announce($"Welcome to Nigerian News! Setup complete.");
+            SemanticScreenReader.Announce($"Welcome to News Stand NG! Setup complete.");
 
             // 4. Transition root to AppShell
             var shell = _serviceProvider.GetRequiredService<AppShell>();

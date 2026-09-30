@@ -6,7 +6,7 @@ using NigerianNewGrid.ViewModels;
 namespace NigerianNewGrid;
 
 /// <summary>
-/// Main landing page for Nigerian News Grid.
+/// Main landing page for News Stand NG.
 /// Follows MVVM pattern with minimal code-behind: all business logic, data retrieval,
 /// pagination, and state are encapsulated in <see cref="MainViewModel"/>.
 /// This code-behind is strictly responsible for view-layer concerns (navigation, system share, onboarding dialog).
@@ -15,25 +15,59 @@ public partial class MainPage : ContentPage
 {
     private readonly MainViewModel _vm;
     private const string AppShareTagline =
-        "\n\n📲 Follow Nigerian news as it breaks — download Nigerian News and never miss a story.";
+        "\n\n📲 Follow news as it breaks — download News Stand NG and never miss a story.";
 
     public MainPage(MainViewModel viewModel)
     {
-        InitializeComponent();
-        _vm = viewModel;
-        BindingContext = _vm;
+#if ANDROID
+        Android.Util.Log.Info("APP_DEBUG", "MainPage constructor START");
+#endif
+        try
+        {
+            InitializeComponent();
+#if ANDROID
+            Android.Util.Log.Info("APP_DEBUG", "MainPage InitializeComponent DONE");
+#endif
+            _vm = viewModel;
+            BindingContext = _vm;
+            _vm.ScrollToTopRequested += OnScrollToTopRequested;
+#if ANDROID
+            Android.Util.Log.Info("APP_DEBUG", "MainPage BindingContext SET");
+#endif
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"MainPage constructor ERROR: {ex}");
+#if ANDROID
+            Android.Util.Log.Error("APP_DEBUG", $"MainPage constructor ERROR: {ex}");
+#endif
+            throw;
+        }
 
         Appearing += async (_, _) =>
         {
+#if ANDROID
+            Android.Util.Log.Info("APP_DEBUG", "MainPage Appearing FIRED");
+#endif
+            _vm.OnAppResumed();
             try
             {
                 await _vm.InitializeAsync();
+#if ANDROID
+                Android.Util.Log.Info("APP_DEBUG", "MainPage _vm.InitializeAsync COMPLETED");
+#endif
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[MainPage] Startup error: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"MainPage Appearing ERROR: {ex}");
+#if ANDROID
+                Android.Util.Log.Error("APP_DEBUG", $"MainPage Appearing ERROR: {ex}");
+#endif
             }
         };
+#if ANDROID
+        Android.Util.Log.Info("APP_DEBUG", "MainPage constructor FINISHED");
+#endif
     }
 
     private async void OnArticleTapped(object? sender, TappedEventArgs e)
@@ -123,7 +157,7 @@ public partial class MainPage : ContentPage
             else if (sender is BindableObject { BindingContext: BriefingItem bItem }) item = bItem;
             if (item is null) return;
 
-            var shareText = $"Check out this story from {item.Source ?? "Nigerian News"}:\n\n{item.Title}\n\n{item.Summary}\n\nRead more: {item.Url}{AppShareTagline}".Trim();
+            var shareText = $"Check out this story from {item.Source ?? "News Stand NG"}:\n\n{item.Title}\n\n{item.Summary}\n\nRead more: {item.Url}{AppShareTagline}".Trim();
             await Share.Default.RequestAsync(new ShareTextRequest
             {
                 Title = "Share News Story",
@@ -135,5 +169,20 @@ public partial class MainPage : ContentPage
         {
             Debug.WriteLine($"[MainPage] Share error: {ex.Message}");
         }
+    }
+
+    private void OnScrollToTopRequested()
+    {
+        MainThread.BeginInvokeOnMainThread(async () =>
+        {
+            try
+            {
+                await FeedScrollView.ScrollToAsync(0, 0, animated: true);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[MainPage] ScrollToTop failed: {ex.Message}");
+            }
+        });
     }
 }

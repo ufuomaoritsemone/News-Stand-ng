@@ -122,4 +122,45 @@ public class FeedbackServiceTests
         // Assert
         Assert.Equal(5, list.Count);
     }
+
+    [Fact]
+    public async Task DeleteFeedbackAsync_ExistingFeedback_RemovesFromDbAndReturnsTrue()
+    {
+        // Arrange
+        using var db = CreateInMemoryDb();
+        var config = CreateEmptyConfiguration();
+        var service = new FeedbackService(db, config, NullLogger<FeedbackService>.Instance);
+
+        var feedback = new FeedbackItem
+        {
+            Rating = 5,
+            Category = "General",
+            Message = "Test message to delete"
+        };
+        db.Feedbacks.Add(feedback);
+        await db.SaveChangesAsync();
+
+        // Act
+        var result = await service.DeleteFeedbackAsync(feedback.Id);
+
+        // Assert
+        Assert.True(result);
+        var inDb = await db.Feedbacks.FindAsync(feedback.Id);
+        Assert.Null(inDb);
+    }
+
+    [Fact]
+    public async Task DeleteFeedbackAsync_NonExistentFeedback_ReturnsFalse()
+    {
+        // Arrange
+        using var db = CreateInMemoryDb();
+        var config = CreateEmptyConfiguration();
+        var service = new FeedbackService(db, config, NullLogger<FeedbackService>.Instance);
+
+        // Act
+        var result = await service.DeleteFeedbackAsync("non-existent-id");
+
+        // Assert
+        Assert.False(result);
+    }
 }

@@ -18,11 +18,22 @@ public static class NotificationPreferences
     private const string NotifiedArticleIdsKey = "notified_article_ids";
     private const string LastAlertEvaluationTimeKey = "last_keyword_alert_eval_utc";
     private const string LastSyncTimeKey = "last_background_sync_utc";
+    private const string BackgroundUpdatesEnabledKey = "background_updates_enabled";
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNameCaseInsensitive = true
     };
+
+    /// <summary>
+    /// Governs autonomous background news retrieval and widget synchronization.
+    /// Default true. Users can opt out in Settings to maximize battery savings.
+    /// </summary>
+    public static bool BackgroundUpdatesEnabled
+    {
+        get => Preferences.Get(BackgroundUpdatesEnabledKey, true);
+        set => Preferences.Set(BackgroundUpdatesEnabledKey, value);
+    }
 
     public static bool MorningBriefingEnabled
     {

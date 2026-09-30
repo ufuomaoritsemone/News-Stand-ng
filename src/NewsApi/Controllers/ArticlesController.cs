@@ -1,11 +1,13 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Primitives;
 using NewsApi.Data;
 using NewsApi.Infrastructure;
 using NewsApi.Models;
 using NewsApi.Services;
 using NigerianNewsGrid.Client.Helpers;
+using NigerianNewsGrid.Client.Models;
 
 namespace NewsApi.Controllers;
 
@@ -13,13 +15,15 @@ namespace NewsApi.Controllers;
 [Route("api/v1/[controller]")]
 public class ArticlesController : ControllerBase
 {
+    private static CancellationTokenSource _briefingTokenSource = new();
+
     private readonly NewsDbContext _db;
     private readonly IRelatedContentService _relatedService; // Fix #19 — abstraction
     private readonly IArticleSearchService _searchService;
+    private readonly ICategorizerTrainingService? _categorizerTrainingService;
     private readonly IMemoryCache _cache;
     private readonly ILogger<ArticlesController> _logger;
 
-    // Fix #31 — use a single invalidation key instead of brute-force permutation loop
     private const string BriefingCacheTag = "briefings";
 
     public ArticlesController(
@@ -27,13 +31,15 @@ public class ArticlesController : ControllerBase
         IRelatedContentService relatedService,  // Fix #19
         IArticleSearchService searchService,
         IMemoryCache cache,
-        ILogger<ArticlesController> logger)
+        ILogger<ArticlesController> logger,
+        ICategorizerTrainingService? categorizerTrainingService = null)
     {
-        _db             = db;
-        _relatedService = relatedService;
-        _searchService  = searchService;
-        _cache          = cache;
-        _logger         = logger;
+        _db                         = db;
+        _relatedService             = relatedService;
+        _searchService              = searchService;
+        _cache                      = cache;
+        _logger                     = logger;
+        _categorizerTrainingService = categorizerTrainingService;
     }
 
     /// <summary>
@@ -143,6 +149,7 @@ public class ArticlesController : ControllerBase
             .ToList();
 
         _cache.Set(cacheKey, briefing, new MemoryCacheEntryOptions()
+            .AddExpirationToken(new CancellationChangeToken(_briefingTokenSource.Token))
             .SetSlidingExpiration(TimeSpan.FromMinutes(3))
             .SetAbsoluteExpiration(TimeSpan.FromMinutes(5)));
 
@@ -455,6 +462,7 @@ public class ArticlesController : ControllerBase
 
         var oldCategory    = article.Category ?? "General";
         article.Category   = request.Category.Trim();
+        article.UpdatedAt  = DateTime.UtcNow;
         await _db.SaveChangesAsync(cancellationToken);
 
         await SaveCorrectionFeedbackAsync(article, oldCategory, cancellationToken);
@@ -467,18 +475,49 @@ public class ArticlesController : ControllerBase
         return Ok(new { id = article.Id, category = article.Category, message = "Category updated successfully." });
     }
 
-    // Fix #31 — single cache tag removal instead of brute-force permutation loop
+    /// <summary>
+    /// Fetches lightweight article delta records (e.g. category reclassifications) modified since the specified UTC timestamp.
+    /// Enables client-side SQLite caches to synchronize out-of-band updates with minimal bandwidth.
+    /// </summary>
+    [HttpGet("sync")]
+    public async Task<IActionResult> GetArticleDeltas(
+        [FromQuery] DateTime? sinceUtc,
+        CancellationToken cancellationToken = default)
+    {
+        var cutoff = sinceUtc ?? DateTime.UtcNow.AddDays(-14);
+
+        var deltas = await _db.Articles
+            .AsNoTracking()
+            .Where(a => a.UpdatedAt != null && a.UpdatedAt > cutoff)
+            .OrderBy(a => a.UpdatedAt)
+            .Take(500)
+            .Select(a => new ArticleDeltaDto
+            {
+                Id = a.Id,
+                Category = a.Category ?? "General",
+                UpdatedAt = a.UpdatedAt!.Value
+            })
+            .ToListAsync(cancellationToken);
+
+        return Ok(deltas);
+    }
+
+    // Atomic briefing cache eviction via CancellationChangeToken
     private void InvalidateBriefingCache()
     {
-        // IMemoryCache does not support tag-based eviction natively, so we track
-        // active keys via a compact pattern. All briefing keys share the same prefix
-        // and can be cleared by iterating a small known set of variant parameters.
-        // For a Redis-backed implementation, use IDistributedCache with tags instead.
-        string[] languages = ["English", "Yoruba", "Igbo", "Hausa"];
-        int[]    topLimits = [3, 5, 10, 15, 20];
-        foreach (var lang in languages)
-            foreach (var top in topLimits)
-                _cache.Remove($"{BriefingCacheTag}_{lang}_{top}");
+        var oldToken = Interlocked.Exchange(ref _briefingTokenSource, new CancellationTokenSource());
+        try
+        {
+            oldToken.Cancel();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Error cancelling briefing change token.");
+        }
+        finally
+        {
+            oldToken.Dispose();
+        }
     }
 
     private async Task SaveCorrectionFeedbackAsync(
@@ -499,6 +538,8 @@ public class ArticlesController : ControllerBase
             });
             await _db.SaveChangesAsync(ct);
             _logger.LogInformation("Persisted category correction for article {ArticleId}.", article.Id);
+
+            _categorizerTrainingService?.CheckAndTriggerAutoRetrain();
         }
         catch (Exception ex)
         {
@@ -665,31 +706,39 @@ public class ArticlesController : ControllerBase
 
     /// <summary>
     /// Records an impression for a story/article (used for CTR tracking).
+    /// Executes an atomic SQL increment to eliminate lost update race conditions under high concurrency.
     /// </summary>
     [HttpPost("{id}/track-impression")]
     public async Task<IActionResult> TrackImpression(string id, CancellationToken ct = default)
     {
-        var article = await _db.Articles.FindAsync([id], ct);
-        if (article != null)
+        var updated = await _db.Articles
+            .Where(a => a.Id == id)
+            .ExecuteUpdateAsync(s => s.SetProperty(a => a.ImpressionCount, a => a.ImpressionCount + 1), ct);
+
+        if (updated == 0)
         {
-            article.ImpressionCount++;
-            await _db.SaveChangesAsync(ct);
+            return NotFound(new { message = $"Article with ID '{id}' not found." });
         }
+
         return NoContent();
     }
 
     /// <summary>
     /// Records a click-through for a sponsored story or advertiser URL.
+    /// Executes an atomic SQL increment to eliminate lost update race conditions under high concurrency.
     /// </summary>
     [HttpPost("{id}/track-click")]
     public async Task<IActionResult> TrackClick(string id, CancellationToken ct = default)
     {
-        var article = await _db.Articles.FindAsync([id], ct);
-        if (article != null)
+        var updated = await _db.Articles
+            .Where(a => a.Id == id)
+            .ExecuteUpdateAsync(s => s.SetProperty(a => a.ClickCount, a => a.ClickCount + 1), ct);
+
+        if (updated == 0)
         {
-            article.ClickCount++;
-            await _db.SaveChangesAsync(ct);
+            return NotFound(new { message = $"Article with ID '{id}' not found." });
         }
+
         return NoContent();
     }
 }

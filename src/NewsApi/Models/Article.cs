@@ -31,4 +31,7 @@ public class Article
     public int PriorityWeight { get; set; } = 1;
     public int ImpressionCount { get; set; } = 0;
     public int ClickCount { get; set; } = 0;
+
+    // Delta tracking timestamp for client cache reconciliation
+    public DateTime? UpdatedAt { get; set; }
 }

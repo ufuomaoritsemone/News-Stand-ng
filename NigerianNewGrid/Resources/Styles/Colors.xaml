@@ -75,6 +75,8 @@
     <Color x:Key="DarkAccentOrangeLight">#332211</Color>
     <Color x:Key="DarkTextPrimary">#F8FAFC</Color>
     <Color x:Key="DarkTextSecondary">#94A3B8</Color>
+    <Color x:Key="DarkAccentGreen">#4ADE80</Color>
+    <Color x:Key="DarkAccentGreenLight">#0F3820</Color>
 
     <!-- ── High-Contrast Button Color Tokens ── -->
     <Color x:Key="ButtonBorderLight">#CBD5E1</Color>
@@ -105,6 +107,8 @@
                      Color="{AppThemeBinding Light={StaticResource AccentOrangeLight}, Dark={StaticResource DarkAccentOrangeLight}}"/>
     <SolidColorBrush x:Key="WhiteBrush"
                      Color="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource DarkSurface}}"/>
+    <SolidColorBrush x:Key="AlwaysWhiteBrush"
+                     Color="White"/>
     <SolidColorBrush x:Key="BlackBrush"
                      Color="{AppThemeBinding Light={StaticResource Black}, Dark={StaticResource DarkTextPrimary}}"/>
 

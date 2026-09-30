@@ -9,9 +9,9 @@ export default function Footer({ onSelectCategory }) {
         <div className="footer-top">
           <div style={{ maxWidth: 420 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-              <img src="/logo.png" alt="Nigerian News Grid" style={{ width: 32, height: 32, borderRadius: 8 }} />
+              <img src="/logo.png" alt="News Stand NG" style={{ width: 32, height: 32, borderRadius: 8 }} />
               <span style={{ fontSize: '1.2rem', fontWeight: 800, letterSpacing: '-0.02em' }}>
-                NIGERIAN <span style={{ color: 'var(--emerald-bright)' }}>NEWS GRID</span>
+                NEWS STAND <span style={{ color: 'var(--emerald-bright)' }}>NG</span>
               </span>
             </div>
             <p style={{ fontSize: '0.86rem', color: 'var(--text-muted)', lineHeight: 1.6 }}>
@@ -51,7 +51,7 @@ export default function Footer({ onSelectCategory }) {
 
         <div className="footer-bottom">
           <div>
-            © {currentYear} Nigerian News Grid. All rights reserved.
+            © {currentYear} News Stand NG. All rights reserved.
           </div>
           <div style={{ display: 'flex', gap: 16 }}>
             <span>Verified RSS Ingestion</span>

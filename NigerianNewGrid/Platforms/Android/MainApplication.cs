@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading.Tasks;
 using Android.App;
 using Android.Runtime;
@@ -28,16 +28,13 @@ namespace NigerianNewGrid
             // Log Android environment exceptions coming from Java side
             AndroidEnvironment.UnhandledExceptionRaiser += (sender, args) =>
             {
-                Log.Error("APP", $"AndroidEnvironment.UnhandledExceptionRaiser: {args.Exception}");
-                // Mark handled to prevent the exception from immediately terminating the app
-                // while still logging it for diagnostics.
-                args.Handled = true;
+                Log.Error("APP_DEBUG", $"AndroidEnvironment.UnhandledExceptionRaiser: {args.Exception}");
             };
 
             // Capture unobserved task exceptions
             TaskScheduler.UnobservedTaskException += (s, e) =>
             {
-                Log.Error("APP", $"UnobservedTaskException: {e.Exception}");
+                Log.Error("APP_DEBUG", $"UnobservedTaskException: {e.Exception}");
                 e.SetObserved();
             };
         }

@@ -245,73 +245,79 @@
         <!-- ══════════════════════════════════════════════
              TOP APP BAR — Logo · Title · Actions (Always visible)
         ══════════════════════════════════════════════ -->
-        <Grid Grid.Row="0"
-              ColumnDefinitions="Auto,*,Auto,Auto,Auto"
-              ColumnSpacing="8"
-              Padding="16,14,16,10"
-              Background="{StaticResource WhiteBrush}"
-              VerticalOptions="Center">
+        <Border Grid.Row="0"
+                StrokeThickness="0"
+                Background="{StaticResource AlwaysWhiteBrush}"
+                Padding="16,10,16,8">
+            <VerticalStackLayout Spacing="6">
+                <!-- Row 1: Masthead & Actions -->
+                <Grid ColumnDefinitions="*,Auto" VerticalOptions="Center">
+                    <!-- Masthead / Logo -->
+                    <Image Grid.Column="0"
+                           Source="newsstand_mast_head.png"
+                           HeightRequest="36"
+                           Aspect="AspectFit"
+                           HorizontalOptions="Start"
+                           VerticalOptions="Center"
+                           SemanticProperties.Description="News Stand NG" />
 
-            <!-- Logo -->
-            <Image Grid.Column="0"
-                   Source="nigerian_news_head.png"
-                   HeightRequest="38"
-                   Aspect="AspectFit"
-                   HorizontalOptions="Start"
-                   VerticalOptions="Center"
-                   SemanticProperties.Description="Nigerian News" />
+                    <!-- Action buttons -->
+                    <HorizontalStackLayout Grid.Column="1" Spacing="8" VerticalOptions="Center">
+                        <!-- Search shortcut button -->
+                        <Button Text="🔍"
+                                Clicked="OnSearchToolbarClicked"
+                                Padding="10,6"
+                                FontSize="15"
+                                CornerRadius="14"
+                                BorderWidth="1.5"
+                                BorderColor="{StaticResource ButtonBorderLight}"
+                                BackgroundColor="{StaticResource ButtonBgLight}"
+                                TextColor="{StaticResource ButtonTextLight}"
+                                SemanticProperties.Hint="Search news topics" />
 
-            <!-- Status / Subtitle with Date/Time -->
-            <Label Grid.Column="1"
-                   x:Name="StatusLabel"
-                   Text="{Binding StatusText}"
-                   FontFamily="LegacySansBook"
-                   FontSize="12"
-                   FontAttributes="Bold"
-                   TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource DarkTextPrimary}}"
-                   VerticalOptions="Center"
-                   MaxLines="2"
-                   LineBreakMode="WordWrap" />
+                        <!-- Refresh button -->
+                        <Button Text="↻"
+                                Command="{Binding RefreshCommand}"
+                                Padding="10,6"
+                                FontSize="16"
+                                CornerRadius="14"
+                                BorderWidth="1.5"
+                                BorderColor="{StaticResource ButtonBorderLight}"
+                                BackgroundColor="{StaticResource ButtonBgLight}"
+                                TextColor="{StaticResource ButtonTextLight}"
+                                SemanticProperties.Hint="Reload briefing" />
 
-            <!-- Search shortcut button -->
-            <Button Grid.Column="2"
-                    Text="🔍"
-                    Clicked="OnSearchToolbarClicked"
-                    Padding="10,6"
-                    FontSize="15"
-                    CornerRadius="14"
-                    BorderWidth="1.5"
-                    BorderColor="{AppThemeBinding Light={StaticResource ButtonBorderLight}, Dark={StaticResource ButtonBorderDark}}"
-                    BackgroundColor="{AppThemeBinding Light={StaticResource ButtonBgLight}, Dark={StaticResource ButtonSecondaryBgDark}}"
-                    TextColor="{AppThemeBinding Light={StaticResource ButtonTextLight}, Dark={StaticResource ButtonTextDark}}"
-                    SemanticProperties.Hint="Search news topics" />
+                        <!-- Audio briefing button -->
+                        <Button Text="{Binding AudioButtonText}"
+                                Command="{Binding PlayAudioBriefingCommand}"
+                                Padding="10,6"
+                                FontSize="16"
+                                CornerRadius="14"
+                                BorderWidth="1.5"
+                                BorderColor="{StaticResource AccentOrange}"
+                                BackgroundColor="{StaticResource AccentOrangeLight}"
+                                TextColor="{StaticResource AccentOrange}"
+                                SemanticProperties.Hint="{Binding AudioButtonHint}" />
+                    </HorizontalStackLayout>
+                </Grid>
 
-            <!-- Refresh button -->
-            <Button Grid.Column="3"
-                    Text="↻"
-                    Command="{Binding RefreshCommand}"
-                    Padding="10,6"
-                    FontSize="16"
-                    CornerRadius="14"
-                    BorderWidth="1.5"
-                    BorderColor="{AppThemeBinding Light={StaticResource ButtonBorderLight}, Dark={StaticResource ButtonBorderDark}}"
-                    BackgroundColor="{AppThemeBinding Light={StaticResource ButtonBgLight}, Dark={StaticResource ButtonSecondaryBgDark}}"
-                    TextColor="{AppThemeBinding Light={StaticResource ButtonTextLight}, Dark={StaticResource ButtonTextDark}}"
-                    SemanticProperties.Hint="Reload briefing" />
-
-            <!-- Audio briefing button -->
-            <Button Grid.Column="4"
-                    Text="{Binding AudioButtonText}"
-                    Command="{Binding PlayAudioBriefingCommand}"
-                    Padding="10,6"
-                    FontSize="16"
-                    CornerRadius="14"
-                    BorderWidth="1.5"
-                    BorderColor="{AppThemeBinding Light={StaticResource AccentOrange}, Dark={StaticResource DarkAccentOrange}}"
-                    BackgroundColor="{AppThemeBinding Light={StaticResource AccentOrangeLight}, Dark={StaticResource DarkAccentOrangeLight}}"
-                    TextColor="{AppThemeBinding Light={StaticResource AccentOrange}, Dark={StaticResource DarkAccentOrange}}"
-                    SemanticProperties.Hint="{Binding AudioButtonHint}" />
-        </Grid>
+                <!-- Row 2: Status / Live Timestamp Strip -->
+                <HorizontalStackLayout Spacing="6" VerticalOptions="Center" Padding="2,0,0,0">
+                    <Label Text="●"
+                           FontSize="9"
+                           TextColor="{StaticResource AccentGreen}"
+                           VerticalOptions="Center" />
+                    <Label x:Name="StatusLabel"
+                           Text="{Binding StatusText}"
+                           FontFamily="LegacySansBook"
+                           FontSize="11"
+                           FontAttributes="Bold"
+                           TextColor="{StaticResource Gray600}"
+                           VerticalOptions="Center"
+                           LineBreakMode="TailTruncation" />
+                </HorizontalStackLayout>
+            </VerticalStackLayout>
+        </Border>
 
         <!-- ══════════════════════════════════════════════
              SCROLLABLE FEED (RefreshView + ScrollView)
@@ -320,7 +326,7 @@
                      x:Name="BriefingRefreshView"
                      IsRefreshing="{Binding IsRefreshing}"
                      Command="{Binding RefreshCommand}">
-            <ScrollView>
+            <ScrollView x:Name="FeedScrollView">
                 <VerticalStackLayout Padding="20,16,20,0"
                                      Spacing="12"
                                      Background="{StaticResource SecondaryLightBrush}">
@@ -454,6 +460,88 @@
                                TextColor="{StaticResource Gray500}"
                                HorizontalTextAlignment="Center" />
                     </VerticalStackLayout>
+
+                    <!-- ══════════════════════════════════════════════
+                         NATIVE AD — Displayed between article feed and Video News section
+                    ══════════════════════════════════════════════ -->
+                    <admob:NativeAdView AdUnitId="{x:Static constants:AdConstants.VideoNativeAdUnitId}"
+                                        Margin="0,8,0,16">
+                        <admob:NativeAdView.AdContent>
+                            <ContentView x:DataType="{x:Null}">
+                                <Border Padding="0"
+                                        Background="{AppThemeBinding Light={StaticResource WhiteBrush}, Dark={StaticResource Gray800Brush}}"
+                                        StrokeShape="RoundRectangle 16"
+                                        StrokeThickness="1"
+                                        Stroke="{AppThemeBinding Light={StaticResource Gray100Brush}, Dark={StaticResource Gray700Brush}}"
+                                        MinimumHeightRequest="110">
+                                    <Grid ColumnDefinitions="110,*" ColumnSpacing="0"
+                                          MinimumHeightRequest="110">
+
+                                        <!-- Ad Media (left panel) -->
+                                        <Border Grid.Column="0"
+                                                StrokeThickness="0"
+                                                StrokeShape="RoundRectangle 16,0,16,0"
+                                                HeightRequest="110"
+                                                WidthRequest="110"
+                                                VerticalOptions="Fill">
+                                            <admob:MediaView HeightRequest="110"
+                                                             WidthRequest="110"
+                                                             VerticalOptions="Fill" />
+                                        </Border>
+
+                                        <!-- Ad Content (right panel) -->
+                                        <VerticalStackLayout Grid.Column="1"
+                                                             Padding="12,10,12,10"
+                                                             Spacing="4"
+                                                             VerticalOptions="Center">
+
+                                            <!-- Attribution Row -->
+                                            <HorizontalStackLayout Spacing="6" VerticalOptions="Center">
+                                                <Border Padding="6,2"
+                                                        BackgroundColor="{AppThemeBinding Light=#FEF3C7, Dark=#78350F}"
+                                                        StrokeShape="RoundRectangle 6"
+                                                        StrokeThickness="0">
+                                                    <Label Text="AD • SPONSORED"
+                                                           FontSize="9"
+                                                           FontAttributes="Bold"
+                                                           TextColor="{AppThemeBinding Light=#B45309, Dark=#FDE68A}" />
+                                                </Border>
+                                                <Label Text="{Binding Advertiser}"
+                                                       FontFamily="LegacySansBook"
+                                                       FontSize="11"
+                                                       TextColor="{StaticResource Gray500}"
+                                                       MaxLines="1"
+                                                       LineBreakMode="TailTruncation" />
+                                            </HorizontalStackLayout>
+
+                                            <!-- Headline -->
+                                            <Label Text="{Binding Headline}"
+                                                   FontFamily="LegacySerifBold"
+                                                   FontSize="13"
+                                                   FontAttributes="Bold"
+                                                   MaxLines="2"
+                                                   LineBreakMode="WordWrap"
+                                                   TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource DarkTextPrimary}}" />
+
+                                            <!-- Body -->
+                                            <Label Text="{Binding Body}"
+                                                   FontFamily="LegacySansBook"
+                                                   FontSize="11"
+                                                   TextColor="{StaticResource Gray500}"
+                                                   MaxLines="2"
+                                                   LineBreakMode="TailTruncation" />
+
+                                            <!-- CTA -->
+                                            <Label Text="{Binding CallToAction, FallbackValue='Learn More →'}"
+                                                   FontFamily="LegacySansBold"
+                                                   FontSize="11"
+                                                   TextColor="{StaticResource AccentBlue}" />
+                                        </VerticalStackLayout>
+                                    </Grid>
+                                </Border>
+                            </ContentView>
+                        </admob:NativeAdView.AdContent>
+                    </admob:NativeAdView>
 
                     <!-- ══════════════════════════════════════════════
                          VIDEO STORIES — YouTube News Broadcasts & Reports
@@ -614,5 +702,45 @@
                 </VerticalStackLayout>
             </ScrollView>
         </RefreshView>
+
+        <!-- ══════════════════════════════════════════════
+             FLOATING "NEW STORIES" PILL (Appears on background sync)
+        ══════════════════════════════════════════════ -->
+        <Border Grid.Row="1"
+                IsVisible="{Binding HasNewStoriesAvailable}"
+                HorizontalOptions="Center"
+                VerticalOptions="Start"
+                Margin="0,12,0,0"
+                Padding="16,8"
+                Background="{AppThemeBinding Light=#0F172A, Dark=#1E293B}"
+                Stroke="{AppThemeBinding Light=#38BDF8, Dark=#38BDF8}"
+                StrokeThickness="1.5"
+                StrokeShape="RoundRectangle 24"
+                ZIndex="999"
+                SemanticProperties.Description="{Binding NewStoriesPillText}"
+                SemanticProperties.Hint="Tap to scroll to top and show new stories">
+            <Border.Shadow>
+                <Shadow Brush="#000000"
+                        Offset="0,4"
+                        Radius="12"
+                        Opacity="0.35" />
+            </Border.Shadow>
+            <Border.GestureRecognizers>
+                <TapGestureRecognizer Command="{Binding ApplyNewStoriesCommand}" />
+            </Border.GestureRecognizers>
+            <HorizontalStackLayout Spacing="8" VerticalOptions="Center" InputTransparent="True">
+                <Label Text="↑"
+                       TextColor="#38BDF8"
+                       FontSize="15"
+                       FontAttributes="Bold"
+                       VerticalOptions="Center" />
+                <Label Text="{Binding NewStoriesPillText}"
+                       TextColor="#FFFFFF"
+                       FontFamily="LegacySansBook"
+                       FontSize="13"
+                       FontAttributes="Bold"
+                       VerticalOptions="Center" />
+            </HorizontalStackLayout>
+        </Border>
     </Grid>
 </ContentPage>

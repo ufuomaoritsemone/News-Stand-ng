@@ -24,9 +24,9 @@
                 android:id="@+id/widget_title"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="NIGERIAN NEWS GRID"
+                android:text="NEWS STAND NG"
                 android:textColor="#FFFFFF"
-                android:textSize="12sp"
+                android:textSize="16sp"
                 android:textStyle="bold" />
 
             <TextView
@@ -35,8 +35,8 @@
                 android:layout_height="wrap_content"
                 android:layout_marginLeft="6dp"
                 android:text=""
-                android:textColor="#A0A0A0"
-                android:textSize="10sp" />
+                android:textColor="#B0B0B8"
+                android:textSize="13sp" />
         </LinearLayout>
 
         <ImageView
@@ -44,17 +44,19 @@
             android:layout_width="24dp"
             android:layout_height="24dp"
             android:layout_alignParentRight="true"
+            android:layout_alignParentEnd="true"
             android:layout_centerVertical="true"
-            android:src="@android:drawable/ic_popup_sync"
+            android:src="@android:drawable/ic_menu_rotate"
             android:contentDescription="Refresh news"
             android:padding="2dp" />
     </RelativeLayout>
 
-    <View
+    <ImageView
         android:layout_width="match_parent"
         android:layout_height="1dp"
         android:background="#2D2D36"
-        android:layout_marginBottom="6dp" />
+        android:layout_marginBottom="6dp"
+        android:contentDescription="@null" />
 
     <!-- Scrollable ListView -->
     <FrameLayout
@@ -66,8 +68,8 @@
             android:id="@+id/widget_news_list"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:divider="#25252E"
-            android:dividerHeight="1dp"
+            android:divider="@null"
+            android:dividerHeight="0dp"
             android:scrollbars="none" />
 
         <TextView
@@ -77,6 +79,6 @@
             android:gravity="center"
             android:text="Loading news..."
             android:textColor="#888888"
-            android:textSize="13sp" />
+            android:textSize="16sp" />
     </FrameLayout>
 </LinearLayout>

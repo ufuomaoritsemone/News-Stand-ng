@@ -11,7 +11,7 @@ builder.Services
     .AddApplicationServices()
     .AddInfrastructureServices(builder.Configuration)
     .AddConfiguredCors(builder.Configuration)   // Fix #2 — named origin allowlist
-    .AddApiRateLimiting()                        // Fix #4 — sliding window rate limiter
+    .AddApiRateLimiting(builder.Configuration)  // Fix #4 — sliding window rate limiter
     .AddObservability();                         // Fix #38 — OpenTelemetry tracing + metrics
 
 // Authorization Services (Hardening Step 3)

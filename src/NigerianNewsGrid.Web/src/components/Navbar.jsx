@@ -16,8 +16,8 @@ export default function Navbar({
         <div className="buletin-header-inner">
           {/* Left: Brand + Navigation Links */}
           <div className="buletin-nav-left">
-            <a href="/" className="buletin-brand-logo" aria-label="Buletin Homepage">
-              <span className="brand-buletin">Buletin</span>
+            <a href="/" className="buletin-brand-logo" aria-label="News Stand NG Homepage">
+              <span className="brand-buletin">News Stand NG</span>
             </a>
 
             <div className="buletin-brand-divider" aria-hidden="true" />

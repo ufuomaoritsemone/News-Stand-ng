@@ -212,8 +212,12 @@ public static class RssScraperHelper
         @"\b(fintech|startup|series [a-d]|seed funding|venture capital|\bvc\b|flutterwave|paystack|moniepoint|opay|piggyvest|kuda bank|andela|interswitch|chowdeck|moove|\bai\b|artificial intelligence|machine learning|large language model|generative ai|cloud computing|azure|google cloud|\baws\b|data center|starlink|satellite internet|\b5g\b|broadband|telecoms|\bnitda\b|\bncc\b|cybersecurity|software engineering|developer ecosystem|app store|play store|mobile app|web3|blockchain|crypto exchange)\b",
         RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
+    private static readonly Regex InternationalRegex = new(
+        @"\b(white house|pentagon|capitol hill|biden|joe biden|trump|donald trump|kamala harris|us congress|state department|us election|american election|justin trudeau|downing street|keir starmer|rishi sunak|westminster|house of commons|kremlin|putin|vladimir putin|moscow|zelensky|volodymyr zelensky|kyiv|ukraine war|emmanuel macron|elysee|scholz|olaf scholz|bundestag|european union|middle east|gaza|gaza strip|hamas|hezbollah|beirut|netanyahu|benjamin netanyahu|tel aviv|\bidf\b|tehran|ayatollah|khamenei|damascus|saudi arabia|riyadh|emirati|abu dhabi|qatar|doha|houthis?|beijing|xi jinping|taiwan strait|south china sea|tokyo|new delhi|narendra modi|islamabad|pyongyang|kim jong un|south africa|cyril ramaphosa|johannesburg|pretoria|\banc\b|kenya|william ruto|nairobi|ghanaian|ghana election|john mahama|nana akufo-addo|sudan war|sudan conflict|khartoum|\brsf\b|rapid support forces|burkina faso|ibrahim traore|mali junta|assimi goita|niger junta|abdourahamane tiani|congo|kinshasa|rwanda|paul kagame|somalia|al-shabaab|united nations|un general assembly|\bunga\b|un security council|\bunsc\b|antonio guterres|security council|\bnato\b|\bg7\b|\bg20\b|\bbrics\b|african union|\bau commission\b|international criminal court|\bicc\b|international court of justice|\bicj\b|world leaders|ceasefire talks|ballistic missile|foreign ministry|peace summit|airstrike|bilateral summit)\b",
+        RegexOptions.Compiled | RegexOptions.IgnoreCase);
+
     private static readonly Regex GeneralRegex = new(
-        @"\b(frsc|road safety|road crash|fatal accident|highway collision|cholera outbreak|lassa fever|ncdc|yellow fever|immunization|public health|teaching hospital|ministry of education|\bwaec\b|\bjamb\b|\butme\b|\bneco\b|\basuu\b|nelfund|student loan|nema|flood disaster|earth tremor|seismic|weather forecast|nimet|rainstorm|nlc|tuc|warning strike|minimum wage|salary arrears|christian association of nigeria|catholic bishops|nscia|sultan of sokoto|ooni of ife|traditional ruler|public holiday|united nations|\bun\b|visas? category|visa categories|visa application|embassy)\b",
+        @"\b(frsc|road safety|road crash|fatal accident|highway collision|cholera outbreak|lassa fever|ncdc|yellow fever|immunization|public health|teaching hospital|ministry of education|\bwaec\b|\bjamb\b|\butme\b|\bneco\b|\basuu\b|nelfund|student loan|nema|flood disaster|earth tremor|seismic|weather forecast|nimet|rainstorm|nlc|tuc|warning strike|minimum wage|salary arrears|christian association of nigeria|catholic bishops|nscia|sultan of sokoto|ooni of ife|traditional ruler|public holiday|visas? category|visa categories|visa application|embassy)\b",
         RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
     private static string StripHtml(string? input)
@@ -237,6 +241,7 @@ public static class RssScraperHelper
             { "Crime", CrimeRegex.Matches(title).Count * 3 + CrimeRegex.Matches(summary).Count },
             { "Entertainment", EntertainmentRegex.Matches(title).Count * 3 + EntertainmentRegex.Matches(summary).Count },
             { "Technology", TechnologyRegex.Matches(title).Count * 3 + TechnologyRegex.Matches(summary).Count },
+            { "International", InternationalRegex.Matches(title).Count * 3 + InternationalRegex.Matches(summary).Count },
             { "General", GeneralRegex.Matches(title).Count * 3 + GeneralRegex.Matches(summary).Count }
         };
 

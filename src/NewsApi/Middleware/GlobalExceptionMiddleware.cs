@@ -31,6 +31,12 @@ public class GlobalExceptionMiddleware
             var traceId = Activity.Current?.Id ?? context.TraceIdentifier;
             _logger.LogError(ex, "Unhandled exception occurred. TraceId: {TraceId}", traceId);
 
+            if (context.Response.HasStarted)
+            {
+                _logger.LogWarning("The response has already started; unable to write standardized ProblemDetails. TraceId: {TraceId}", traceId);
+                throw;
+            }
+
             context.Response.ContentType = "application/problem+json";
             context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
 

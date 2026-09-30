@@ -10,6 +10,8 @@ public partial class SettingsPage : ContentPage
 {
     private readonly INotificationService _notificationService;
     private readonly NewsApiClient _apiClient;
+    private readonly ISonicFeedbackService _sonicService;
+    private readonly IBackgroundSyncService _backgroundSyncService;
     private bool _isInitializing = true;
     private int _selectedRating = 5;
     private string _selectedFeedbackCategory = "General";
@@ -25,11 +27,17 @@ public partial class SettingsPage : ContentPage
         "CBN"
     ];
 
-    public SettingsPage(INotificationService notificationService, NewsApiClient apiClient)
+    public SettingsPage(
+        INotificationService notificationService,
+        NewsApiClient apiClient,
+        ISonicFeedbackService sonicService,
+        IBackgroundSyncService backgroundSyncService)
     {
         InitializeComponent();
         _notificationService = notificationService;
         _apiClient = apiClient;
+        _sonicService = sonicService;
+        _backgroundSyncService = backgroundSyncService;
 
         Appearing += (_, _) =>
         {
@@ -55,13 +63,46 @@ public partial class SettingsPage : ContentPage
         SwitchKeywordAlerts.IsToggled = NotificationPreferences.KeywordAlertsEnabled;
         KeywordAlertsContainer.IsVisible = NotificationPreferences.KeywordAlertsEnabled;
 
+        // Background Updates & Battery saver toggle (default true)
+        SwitchBackgroundUpdates.IsToggled = NotificationPreferences.BackgroundUpdatesEnabled;
+
         // Analytics opt-in (default true — permitted by design)
         SwitchAnalytics.IsToggled = Preferences.Get("analytics_enabled", defaultValue: true);
+
+        // Sonic Feedback opt-in (default true)
+        SwitchSonicFeedback.IsToggled = _sonicService.IsEnabled;
 
         RenderActiveKeywordChips();
         RenderPresetSuggestions();
 
         _isInitializing = false;
+    }
+
+    private void OnBackgroundUpdatesToggled(object? sender, ToggledEventArgs e)
+    {
+        if (_isInitializing) return;
+
+        NotificationPreferences.BackgroundUpdatesEnabled = e.Value;
+
+        if (e.Value)
+        {
+            _backgroundSyncService.ScheduleNewsSync(immediate: true);
+        }
+        else
+        {
+            _backgroundSyncService.CancelNewsSync();
+        }
+    }
+
+    private void OnSonicFeedbackToggled(object? sender, ToggledEventArgs e)
+    {
+        if (_isInitializing) return;
+        _sonicService.IsEnabled = e.Value;
+    }
+
+    private async void OnTestNewspaperHornClicked(object? sender, EventArgs e)
+    {
+        await _sonicService.PlayRefreshChimeAsync();
     }
 
     private async void OnAudioBriefingsToggled(object? sender, ToggledEventArgs e)
@@ -131,6 +172,11 @@ public partial class SettingsPage : ContentPage
         if (e.Value)
         {
             await _notificationService.RequestPermissionAsync();
+            _backgroundSyncService.ScheduleNewsSync(immediate: true);
+        }
+        else
+        {
+            _backgroundSyncService.CancelNewsSync();
         }
     }
 

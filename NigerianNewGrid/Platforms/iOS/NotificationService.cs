@@ -30,7 +30,7 @@ public class NotificationService : INotificationService
         var content = new UNMutableNotificationContent
         {
             Title = "☀️ Good Morning!",
-            Body = "Your Nigerian news briefing is ready. Catch up on top stories across Politics, Business & Sports.",
+            Body = "Your News Stand NG briefing is ready. Catch up on top stories across Politics, Business & Sports.",
             Sound = UNNotificationSound.Default
         };
 

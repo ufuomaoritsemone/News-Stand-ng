@@ -1,6 +1,12 @@
+using System.IO;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Features;
+using Microsoft.Extensions.Logging.Abstractions;
+using Moq;
+using NewsApi.Middleware;
 using NewsApi.Models;
 using Xunit;
 
@@ -249,6 +255,18 @@ public class ApiKeyMiddlewareHardeningTests : IClassFixture<CustomWebApplication
     }
 
     [Fact]
+    public async Task GetSources_WithCancelledToken_AbortsGracefully()
+    {
+        using var cts = new CancellationTokenSource();
+        cts.Cancel();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(async () =>
+        {
+            await _client.GetAsync("/api/v1/sources", cts.Token);
+        });
+    }
+
+    [Fact]
     public async Task GetVideoChannels_ReturnsVideoChannelDtos()
     {
         var response = await _client.GetAsync("/api/v1/video-channels");
@@ -304,5 +322,46 @@ public class ApiKeyMiddlewareHardeningTests : IClassFixture<CustomWebApplication
         var body = await response.Content.ReadAsStringAsync();
         Assert.DoesNotContain("Exception", body);
         Assert.DoesNotContain("at ", body); // stack trace guard
+    }
+
+    [Fact]
+    public async Task GlobalExceptionMiddleware_WhenResponseHasStarted_LogsAndRethrows()
+    {
+        var middleware = new GlobalExceptionMiddleware(ctx =>
+        {
+            throw new InvalidOperationException("Failure occurred mid-stream");
+        }, NullLogger<GlobalExceptionMiddleware>.Instance);
+
+        var context = new DefaultHttpContext();
+        var mockFeature = new Mock<IHttpResponseFeature>();
+        mockFeature.SetupGet(f => f.HasStarted).Returns(true);
+        context.Features.Set<IHttpResponseFeature>(mockFeature.Object);
+
+        // Must rethrow original exception rather than masking with 'StatusCode cannot be set'
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => middleware.InvokeAsync(context));
+        Assert.Equal("Failure occurred mid-stream", ex.Message);
+    }
+
+    [Fact]
+    public async Task GlobalExceptionMiddleware_WhenResponseNotStarted_WritesProblemDetails()
+    {
+        var middleware = new GlobalExceptionMiddleware(ctx =>
+        {
+            throw new ApplicationException("Unhandled domain fault");
+        }, NullLogger<GlobalExceptionMiddleware>.Instance);
+
+        var context = new DefaultHttpContext();
+        context.Response.Body = new MemoryStream();
+
+        await middleware.InvokeAsync(context);
+
+        Assert.Equal((int)HttpStatusCode.InternalServerError, context.Response.StatusCode);
+        Assert.Equal("application/problem+json", context.Response.ContentType);
+
+        context.Response.Body.Seek(0, SeekOrigin.Begin);
+        using var reader = new StreamReader(context.Response.Body);
+        var body = await reader.ReadToEndAsync();
+        Assert.Contains("An unexpected server error occurred", body);
+        Assert.DoesNotContain("Unhandled domain fault", body); // Stack and internal message not leaked
     }
 }

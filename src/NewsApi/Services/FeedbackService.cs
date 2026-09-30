@@ -10,6 +10,7 @@ public interface IFeedbackService
 {
     Task<FeedbackResponseDto> SubmitFeedbackAsync(FeedbackRequestDto request, CancellationToken cancellationToken = default);
     Task<List<FeedbackItem>> GetRecentFeedbacksAsync(int limit = 50, CancellationToken cancellationToken = default);
+    Task<bool> DeleteFeedbackAsync(string id, CancellationToken cancellationToken = default);
 }
 
 public class FeedbackService : IFeedbackService
@@ -54,7 +55,7 @@ public class FeedbackService : IFeedbackService
 
         return new FeedbackResponseDto(
             Success: true,
-            Message: "Thank you for your feedback! Your experience helps us improve Nigerian News Grid.",
+            Message: "Thank you for your feedback! Your experience helps us improve News Stand NG.",
             FeedbackId: feedback.Id
         );
     }
@@ -62,14 +63,39 @@ public class FeedbackService : IFeedbackService
     public async Task<List<FeedbackItem>> GetRecentFeedbacksAsync(int limit = 50, CancellationToken cancellationToken = default)
     {
         var effectiveLimit = Math.Clamp(limit, 1, 200);
-        var items = await _db.Feedbacks
-            .AsNoTracking()
-            .ToListAsync(cancellationToken);
 
-        return items
+        // SQLite does not support native DateTimeOffset in ORDER BY clauses in EF Core
+        if (_db.Database.ProviderName == "Microsoft.EntityFrameworkCore.Sqlite")
+        {
+            var items = await _db.Feedbacks
+                .AsNoTracking()
+                .ToListAsync(cancellationToken);
+
+            return items
+                .OrderByDescending(f => f.CreatedAt)
+                .Take(effectiveLimit)
+                .ToList();
+        }
+
+        return await _db.Feedbacks
+            .AsNoTracking()
             .OrderByDescending(f => f.CreatedAt)
             .Take(effectiveLimit)
-            .ToList();
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<bool> DeleteFeedbackAsync(string id, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(id)) return false;
+
+        var item = await _db.Feedbacks.FindAsync(new object[] { id }, cancellationToken);
+        if (item is null) return false;
+
+        _db.Feedbacks.Remove(item);
+        await _db.SaveChangesAsync(cancellationToken);
+
+        _logger.LogInformation("Feedback {FeedbackId} deleted by administrator.", id);
+        return true;
     }
 
     private async Task<bool> TrySendFeedbackEmailAsync(FeedbackItem feedback, CancellationToken cancellationToken)
@@ -90,12 +116,12 @@ public class FeedbackService : IFeedbackService
             var username = _config["Feedback:Smtp:UserName"];
             var password = _config["Feedback:Smtp:Password"];
             var fromEmail = _config["Feedback:Smtp:FromEmail"] ?? "no-reply@nigeriannewsgrid.com";
-            var fromName = _config["Feedback:Smtp:FromName"] ?? "Nigerian News Grid";
+            var fromName = _config["Feedback:Smtp:FromName"] ?? "News Stand NG";
 
             using var message = new MailMessage
             {
                 From = new MailAddress(fromEmail, fromName),
-                Subject = $"[User Feedback - {feedback.Rating}⭐] {feedback.Category} - Nigerian News Grid",
+                Subject = $"[User Feedback - {feedback.Rating}⭐] {feedback.Category} - News Stand NG",
                 IsBodyHtml = true,
                 Body = BuildHtmlEmailBody(feedback)
             };
@@ -204,7 +230,7 @@ public class FeedbackService : IFeedbackService
             </table>
         </div>
         <div class='footer'>
-            Nigerian News Grid &bull; Automated User Experience Feedback Notification
+            News Stand NG &bull; Automated User Experience Feedback Notification
         </div>
     </div>
 </body>

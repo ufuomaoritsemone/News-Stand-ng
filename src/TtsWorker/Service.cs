@@ -31,17 +31,20 @@ public class Service : BackgroundService
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly IConfiguration _configuration;
     private readonly ITtsSynthesizer _synthesizer;
+    private readonly IHostApplicationLifetime? _appLifetime;
 
     public Service(
         ILogger<Service> logger,
         IHttpClientFactory httpClientFactory,
         IConfiguration configuration,
-        ITtsSynthesizer synthesizer)
+        ITtsSynthesizer synthesizer,
+        IHostApplicationLifetime? appLifetime = null)
     {
         _logger = logger;
         _httpClientFactory = httpClientFactory;
         _configuration = configuration;
         _synthesizer = synthesizer;
+        _appLifetime = appLifetime;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -62,6 +65,14 @@ public class Service : BackgroundService
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Unhandled exception during TTS background cycle");
+            }
+
+            if (string.Equals(Environment.GetEnvironmentVariable("TTS_RUN_ONCE"), "true", StringComparison.OrdinalIgnoreCase)
+                || _configuration.GetValue<bool>("TtsWorker:RunOnce"))
+            {
+                _logger.LogInformation("🏁 TTS_RUN_ONCE set. Stopping worker after single synthesis pass.");
+                _appLifetime?.StopApplication();
+                break;
             }
 
             var currentWat = TtsBriefingFormatter.GetNigerianTime();
@@ -85,7 +96,7 @@ public class Service : BackgroundService
         var client = _httpClientFactory.CreateClient();
         var apiBaseUrl = _configuration["ApiBaseUrl"] 
             ?? _configuration["NewsApi:BaseUrl"] 
-            ?? "http://localhost:5000";
+            ?? "http://localhost:56193";
         var articlesUrl = $"{apiBaseUrl.TrimEnd('/')}/api/v1/articles?limit=100";
 
         List<ArticleDto>? articles = null;
@@ -155,7 +166,7 @@ public class Service : BackgroundService
                 masterStoryIndex++;
             }
         }
-        masterScriptBuilder.AppendLine("That concludes this news briefing from the Nigerian News Grid.");
+        masterScriptBuilder.AppendLine("That concludes this news briefing from News Stand NG.");
 
         var masterScript = masterScriptBuilder.ToString();
         var masterBaseName = $"briefing_{timeOfDay.ToLowerInvariant()}";

@@ -13,8 +13,18 @@ public class MainActivity : MauiAppCompatActivity
 {
     protected override void OnCreate(Bundle? savedInstanceState)
     {
+        Android.Util.Log.Info("APP_DEBUG", "MainActivity.OnCreate START");
         base.OnCreate(savedInstanceState);
+        Android.Util.Log.Info("APP_DEBUG", "MainActivity.OnCreate base.OnCreate DONE");
         HandleNotificationIntent(Intent);
+        Android.Util.Log.Info("APP_DEBUG", "MainActivity.OnCreate FINISHED");
+    }
+
+    protected override void OnResume()
+    {
+        Android.Util.Log.Info("APP_DEBUG", "MainActivity.OnResume START");
+        base.OnResume();
+        Android.Util.Log.Info("APP_DEBUG", "MainActivity.OnResume DONE");
     }
 
     protected override void OnNewIntent(Intent? intent)
@@ -78,7 +88,7 @@ public class MainActivity : MauiAppCompatActivity
                         var url = articleUrl;
                         if (string.IsNullOrWhiteSpace(url) && !string.IsNullOrWhiteSpace(articleId))
                         {
-                            url = ResolveUrlFromCache(articleId);
+                            url = await ResolveUrlFromCacheAsync(articleId);
                         }
 
                         if (!string.IsNullOrWhiteSpace(url))
@@ -96,16 +106,24 @@ public class MainActivity : MauiAppCompatActivity
         }
     }
 
-    private static string? ResolveUrlFromCache(string articleId)
+    private static async Task<string?> ResolveUrlFromCacheAsync(string articleId)
     {
         try
         {
+            var persistenceService = IPlatformApplication.Current?.Services.GetService<INewsPersistenceService>();
+            if (persistenceService != null)
+            {
+                var categories = await persistenceService.GetCachedBriefingAsync(days: 14);
+                var item = categories?.SelectMany(c => c.Top).FirstOrDefault(i => string.Equals(i.Id, articleId, StringComparison.OrdinalIgnoreCase));
+                if (item?.Url != null) return item.Url;
+            }
+
             var cached = Preferences.Get("last_briefing", string.Empty);
             if (string.IsNullOrWhiteSpace(cached)) return null;
 
-            var categories = JsonSerializer.Deserialize<List<BriefingCategory>>(cached, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-            var item = categories?.SelectMany(c => c.Top).FirstOrDefault(i => string.Equals(i.Id, articleId, StringComparison.OrdinalIgnoreCase));
-            return item?.Url;
+            var legacyCategories = JsonSerializer.Deserialize<List<BriefingCategory>>(cached, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            var legacyItem = legacyCategories?.SelectMany(c => c.Top).FirstOrDefault(i => string.Equals(i.Id, articleId, StringComparison.OrdinalIgnoreCase));
+            return legacyItem?.Url;
         }
         catch
         {

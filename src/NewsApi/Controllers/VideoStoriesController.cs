@@ -11,6 +11,14 @@ namespace NewsApi.Controllers;
 [Route("api/v1/video-stories")]
 public class VideoStoriesController : ControllerBase
 {
+    private static int _isSyncingChannels;
+    private static DateTimeOffset _lastChannelSyncAttempt = DateTimeOffset.MinValue;
+
+    private static int _isSyncingTrending;
+    private static DateTimeOffset _lastTrendingSyncAttempt = DateTimeOffset.MinValue;
+
+    private static readonly TimeSpan MinSyncCooldown = TimeSpan.FromMinutes(15);
+
     private readonly NewsDbContext _db;
     private readonly IYouTubeFeedService _ytService;
     private readonly IServiceScopeFactory _scopeFactory;
@@ -36,7 +44,10 @@ public class VideoStoriesController : ControllerBase
     /// Highly optimized with in-memory caching and non-blocking background sync.
     /// </summary>
     [HttpGet]
-    public async Task<IActionResult> GetLatest([FromQuery] int limit = 20, [FromQuery] string? category = null)
+    public async Task<IActionResult> GetLatest(
+        [FromQuery] int limit = 20,
+        [FromQuery] string? category = null,
+        CancellationToken cancellationToken = default)
     {
         var effectiveLimit = Math.Clamp(limit, 1, 50);
         var normCategory = string.IsNullOrWhiteSpace(category) ? "All" : category.Trim();
@@ -58,29 +69,39 @@ public class VideoStoriesController : ControllerBase
         var stories = await query
             .OrderByDescending(v => v.PublishedAt)
             .Take(effectiveLimit)
-            .ToListAsync();
+            .ToListAsync(cancellationToken);
 
         foreach (var s in stories)
         {
             s.ThumbnailUrl = YouTubeFeedService.ResolveBestThumbnail(s.ThumbnailUrl, null, s.VideoId, s.Category);
         }
 
-        // Stale-while-revalidate / initial background sync (non-blocking with isolated DI scope)
+        // Stale-while-revalidate / initial background sync (throttled gate with isolated DI scope)
         if (stories.Count == 0 || stories[0].PublishedAt < DateTime.UtcNow.AddHours(-2))
         {
-            _ = Task.Run(async () =>
+            var now = DateTimeOffset.UtcNow;
+            if (now - _lastChannelSyncAttempt >= MinSyncCooldown &&
+                Interlocked.CompareExchange(ref _isSyncingChannels, 1, 0) == 0)
             {
-                try
+                _lastChannelSyncAttempt = now;
+                _ = Task.Run(async () =>
                 {
-                    using var scope = _scopeFactory.CreateScope();
-                    var ytService = scope.ServiceProvider.GetRequiredService<IYouTubeFeedService>();
-                    await ytService.SyncAllChannelsAsync();
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogWarning(ex, "Background channel sync failed in VideoStoriesController");
-                }
-            });
+                    try
+                    {
+                        using var scope = _scopeFactory.CreateScope();
+                        var ytService = scope.ServiceProvider.GetRequiredService<IYouTubeFeedService>();
+                        await ytService.SyncAllChannelsAsync();
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "Background channel sync failed in VideoStoriesController");
+                    }
+                    finally
+                    {
+                        Interlocked.Exchange(ref _isSyncingChannels, 0);
+                    }
+                });
+            }
         }
 
         var dtos = stories.Select(ToDto).ToList();
@@ -100,14 +121,14 @@ public class VideoStoriesController : ControllerBase
     /// Triggers an immediate refresh of video stories from all registered YouTube channels.
     /// </summary>
     [HttpPost("sync")]
-    public async Task<IActionResult> SyncChannels()
+    public async Task<IActionResult> SyncChannels(CancellationToken cancellationToken = default)
     {
         try
         {
-            var count = await _ytService.SyncAllChannelsAsync();
+            var count = await _ytService.SyncAllChannelsAsync(cancellationToken);
             return Ok(new { message = $"Successfully synced YouTube feeds. {count} new stories added.", newCount = count });
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             _logger.LogError(ex, "Error syncing YouTube video channels");
             return StatusCode(500, new { message = "Sync failed. An error occurred while synchronizing YouTube feeds." });
@@ -119,7 +140,10 @@ public class VideoStoriesController : ControllerBase
     /// Highly optimized with in-memory caching and non-blocking background sync.
     /// </summary>
     [HttpGet("trending")]
-    public async Task<IActionResult> GetTrending([FromQuery] int limit = 20, [FromQuery] string? category = null)
+    public async Task<IActionResult> GetTrending(
+        [FromQuery] int limit = 20,
+        [FromQuery] string? category = null,
+        CancellationToken cancellationToken = default)
     {
         var effectiveLimit = Math.Clamp(limit, 1, 50);
         var normCategory = string.IsNullOrWhiteSpace(category) ? "All" : category.Trim();
@@ -143,29 +167,39 @@ public class VideoStoriesController : ControllerBase
             .ThenByDescending(v => v.ViewCount)
             .ThenByDescending(v => v.PublishedAt)
             .Take(effectiveLimit)
-            .ToListAsync();
+            .ToListAsync(cancellationToken);
 
         foreach (var s in trendingStories)
         {
             s.ThumbnailUrl = YouTubeFeedService.ResolveBestThumbnail(s.ThumbnailUrl, null, s.VideoId, s.Category);
         }
 
-        // Stale-while-revalidate / initial background sync (non-blocking with isolated DI scope)
+        // Stale-while-revalidate / initial background sync (throttled gate with isolated DI scope)
         if (trendingStories.Count == 0 || trendingStories[0].PublishedAt < DateTime.UtcNow.AddHours(-2))
         {
-            _ = Task.Run(async () =>
+            var now = DateTimeOffset.UtcNow;
+            if (now - _lastTrendingSyncAttempt >= MinSyncCooldown &&
+                Interlocked.CompareExchange(ref _isSyncingTrending, 1, 0) == 0)
             {
-                try
+                _lastTrendingSyncAttempt = now;
+                _ = Task.Run(async () =>
                 {
-                    using var scope = _scopeFactory.CreateScope();
-                    var ytService = scope.ServiceProvider.GetRequiredService<IYouTubeFeedService>();
-                    await ytService.SyncTrendingNewsAsync();
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogWarning(ex, "Background trending sync failed in VideoStoriesController");
-                }
-            });
+                    try
+                    {
+                        using var scope = _scopeFactory.CreateScope();
+                        var ytService = scope.ServiceProvider.GetRequiredService<IYouTubeFeedService>();
+                        await ytService.SyncTrendingNewsAsync();
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "Background trending sync failed in VideoStoriesController");
+                    }
+                    finally
+                    {
+                        Interlocked.Exchange(ref _isSyncingTrending, 0);
+                    }
+                });
+            }
         }
 
         var dtos = trendingStories.Select(ToDto).ToList();
@@ -205,14 +239,14 @@ public class VideoStoriesController : ControllerBase
     /// Triggers an immediate refresh of trending YouTube video stories.
     /// </summary>
     [HttpPost("trending/sync")]
-    public async Task<IActionResult> SyncTrending()
+    public async Task<IActionResult> SyncTrending(CancellationToken cancellationToken = default)
     {
         try
         {
-            var count = await _ytService.SyncTrendingNewsAsync();
+            var count = await _ytService.SyncTrendingNewsAsync(cancellationToken);
             return Ok(new { message = $"Successfully synced trending YouTube news. {count} stories updated.", updatedCount = count });
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             _logger.LogError(ex, "Error syncing trending YouTube stories");
             return StatusCode(500, new { message = "Trending sync failed. An error occurred while synchronizing trending stories." });
@@ -223,12 +257,12 @@ public class VideoStoriesController : ControllerBase
     /// Triggers an immediate synchronization of both channel feeds and trending YouTube news.
     /// </summary>
     [HttpPost("sync/all")]
-    public async Task<IActionResult> SyncAll()
+    public async Task<IActionResult> SyncAll(CancellationToken cancellationToken = default)
     {
         try
         {
-            var channelCount = await _ytService.SyncAllChannelsAsync();
-            var trendingCount = await _ytService.SyncTrendingNewsAsync();
+            var channelCount = await _ytService.SyncAllChannelsAsync(cancellationToken);
+            var trendingCount = await _ytService.SyncTrendingNewsAsync(cancellationToken);
             return Ok(new
             {
                 message = "Successfully synchronized all YouTube channels and trending feeds.",
@@ -236,7 +270,7 @@ public class VideoStoriesController : ControllerBase
                 trendingStoriesSynced = trendingCount
             });
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             _logger.LogError(ex, "Error syncing all YouTube channels and trending stories");
             return StatusCode(500, new { message = "Full sync failed. An error occurred while synchronizing all feeds." });
@@ -247,13 +281,13 @@ public class VideoStoriesController : ControllerBase
     /// Deletes a specific video story.
     /// </summary>
     [HttpDelete("{id}")]
-    public async Task<IActionResult> Delete(string id)
+    public async Task<IActionResult> Delete(string id, CancellationToken cancellationToken = default)
     {
-        var story = await _db.VideoStories.FirstOrDefaultAsync(v => v.Id == id);
+        var story = await _db.VideoStories.FirstOrDefaultAsync(v => v.Id == id, cancellationToken);
         if (story is not null)
         {
             _db.VideoStories.Remove(story);
-            await _db.SaveChangesAsync();
+            await _db.SaveChangesAsync(cancellationToken);
         }
         return NoContent();
     }

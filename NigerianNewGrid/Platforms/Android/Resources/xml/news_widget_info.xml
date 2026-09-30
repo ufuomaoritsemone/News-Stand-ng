@@ -8,6 +8,7 @@
     android:targetCellHeight="2"
     android:updatePeriodMillis="1800000"
     android:initialLayout="@layout/widget_news_layout"
+    android:previewLayout="@layout/widget_news_layout"
     android:resizeMode="horizontal|vertical"
     android:widgetCategory="home_screen">
 </appwidget-provider>

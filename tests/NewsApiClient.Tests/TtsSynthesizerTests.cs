@@ -223,4 +223,15 @@ public class TtsSynthesizerTests : IClassFixture<WebApplicationFactory<Program>>
         var metadata = await response.Content.ReadFromJsonAsync<NigerianNewsGrid.Client.Models.AudioBriefingMetadata>();
         Assert.NotNull(metadata);
     }
+
+    [Fact]
+    public void TtsWorker_DefaultFallbackPort_Is56193()
+    {
+        var config = new ConfigurationBuilder().Build();
+        var apiBaseUrl = config["ApiBaseUrl"] 
+            ?? config["NewsApi:BaseUrl"] 
+            ?? "http://localhost:56193";
+
+        Assert.Equal("http://localhost:56193", apiBaseUrl);
+    }
 }

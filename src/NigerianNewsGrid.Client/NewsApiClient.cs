@@ -439,6 +439,39 @@ public class NewsApiClient
         }
     }
 
+    /// <summary>
+    /// Fetches lightweight article delta records (e.g. category reclassifications) modified since the given UTC timestamp.
+    /// Used by client-side SQLite cache to reconcile discrepancies with the central database.
+    /// </summary>
+    public async Task<List<ArticleDeltaDto>> GetArticleDeltasAsync(DateTime? sinceUtc = null, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var normalizedBaseUrl = NormalizeBaseUrl(BaseUrl);
+            var builder = new UriBuilder(new Uri(new Uri(normalizedBaseUrl), "api/v1/articles/sync"));
+            if (sinceUtc.HasValue)
+            {
+                var query = System.Web.HttpUtility.ParseQueryString(builder.Query);
+                query["sinceUtc"] = sinceUtc.Value.ToString("O");
+                builder.Query = query.ToString();
+            }
+
+            var response = await _httpClient.GetAsync(builder.Uri, cancellationToken);
+            if (!response.IsSuccessStatusCode)
+            {
+                return new List<ArticleDeltaDto>();
+            }
+
+            var deltas = await response.Content.ReadFromJsonAsync<List<ArticleDeltaDto>>(JsonOptions, cancellationToken);
+            return deltas ?? new List<ArticleDeltaDto>();
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            System.Diagnostics.Debug.WriteLine($"[NewsApiClient] Delta sync error: {ex.Message}");
+            return new List<ArticleDeltaDto>();
+        }
+    }
+
     private static string NormalizeBaseUrl(string baseUrl)
     {
         return string.IsNullOrWhiteSpace(baseUrl) ? "http://localhost:56193" : baseUrl.Trim().TrimEnd('/');

@@ -21,4 +21,11 @@ public static class AppPreferenceKeys
 
     // ── User Keywords ────────────────────────────────────────────
     public const string KeywordAlerts       = "keyword_alerts";
+
+    // ── Background Updates & Battery ─────────────────────────────
+    public const string BackgroundUpdates   = "background_updates_enabled";
+
+    // ── Synchronization ──────────────────────────────────────────
+    public const string LastDeltaSyncUtc        = "last_delta_sync_utc";
+    public const string LastBriefingReceivedUtc = "last_briefing_received_utc";
 }

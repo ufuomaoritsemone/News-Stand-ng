@@ -353,7 +353,7 @@ public class ArticleDistillerService
                             </div>
 
                             <div class=""nng-reader-footer"">
-                                ✨ Clean Reading View • Nigerian News
+                                ✨ Clean Reading View • News Stand NG
                             </div>
                         </div>
                     `;

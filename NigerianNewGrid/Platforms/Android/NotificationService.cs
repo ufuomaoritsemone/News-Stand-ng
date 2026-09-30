@@ -16,12 +16,15 @@ public class NotificationService : INotificationService
 
     public NotificationService()
     {
-        CreateNotificationChannels();
+        if (OperatingSystem.IsAndroidVersionAtLeast(26))
+        {
+            CreateNotificationChannels();
+        }
     }
 
+    [System.Runtime.Versioning.SupportedOSPlatform("android26.0")]
     private static void CreateNotificationChannels()
     {
-        if (Build.VERSION.SdkInt < BuildVersionCodes.O) return;
 
         var context = global::Android.App.Application.Context;
         var notificationManager = (NotificationManager?)context.GetSystemService(Context.NotificationService);
@@ -33,7 +36,7 @@ public class NotificationService : INotificationService
             "Daily Morning Briefings",
             NotificationImportance.Default)
         {
-            Description = "Daily curated morning news briefings for Nigerian News."
+            Description = "Daily curated morning news briefings for News Stand NG."
         };
         morningChannel.EnableLights(true);
         morningChannel.EnableVibration(true);
@@ -92,6 +95,7 @@ public class NotificationService : INotificationService
             : PendingIntentFlags.UpdateCurrent;
 
         var pendingIntent = PendingIntent.GetBroadcast(context, MorningAlarmRequestCode, intent, pendingIntentFlags);
+        if (pendingIntent == null) return;
 
         var now = DateTime.Now;
         var target = DateTime.Today.Add(deliveryTime);
@@ -117,7 +121,10 @@ public class NotificationService : INotificationService
             : PendingIntentFlags.UpdateCurrent;
 
         var pendingIntent = PendingIntent.GetBroadcast(context, MorningAlarmRequestCode, intent, pendingIntentFlags);
-        alarmManager.Cancel(pendingIntent);
+        if (pendingIntent != null)
+        {
+            alarmManager.Cancel(pendingIntent);
+        }
     }
 
     public void ScheduleAudioBriefings()
@@ -132,6 +139,7 @@ public class NotificationService : INotificationService
             : PendingIntentFlags.UpdateCurrent;
 
         var pendingIntent = PendingIntent.GetBroadcast(context, AudioAlarmRequestCode, intent, pendingIntentFlags);
+        if (pendingIntent == null) return;
 
         var nextSlotUtc = NotificationPreferences.GetNextAudioBriefingUtc();
         var triggerMillis = (long)(nextSlotUtc - DateTime.UnixEpoch).TotalMilliseconds;
@@ -143,7 +151,7 @@ public class NotificationService : INotificationService
     {
         try
         {
-            if (Build.VERSION.SdkInt >= BuildVersionCodes.S)
+            if (OperatingSystem.IsAndroidVersionAtLeast(31))
             {
                 if (alarmManager.CanScheduleExactAlarms())
                 {
@@ -190,7 +198,10 @@ public class NotificationService : INotificationService
             : PendingIntentFlags.UpdateCurrent;
 
         var pendingIntent = PendingIntent.GetBroadcast(context, AudioAlarmRequestCode, intent, pendingIntentFlags);
-        alarmManager.Cancel(pendingIntent);
+        if (pendingIntent != null)
+        {
+            alarmManager.Cancel(pendingIntent);
+        }
     }
 
     public void ShowBriefingNotification(string title, string message)
@@ -248,6 +259,7 @@ public class NotificationService : INotificationService
             ? context.ApplicationInfo!.Icon
             : global::Android.Resource.Drawable.IcDialogInfo;
 
+#pragma warning disable CS8602 // Dereference of a possibly null reference for fluent builder
         var builder = new NotificationCompat.Builder(context, channelId)
             .SetContentTitle(title)
             .SetContentText(message)
@@ -262,5 +274,6 @@ public class NotificationService : INotificationService
         }
 
         NotificationManagerCompat.From(context).Notify(notificationId, builder.Build());
+#pragma warning restore CS8602
     }
 }

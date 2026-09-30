@@ -32,8 +32,14 @@ public class AnalyticsController : ControllerBase
 
         var allowedTypes = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
+            // In-app events
             "app_open", "article_read", "article_share", "article_bookmark",
-            "audio_listen_start", "audio_listen_complete", "audio_listen", "audio_complete"
+            "audio_listen_start", "audio_listen_complete", "audio_listen", "audio_complete",
+            // App Open Ad events
+            "app_open_ad_loaded", "app_open_ad_shown",
+            "app_open_ad_skipped_tts_active", "app_open_ad_skipped_frequency_cap", "app_open_ad_error",
+            // Widget lifecycle events
+            "widget_enabled", "widget_disabled", "widget_refresh", "widget_item_click"
         };
 
         var validEvents = events
@@ -78,15 +84,33 @@ public class AnalyticsController : ControllerBase
         CancellationToken cancellationToken = default)
     {
         var since = DateTimeOffset.UtcNow.AddDays(-Math.Abs(days));
-        var allRecent = await _db.UserEvents
-            .AsNoTracking()
-            .ToListAsync(cancellationToken);
+        List<UserEvent> events;
 
-        var events = allRecent
-            .Where(e => e.OccurredAt >= since)
-            .OrderByDescending(e => e.OccurredAt)
-            .Take(10000)
-            .ToList();
+        // SQLite does not support native DateTimeOffset in ORDER BY clauses in EF Core.
+        // We push the date range filter to SQL, and order in-memory for SQLite, or in-database for PostgreSQL.
+        if (_db.Database.ProviderName == "Microsoft.EntityFrameworkCore.Sqlite")
+        {
+            // SQLite provider does not support DateTimeOffset in SQL expressions (WHERE / ORDER BY).
+            // Filter and order in-memory for SQLite; PostgreSQL executes natively in SQL.
+            var allRecent = await _db.UserEvents
+                .AsNoTracking()
+                .ToListAsync(cancellationToken);
+
+            events = allRecent
+                .Where(e => e.OccurredAt >= since)
+                .OrderByDescending(e => e.OccurredAt)
+                .Take(10000)
+                .ToList();
+        }
+        else
+        {
+            events = await _db.UserEvents
+                .AsNoTracking()
+                .Where(e => e.OccurredAt >= since)
+                .OrderByDescending(e => e.OccurredAt)
+                .Take(10000)
+                .ToListAsync(cancellationToken);
+        }
 
         var totalEvents = events.Count;
         var uniqueDevices = events.Select(e => e.DeviceId).Distinct().Count();
@@ -124,6 +148,13 @@ public class AnalyticsController : ControllerBase
         var audioCompleted = byType.GetValueOrDefault("audio_listen_complete", 0) + byType.GetValueOrDefault("audio_complete", 0);
         var audioCompletionRate = audioStarted > 0 ? Math.Round((audioCompleted * 100.0 / audioStarted), 1) : 0.0;
 
+        var widgetInstalls = byType.GetValueOrDefault("widget_enabled", 0);
+        var widgetRemovals = byType.GetValueOrDefault("widget_disabled", 0);
+        var widgetRefreshes = byType.GetValueOrDefault("widget_refresh", 0);
+        var widgetClicks = byType.GetValueOrDefault("widget_item_click", 0);
+        // Net active widget deployments = installs minus removals (floor 0)
+        var netWidgetDeployments = Math.Max(0, widgetInstalls - widgetRemovals);
+
         return Ok(new AnalyticsSummaryDto
         {
             TotalEvents = totalEvents,
@@ -135,6 +166,11 @@ public class AnalyticsController : ControllerBase
             AudioListensStarted = audioStarted,
             AudioListensCompleted = audioCompleted,
             AudioCompletionRate = audioCompletionRate,
+            WidgetInstalls = widgetInstalls,
+            WidgetRemovals = widgetRemovals,
+            WidgetRefreshes = widgetRefreshes,
+            WidgetClicks = widgetClicks,
+            NetWidgetDeployments = netWidgetDeployments,
             TopArticles = topArticles,
             DailyBreakdown = dailyBreakdown,
             PeriodDays = days
@@ -159,14 +195,26 @@ public class AnalyticsController : ControllerBase
         if (!string.IsNullOrWhiteSpace(eventType))
             query = query.Where(e => e.EventType == eventType.ToLowerInvariant());
 
-        var allMatching = await query.ToListAsync(cancellationToken);
-        var total = allMatching.Count;
+        var total = await query.CountAsync(cancellationToken);
 
-        var rawRows = allMatching
-            .OrderByDescending(e => e.OccurredAt)
-            .Skip((pageIndex - 1) * size)
-            .Take(size)
-            .ToList();
+        List<UserEvent> rawRows;
+        if (_db.Database.ProviderName == "Microsoft.EntityFrameworkCore.Sqlite")
+        {
+            var all = await query.ToListAsync(cancellationToken);
+            rawRows = all
+                .OrderByDescending(e => e.OccurredAt)
+                .Skip((pageIndex - 1) * size)
+                .Take(size)
+                .ToList();
+        }
+        else
+        {
+            rawRows = await query
+                .OrderByDescending(e => e.OccurredAt)
+                .Skip((pageIndex - 1) * size)
+                .Take(size)
+                .ToListAsync(cancellationToken);
+        }
 
         var rows = rawRows.Select(e => new UserEventRowDto
         {
@@ -213,6 +261,13 @@ public class AnalyticsSummaryDto
     public int AudioListensStarted { get; set; }
     public int AudioListensCompleted { get; set; }
     public double AudioCompletionRate { get; set; }
+    // Widget adoption metrics
+    public int WidgetInstalls { get; set; }
+    public int WidgetRemovals { get; set; }
+    public int WidgetRefreshes { get; set; }
+    public int WidgetClicks { get; set; }
+    /// <summary>Estimated net active widget deployments (installs minus removals).</summary>
+    public int NetWidgetDeployments { get; set; }
     public int PeriodDays { get; set; }
     public List<TopArticleDto> TopArticles { get; set; } = [];
     public List<DailyCountDto> DailyBreakdown { get; set; } = [];

@@ -233,6 +233,51 @@
                 </VerticalStackLayout>
             </Border>
 
+            <!-- Background Updates & Battery Saver Section -->
+            <Label Text="BACKGROUND UPDATES &amp; BATTERY"
+                   FontFamily="LegacySansBook"
+                   FontSize="11"
+                   FontAttributes="Bold"
+                   TextColor="{StaticResource Gray500}"
+                   Margin="0,0,0,8" />
+
+            <Border Padding="16"
+                    Background="{StaticResource WhiteBrush}"
+                    StrokeShape="RoundRectangle 16"
+                    StrokeThickness="1"
+                    Stroke="{StaticResource Gray100Brush}"
+                    Margin="0,0,0,24">
+                <VerticalStackLayout Spacing="12">
+                    <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto">
+                        <HorizontalStackLayout Grid.Column="0" Grid.Row="0" Spacing="8">
+                            <Label Text="🔋" FontSize="18" VerticalOptions="Center" />
+                            <Label Text="Background Updates"
+                                   FontFamily="LegacySerifBold"
+                                   FontSize="15"
+                                   FontAttributes="Bold"
+                                   TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource DarkTextPrimary}}"
+                                   VerticalOptions="Center" />
+                        </HorizontalStackLayout>
+                        <Switch Grid.Column="1" Grid.Row="0" Grid.RowSpan="2"
+                                x:Name="SwitchBackgroundUpdates"
+                                Toggled="OnBackgroundUpdatesToggled"
+                                VerticalOptions="Center" />
+                        <Label Grid.Column="0" Grid.Row="1"
+                               Text="Keep home screen widget and stories updated in the background. Turn off to save battery power."
+                               FontFamily="LegacySansBook"
+                               FontSize="12"
+                               TextColor="{StaticResource Gray500}"
+                               Margin="26,2,0,0" />
+                    </Grid>
+                    <BoxView HeightRequest="1" Color="{AppThemeBinding Light={StaticResource Gray100}, Dark={StaticResource DarkSurfaceCard}}" />
+                    <Label Text="When turned off, the widget and stories only refresh when you launch the app or manually tap the widget refresh icon."
+                           FontFamily="LegacySansBook"
+                           FontSize="11"
+                           TextColor="{StaticResource Gray400}"
+                           LineBreakMode="WordWrap" />
+                </VerticalStackLayout>
+            </Border>
+
             <!-- App Info Section -->
             <Label Text="ABOUT"
                    FontFamily="LegacySansBook"
@@ -247,7 +292,7 @@
                     StrokeThickness="1"
                     Stroke="{StaticResource Gray100Brush}">
                 <VerticalStackLayout Spacing="6">
-                    <Label Text="Nigerian News"
+                    <Label Text="News Stand NG"
                            FontFamily="LegacySerifBold"
                            FontSize="17"
                            FontAttributes="Bold"
@@ -257,11 +302,62 @@
                            FontSize="13"
                            TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource DarkTextSecondary}}"
                            LineBreakMode="WordWrap" />
-                    <Label Text="Version 1.0 · Nigerian News"
+                    <Label Text="Version 1.0 · News Stand NG"
                            FontFamily="LegacySansBook"
                            FontSize="11"
                            TextColor="{StaticResource Gray500}"
                            Margin="0,4,0,0" />
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Sonic Identity & Audio Feedback Section -->
+            <Label Text="SONIC IDENTITY &amp; AUDIO FEEDBACK"
+                   FontFamily="LegacySansBook"
+                   FontSize="11"
+                   FontAttributes="Bold"
+                   TextColor="{StaticResource Gray500}"
+                   Margin="0,24,0,8" />
+
+            <Border Padding="16"
+                    Background="{StaticResource WhiteBrush}"
+                    StrokeShape="RoundRectangle 16"
+                    StrokeThickness="1"
+                    Stroke="{StaticResource Gray100Brush}"
+                    Margin="0,0,0,8">
+                <VerticalStackLayout Spacing="12">
+                    <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto">
+                        <HorizontalStackLayout Grid.Column="0" Grid.Row="0" Spacing="8">
+                            <Label Text="🎺" FontSize="18" VerticalOptions="Center" />
+                            <Label Text="Sound Effects &amp; Earcons"
+                                   FontFamily="LegacySerifBold"
+                                   FontSize="15"
+                                   FontAttributes="Bold"
+                                   TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource DarkTextPrimary}}"
+                                   VerticalOptions="Center" />
+                        </HorizontalStackLayout>
+                        <Switch Grid.Column="1" Grid.Row="0" Grid.RowSpan="2"
+                                x:Name="SwitchSonicFeedback"
+                                Toggled="OnSonicFeedbackToggled"
+                                VerticalOptions="Center" />
+                        <Label Grid.Column="0" Grid.Row="1"
+                               Text="Play signature Newspaper Horn chime on feed refresh and audio feedback on key actions"
+                               FontFamily="LegacySansBook"
+                               FontSize="12"
+                               TextColor="{StaticResource Gray500}"
+                               Margin="26,2,0,0" />
+                    </Grid>
+                    <BoxView HeightRequest="1"
+                             Color="{AppThemeBinding Light={StaticResource Gray100}, Dark={StaticResource DarkSurfaceCard}}" />
+                    <Button Text="Test Newspaper Horn 🎺"
+                            Clicked="OnTestNewspaperHornClicked"
+                            HeightRequest="36"
+                            CornerRadius="10"
+                            Padding="12,0"
+                            FontSize="12"
+                            FontAttributes="Bold"
+                            BackgroundColor="{AppThemeBinding Light={StaticResource ButtonSecondaryBgLight}, Dark={StaticResource ButtonSecondaryBgDark}}"
+                            TextColor="{AppThemeBinding Light={StaticResource ButtonTextLight}, Dark={StaticResource ButtonTextDark}}"
+                            HorizontalOptions="Start" />
                 </VerticalStackLayout>
             </Border>
 

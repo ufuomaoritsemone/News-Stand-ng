@@ -259,7 +259,10 @@ public class IndexModel : PageModel
         Channels = knownChannels.ToList();
 
         // Available Categories
-        var knownCats = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "All" };
+        var knownCats = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "All", "Politics", "Business", "Sports", "Entertainment", "Technology", "Crime", "International", "General"
+        };
         foreach (var a in Articles)
         {
             if (!string.IsNullOrWhiteSpace(a.Category)) knownCats.Add(a.Category);

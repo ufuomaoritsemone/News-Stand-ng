@@ -7,24 +7,27 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace AdminDashboard.Pages;
 
 [AllowAnonymous]
 public class LoginModel : PageModel
 {
+    private const int MaxFailedAttempts = 5;
+    private static readonly TimeSpan LockoutDuration = TimeSpan.FromMinutes(5);
+
     private readonly IConfiguration _config;
     private readonly ILogger<LoginModel> _logger;
+    private readonly IMemoryCache _cache;
 
-    // Track failed attempts in-memory for brute-force deterrence
-    private static int _failedAttempts;
-    private static DateTimeOffset _lastFailedAttempt = DateTimeOffset.MinValue;
-    private static readonly object _lock = new();
+    private sealed record LoginAttemptState(int FailedAttempts, DateTimeOffset LastFailedAttempt);
 
-    public LoginModel(IConfiguration config, ILogger<LoginModel> logger)
+    public LoginModel(IConfiguration config, ILogger<LoginModel> logger, IMemoryCache cache)
     {
         _config = config;
         _logger = logger;
+        _cache = cache;
     }
 
     [BindProperty]
@@ -52,13 +55,16 @@ public class LoginModel : PageModel
             return Page();
         }
 
-        // Apply throttling if multiple consecutive failed attempts occurred
-        lock (_lock)
+        var clientIp = GetClientIpAddress();
+        var cacheKey = $"login_attempt_{clientIp}";
+
+        // Apply throttling if multiple consecutive failed attempts occurred from this client IP
+        if (_cache.TryGetValue(cacheKey, out LoginAttemptState? state) && state is not null)
         {
-            if (_failedAttempts >= 5 && (DateTimeOffset.UtcNow - _lastFailedAttempt).TotalMinutes < 5)
+            if (state.FailedAttempts >= MaxFailedAttempts && (DateTimeOffset.UtcNow - state.LastFailedAttempt) < LockoutDuration)
             {
                 ErrorMessage = "Too many failed attempts. Please wait a few minutes before trying again.";
-                _logger.LogWarning("Throttled login attempt from {IP}", HttpContext.Connection.RemoteIpAddress);
+                _logger.LogWarning("Throttled login attempt from {IP} (Failed attempts: {Count})", clientIp, state.FailedAttempts);
                 return Page();
             }
         }
@@ -76,24 +82,21 @@ public class LoginModel : PageModel
 
         if (!isUserValid || !isPassValid)
         {
-            lock (_lock)
-            {
-                _failedAttempts++;
-                _lastFailedAttempt = DateTimeOffset.UtcNow;
-            }
+            var attempts = (_cache.TryGetValue(cacheKey, out LoginAttemptState? existing) && existing is not null)
+                ? existing.FailedAttempts + 1
+                : 1;
 
-            _logger.LogWarning("Failed login attempt for username '{Username}' from {IP}",
-                Input.Username, HttpContext.Connection.RemoteIpAddress);
+            _cache.Set(cacheKey, new LoginAttemptState(attempts, DateTimeOffset.UtcNow), LockoutDuration);
+
+            _logger.LogWarning("Failed login attempt ({Attempt}/{Max}) for username '{Username}' from {IP}",
+                attempts, MaxFailedAttempts, Input.Username, clientIp);
 
             ErrorMessage = "Invalid administrator username or password.";
             return Page();
         }
 
-        // Reset failed attempts on success
-        lock (_lock)
-        {
-            _failedAttempts = 0;
-        }
+        // Reset failed attempts on success for this client IP
+        _cache.Remove(cacheKey);
 
         var claims = new List<Claim>
         {
@@ -118,7 +121,7 @@ public class LoginModel : PageModel
         await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal, authProperties);
 
         _logger.LogInformation("Administrator '{Username}' successfully authenticated from {IP}",
-            configuredUser, HttpContext.Connection.RemoteIpAddress);
+            configuredUser, clientIp);
 
         if (!string.IsNullOrWhiteSpace(ReturnUrl) && Url.IsLocalUrl(ReturnUrl))
         {
@@ -126,6 +129,20 @@ public class LoginModel : PageModel
         }
 
         return RedirectToPage("/Index");
+    }
+
+    private string GetClientIpAddress()
+    {
+        if (Request.Headers.TryGetValue("X-Forwarded-For", out var forwarded) && !string.IsNullOrWhiteSpace(forwarded))
+        {
+            var ip = forwarded.ToString().Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).FirstOrDefault();
+            if (!string.IsNullOrEmpty(ip))
+            {
+                return ip;
+            }
+        }
+
+        return HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
     }
 
     private static bool ConstantTimeEquals(string a, string b)

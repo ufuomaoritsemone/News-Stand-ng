@@ -1,6 +1,7 @@
 using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
 using NewsApi.Data;
+using NewsApi.Infrastructure;
 using NewsApi.Models;
 
 namespace NewsApi.Services;
@@ -84,7 +85,11 @@ public class RelatedContentService : IRelatedContentService
             // If articleId is supplied, lookup article details if title/category are missing
             if (!string.IsNullOrWhiteSpace(articleId) && (string.IsNullOrWhiteSpace(title) || string.IsNullOrWhiteSpace(category)))
             {
-                var target = await _db.Articles.AsNoTracking().FirstOrDefaultAsync(a => a.Id == articleId, cancellationToken);
+                var target = await _db.Articles.AsNoTracking()
+                    .Where(a => a.Id == articleId)
+                    .Select(a => new { a.Title, a.Category })
+                    .FirstOrDefaultAsync(cancellationToken);
+
                 if (target != null)
                 {
                     title ??= target.Title;
@@ -98,7 +103,7 @@ public class RelatedContentService : IRelatedContentService
             _logger.LogInformation("Finding related stories for title '{Title}' with keywords [{Keywords}] in category '{Category}'",
                 title, string.Join(", ", keywords), category);
 
-            // 1. Related Archive Articles
+            // 1. Related Archive Articles (projecting only metadata, leaving heavy Content blob on disk)
             var articlesQuery = _db.Articles.AsNoTracking().AsQueryable();
             if (!string.IsNullOrWhiteSpace(articleId))
             {
@@ -113,6 +118,18 @@ public class RelatedContentService : IRelatedContentService
             var allCandidateArticles = await articlesQuery
                 .OrderByDescending(a => a.PublishedAt ?? DateTime.MinValue)
                 .Take(100)
+                .Select(a => new
+                {
+                    a.Id,
+                    a.Title,
+                    a.Summary,
+                    a.Category,
+                    a.PublishedAt,
+                    a.ImageUrl,
+                    a.Source,
+                    a.Url,
+                    a.AudioUrl
+                })
                 .ToListAsync(cancellationToken);
 
             var rankedArticles = allCandidateArticles
@@ -143,9 +160,9 @@ public class RelatedContentService : IRelatedContentService
                     Id = x.Article.Id,
                     Title = x.Article.Title,
                     Summary = x.Article.Summary,
-                    Content = x.Article.Content,
+                    Content = null,
                     Url = x.Article.Url,
-                    ImageUrl = GetValidImageUrl(x.Article.ImageUrl, x.Article.Category, x.Article.Source),
+                    ImageUrl = CategoryImageMap.Resolve(x.Article.ImageUrl, x.Article.Category),
                     Source = string.IsNullOrWhiteSpace(x.Article.Source) ? "General News" : x.Article.Source,
                     Category = string.IsNullOrWhiteSpace(x.Article.Category) ? "General" : x.Article.Category,
                     PublishedAt = x.Article.PublishedAt ?? DateTime.UtcNow,
@@ -258,22 +275,5 @@ public class RelatedContentService : IRelatedContentService
         }
 
         return result;
-    }
-
-    private static string GetValidImageUrl(string? existingUrl, string? category, string? source)
-    {
-        if (!string.IsNullOrWhiteSpace(existingUrl) && (existingUrl.StartsWith("http://") || existingUrl.StartsWith("https://")))
-        {
-            return existingUrl;
-        }
-
-        category = category?.ToLowerInvariant() ?? "";
-        if (category.Contains("politic")) return "https://images.unsplash.com/photo-1540910419892-4a36d2c3266c?w=600&auto=format&fit=crop&q=80";
-        if (category.Contains("business") || category.Contains("econom")) return "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=600&auto=format&fit=crop&q=80";
-        if (category.Contains("sport")) return "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=600&auto=format&fit=crop&q=80";
-        if (category.Contains("tech")) return "https://images.unsplash.com/photo-1518770660439-4636190af475?w=600&auto=format&fit=crop&q=80";
-        if (category.Contains("entertain")) return "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=600&auto=format&fit=crop&q=80";
-
-        return "https://images.unsplash.com/photo-1585829365295-ab7cd400c167?w=600&auto=format&fit=crop&q=80";
     }
 }

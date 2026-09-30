@@ -17,7 +17,7 @@ public class MorningBriefingReceiver : BroadcastReceiver
 
         notificationService.ShowBriefingNotification(
             "☀️ Good Morning!",
-            "Your Nigerian news briefing is ready. Catch up on top stories across Politics, Business & Sports.");
+            "Your News Stand NG briefing is ready. Catch up on top stories across Politics, Business & Sports.");
 
         // Reschedule for the next day
         notificationService.ScheduleDailyMorningBriefing(NotificationPreferences.MorningBriefingTime);

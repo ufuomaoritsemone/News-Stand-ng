@@ -26,10 +26,16 @@ You can run all services using the provided startup scripts:
 
 ### PowerShell
 ```powershell
-# Open services in separate windows (interactive logs)
+# Open services tabbed in a single Windows Terminal window (default if wt.exe installed)
 .\run-services.ps1
 
-# Launch backend services + Modernist Web Application
+# Explicitly open tabbed in Windows Terminal
+.\run-services.ps1 -Tabs
+
+# Open services in separate terminal windows instead
+.\run-services.ps1 -Separate
+
+# Launch backend services + Modernist Web Application (tabbed)
 .\run-services.ps1 -Web
 
 # Run in background jobs
@@ -54,6 +60,138 @@ run-services.bat
 - **News API**: [http://localhost:56193](http://localhost:56193)
  
 ## Updates
+
+### September 30, 2026 — Google Cloud Console (Web GUI) Zero-CLI Deployment Option
+Added an end-to-end, browser-based deployment walkthrough in [`Deployment.md`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/Deployment.md) enabling full provisioning, container building, volume mounting, and service execution entirely through the online Google Cloud Console without requiring a local CLI:
+- **Web Console Provisioning & Cloud Run Architecture ([`Deployment.md`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/Deployment.md))**:
+  - Structured Section 3 into dual pathways: **Option 1 (Google Cloud Console Web GUI Walkthrough)** and **Option 2 (Google Cloud CLI `gcloud` Walkthrough)**.
+  - Documented exact UI click-by-click navigation paths, sub-menus, and form fields for creating the `newsgrid-db` PostgreSQL 16 instance (`db-f1-micro`), application database, and database credentials in the Cloud SQL console.
+  - Specified Cloud Storage bucket creation (`Uniform` access) for audio briefings and mapped native Cloud Run FUSE volume mounts (`/app/data/audio`) for both `news-api` and `tts-worker-job`.
+  - Added step-by-step instructions for deploying `news-api` and `admin-dashboard` Cloud Run services with environment variables and Cloud SQL Unix domain socket attachments.
+  - Documented Cloud Run Job creation for `news-scraper-job` and `tts-worker-job` with built-in Cloud Run console **Scheduler Triggers** for 20-minute scraper cycles and dual daily briefings (8:00 AM and 6:00 PM WAT).
+  - Provided zero-local-installation container image build instructions via in-browser **Cloud Shell** and native GitHub continuous deployment.
+
+### September 30, 2026 — Fix Android Physical Device Startup Deadlock on Splash Screen
+Resolved a severe startup hang where the application froze indefinitely on the Android splash screen when deployed to physical hardware (Samsung Galaxy, API 34+), caused by an SQLite shared-cache deadlock on WAL mode combined with swallowed startup exceptions in the Android unhandled exception handler:
+- **SQLite Concurrency & WAL Deadlock Resolution ([`NewsPersistenceService.cs`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/NigerianNewGrid/Services/NewsPersistenceService.cs))**:
+  - Identified that `SQLiteOpenFlags.SharedCache` is strictly incompatible with SQLite Write-Ahead Logging (WAL) mode. When both were enabled on Android, `sqlite3_step` deadlocked inside `futex_wait_queue` attempting to acquire shared memory file locks (`news_cache.db3-shm`).
+  - Swapped SQLite connection flags from `ReadWrite | Create | SharedCache` to `SQLiteOpenFlags.ReadWrite | SQLiteOpenFlags.Create`.
+  - Replaced `ExecuteAsync("PRAGMA journal_mode=WAL;")` with `ExecuteScalarAsync<string>("PRAGMA journal_mode=WAL;")` inside a safe fallback block, preventing `sqlite-net-pcl` from misinterpreting the scalar result row as a failure and throwing `SQLiteException: not an error`.
+  - Added `.ConfigureAwait(false)` to async database operations to ensure background threads do not contend for the Android main UI looper.
+- **Android Unhandled Exception Raiser Crash Visibility ([`MainApplication.cs`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/NigerianNewGrid/Platforms/Android/MainApplication.cs))**:
+  - Removed `args.Handled = true;` from `AndroidEnvironment.UnhandledExceptionRaiser`. Swallowing fatal startup exceptions was masking underlying background worker errors, leaving unrecoverable Android activities running frozen with invisible window surfaces (`mViewVisibility=0x4`, `mDrawState=NO_SURFACE`).
+- **Physical Device Live Verification**:
+  - Deployed signed APK to attached test device `R5GL34DA4DP` (Android 14 / One UI 6).
+  - Verified end-to-end logcat diagnostic output (`APP_DEBUG`), confirming instantaneous `NewsPersistenceService` initialization, `MainViewModel.InitializeAsync` completion, and immediate dismissal of the Android OS splash window directly into the news feed (`MainPage`).
+
+Hardened and resolved critical lifecycle, memory leak, feed-pollution, and touch-handling vulnerabilities in the mobile app's database update notification bridge, ensuring reliable real-time and warm-resume floating pill notifications when fresh news is persisted to SQLite:
+- **Lifecycle & Warm Resume Bridge ([`AppNotificationBridge.cs`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/NigerianNewGrid/Services/AppNotificationBridge.cs) & [`App.xaml.cs`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/NigerianNewGrid/App.xaml.cs))**:
+  - Added `AppResumed` event and `TriggerAppResumed()` to `AppNotificationBridge`.
+  - Connected `window.Resumed` in `App.xaml.cs` to invoke `AppNotificationBridge.TriggerAppResumed()`, fixing the lifecycle flaw where `Page.Appearing` does not fire when returning to the app from background/sleep.
+- **Feed Pollution & History Flood Prevention ([`INewsPersistenceService.cs`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/NigerianNewGrid/Services/INewsPersistenceService.cs), [`NewsPersistenceService.cs`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/NigerianNewGrid/Services/NewsPersistenceService.cs), [`IBriefingCacheService.cs`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/NigerianNewGrid/Services/IBriefingCacheService.cs), [`BriefingCacheService.cs`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/NigerianNewGrid/Services/BriefingCacheService.cs))**:
+  - Added `topPerCategory` parameter to `GetCachedBriefingAsync(int days = 14, int topPerCategory = 0)`.
+  - Capped cached briefing reloads in `ApplyNewStoriesAsync` to `topPerCategory: 10`, preventing the app from dumping the entire 14-day SQLite archive (hundreds of historical stories) into the active daily feed upon tapping the notification pill.
+- **Memory Leak Elimination ([`MainViewModel.cs`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/NigerianNewGrid/ViewModels/MainViewModel.cs))**:
+  - Added missing `AppNotificationBridge.NewStoriesAvailable -= OnNewStoriesAvailable;` and `AppNotificationBridge.AppResumed -= OnAppResumedFromBridge;` unsubscriptions inside `Dispose()`, eliminating strong static delegate references and preventing `MainViewModel` memory leaks.
+- **Accurate Dynamic Diffing ([`MainViewModel.cs`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/NigerianNewGrid/ViewModels/MainViewModel.cs))**:
+  - Unified background notification handling and warm-resume checks into `CheckForNewStoriesAsync()`.
+  - Replaced raw accumulative `+= count` increments with accurate set-based difference checks (`!displayedIds.Contains(s.Id)`) against currently displayed article IDs, eliminating false alarms and duplicate counts.
+- **Touch Hit-Testing Reliability ([`MainPage.xaml`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/NigerianNewGrid/MainPage.xaml))**:
+  - Added `InputTransparent="True"` to inner stack layout and label elements inside the floating pill border, guaranteeing that tap gestures hit `Border.GestureRecognizers` reliably across Android and iOS.
+- **Full-Text Search & BM25 Scoring Fixes ([`ArticleSearchService.cs`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NewsApi/Services/ArticleSearchService.cs))**:
+  - Added missing `a."UpdatedAt"` column to both SQLite FTS5 and PostgreSQL `FromSqlRaw` queries, preventing EF Core `InvalidOperationException` that was causing all search requests to silently crash and fall back to unranked naive string contains.
+  - Corrected SQLite FTS5 `bm25()` column weights to account for column 0 (`Id` unindexed, weight 0.0), weighting `Title` (10.0), `Summary` (5.0), and `Content` (1.0).
+- **TTS Worker Scheduled Job Support & Cloud Run Deployment Guide ([`TtsWorker/Service.cs`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/TtsWorker/Service.cs), [`Deployment.md`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/Deployment.md))**:
+  - Injected `IHostApplicationLifetime` and added `TTS_RUN_ONCE` / `TtsWorker:RunOnce` support, enabling `TtsWorker` to complete single execution passes and cleanly terminate with exit code 0 when invoked as a Cloud Run Job.
+  - Documented exact `gcloud run jobs create tts-worker-job` commands and dual Cloud Scheduler cron triggers (morning at 8:00 AM WAT / 07:00 UTC and evening at 6:00 PM WAT / 17:00 UTC) with shared Cloud Storage volume mounts in `Deployment.md`.
+
+### September 29, 2026 — Fix Multi-Terminal Errors & Fast Service Startup in run-services.ps1
+Resolved terminal spawn errors, syntax errors, and excessive compilation delays in [`run-services.ps1`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/run-services.ps1):
+- **Windows Terminal (`wt.exe`) Command Splitting & Title Parsing Resolution**:
+  - Replaced inline multi-statement PowerShell strings containing raw semicolons with clean Base64 `-EncodedCommand` script execution.
+  - Semicolons inside target commands were previously parsed by `wt.exe` as Windows Terminal command separators, causing `wt` to split every variable assignment (`$env:ApiBaseUrl`, `$env:ApiKey`, `Write-Host`) into 20+ separate broken tabs and failing terminal windows with `0x80070002` execution errors.
+  - Eliminated spaces from tab titles (e.g. `NewsApi-$resolvedNewsApiPort` instead of `NewsApi ($resolvedNewsApiPort)`) and formatted `wt.exe` arguments as a single unified joined string (`$tabs -join " ; "`). When passed as an array, PowerShell 5.1's `Start-Process` strips quotes around arguments containing spaces, which led `wt.exe` to interpret `(56193)` as a command to execute rather than part of `--title`.
+  - Added safe `try / catch` fallback around `wt.exe` execution to automatically degrade to separate PowerShell windows if Windows Terminal encounters launcher issues.
+- **Concurrent Build File Lock Fix (`--no-build`)**:
+  - Added `--no-build` flag to all `dotnet run` service invocations in both tabbed, separate, and background job modes. This prevents simultaneous `dotnet run` calls from running concurrent MSBuild passes against shared libraries like `NigerianNewsGrid.Client`, eliminating file-locking (`MSB3026`) runtime failures.
+- **Fast Backend Build vs Solution Build (`-BuildAll`)**:
+  - By default, [`run-services.ps1`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/run-services.ps1) now compiles only the 4 backend service projects (`NewsApi`, `AdminDashboard`, `NewsScraperService`, `TtsWorker`), completing in ~5 seconds rather than rebuilding the full `NigerianNewGrid.slnx` multi-platform mobile client (which previously took >4.5 minutes across Android, iOS, MacCatalyst, and Windows).
+  - Added optional `[switch]$BuildAll` parameter if full solution compilation is specifically desired.
+- **Resolved Variable Name Collision with Parameter (`$Tabs`)**:
+  - Renamed internal tab array from `$tabs` to `$tabCommands`. In PowerShell, `[switch]$Tabs` in `param()` establishes a strongly-typed `[System.Management.Automation.SwitchParameter]` variable. Because PowerShell variable assignment is case-insensitive, assigning an array to `$tabs` threw a `ConvertToFinalInvalidCastException` ("Cannot convert System.Object[] to System.Management.Automation.SwitchParameter").
+- **Robust Process Termination (`-Stop`)**:
+  - Upgraded stop logic to terminate both apphost process names (`NewsApi.exe`, `AdminDashboard.exe`, etc.) and `dotnet.exe` processes, as well as freeing lingering port bindings on ports `56192` and `56193`.
+
+### September 29, 2026 — Tabbed Windows Terminal Execution & Service Window Titles
+Enhanced [`run-services.ps1`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/run-services.ps1) with native **Windows Terminal (`wt.exe`) tabbed multi-service execution** and individual console window titles:
+- **Single Window Tabbed Mode (`wt.exe`)**: All backend services now launch inside a single Windows Terminal window with dedicated, color-coded tabs:
+  - **`NewsApi`**: Cyan tab (`#0ea5e9`) on port `56193`.
+  - **`AdminDashboard`**: Purple tab (`#8b5cf6`) on port `56192`.
+  - **`NewsScraperService`**: Green tab (`#10b981`).
+  - **`TtsWorker`**: Amber tab (`#f59e0b`).
+  - **`NigerianNewsGrid Web`**: Pink tab (`#ec4899`) on port `5173` (when `-Web` is specified).
+- **Flexible Execution Modes**:
+  - `.\run-services.ps1`: Automatically launches tabbed if Windows Terminal is available.
+  - `.\run-services.ps1 -Tabs`: Explicitly requests tabbed mode.
+  - `.\run-services.ps1 -Separate`: Opens traditional separate individual windows.
+  - `.\run-services.ps1 -Background`: Runs as background jobs.
+  - `.\run-services.ps1 -Stop`: Gracefully stops all services regardless of whether they were running tabbed, separate, or in the background.
+
+### September 29, 2026 — Reactive "New Stories Available" Floating Pill & Background Sync UI Bridge
+Implemented a reactive, non-intrusive floating pill UI pattern to notify active readers whenever the mobile app's background worker fetches and persists new stories to SQLite:
+- **Cross-Platform Event Bridge ([`AppNotificationBridge.cs`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/NigerianNewGrid/Services/AppNotificationBridge.cs))**:
+  - Added `NewStoriesAvailable` event and `NotifyNewStoriesAvailable(int count)` trigger for real-time notification across native Android background receivers, worker services, and MAUI ViewModels.
+- **Persistence Insertion Tracking ([`NewsPersistenceService.cs`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/NigerianNewGrid/Services/NewsPersistenceService.cs) & [`BriefingCacheService.cs`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/NigerianNewGrid/Services/BriefingCacheService.cs))**:
+  - Updated `UpsertStoriesInternalAsync` to count and return only newly inserted stories (excluding existing updated records).
+  - Automatically dispatches `AppNotificationBridge.NotifyNewStoriesAvailable(newCount)` when `NewsSyncReceiver` or background workers ingest fresh stories.
+- **Floating Pill UI Overlay ([`MainPage.xaml`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/NigerianNewGrid/MainPage.xaml) & [`MainPage.xaml.cs`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/NigerianNewGrid/MainPage.xaml.cs))**:
+  - Positioned an elevated floating pill chip at the top of the feed (`Grid.Row="1"`, `ZIndex="999"`, `VerticalOptions="Start"`) with dark glassmorphic styling (`#0F172A`), cyan highlight (`#38BDF8`), subtle drop shadow, and full screen-reader accessibility hint.
+  - Tapping the pill invokes `ApplyNewStoriesCommand`, gracefully reloads the fresh feed from SQLite cache, plays a pleasant haptic/audio chime, and smoothly animates the `ScrollView` to the top without disrupting prior reading state.
+- **Warm Resume & Active Session Intelligence ([`MainViewModel.cs`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/NigerianNewGrid/ViewModels/MainViewModel.cs))**:
+  - Added `HasNewStoriesAvailable`, `NewStoriesCount`, and `NewStoriesPillText` observable properties.
+  - Enhanced `OnAppResumed()` to inspect SQLite cache against currently displayed article IDs upon returning to the app from background, automatically surfacing the pill if background cycles added newer stories while the user was away.
+  - Automatically suppresses and resets the pill during user-initiated pull-to-refresh or cold loads to ensure clean state transitions.
+
+### September 29, 2026 — Closed-Loop ML Categorizer Re-Training & Feedback Engine
+Engineered an end-to-end closed-loop re-training architecture that continuously improves the ML.NET news categorizer from editorial corrections submitted through the Admin Dashboard:
+- **In-Process ML.NET Multi-Class Re-Trainer ([`CategorizerTrainingService.cs`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NewsApi/Services/CategorizerTrainingService.cs))**:
+  - Implemented `ICategorizerTrainingService` in `NewsApi` utilizing ML.NET 5.0 and `LbfgsMaximumEntropy`.
+  - Merged curated `SeedDataset.InitialSamples` with editorial corrections from the `CategoryCorrections` table, applying **5x reinforcement sample weighting** to guarantee human feedback overrides previous misclassifications.
+  - Employed 3x headline weighting, lowercasing, stop-word removal, and bi-gram (1-2) TfIdf word feature extraction.
+  - Emits updated `categorizer_model.zip` to disk and synchronizes copies across scraper and trainer directories.
+- **Auto-Retrain & API Controller ([`CategorizerController.cs`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NewsApi/Controllers/CategorizerController.cs))**:
+  - Exposed REST endpoints: `GET /api/v1/categorizer/status`, `GET /api/v1/categorizer/corrections`, `POST /api/v1/categorizer/retrain`, `POST /api/v1/categorizer/predict`, and `GET /api/v1/categorizer/model`.
+  - Integrated `CheckAndTriggerAutoRetrain()` hook in [`ArticlesController.cs`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NewsApi/Controllers/ArticlesController.cs) inside `SaveCorrectionFeedbackAsync`, automatically triggering background re-training every time cumulative corrections cross multiples of `AutoRetrainThreshold` (20 corrections).
+- **Zero-Downtime Hot-Reloading in Scraper ([`MlCategorizerEngine.cs`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NewsScraperService/Services/MlCategorizerEngine.cs))**:
+  - Configured `FileSystemWatcher` on `categorizer_model.zip` with 500ms debounce to atomically swap `PredictionEngine` inside `lock (_lock)` when an updated model is compiled, allowing continuous article scraping with zero service restarts.
+- **Admin Dashboard UI ([`Categorizer.cshtml`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/AdminDashboard/Pages/Categorizer.cshtml) & [`Categorizer.cshtml.cs`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/AdminDashboard/Pages/Categorizer.cshtml.cs))**:
+  - Added dedicated navigation bar link (`ML Categorizer`) across all dashboard pages.
+  - KPI cards displaying Model Operational Status, Micro & Macro Accuracy, Total Corrections, and Auto-Retrain Threshold Progress.
+  - One-click **Re-train Model Now** button with real-time AJAX spinner, alert notifications, and metric auto-refresh.
+  - **Live Prediction Sandbox** allowing editors to test arbitrary headlines and inspect predicted categories alongside multiclass confidence scores.
+  - **Editorial Corrections History Table** with source, old category, corrected category, and timestamps.
+- **Automated Verification**:
+  - Added unit and integration tests in [`CategorizerServiceTests.cs`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/tests/NewsApiClient.Tests/CategorizerServiceTests.cs) verifying model training, accurate classification, API endpoints, and auto-retrain trigger logic (47/47 passing tests).
+
+### September 29, 2026 — Proactive Network-Aware Ad Slotting Architecture
+Engineered proactive connectivity-aware ad slotting across [`MainViewModel`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/NigerianNewGrid/ViewModels/MainViewModel.cs) and [`DiscoverViewModel`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/NigerianNewGrid/ViewModels/DiscoverViewModel.cs) to ensure seamless offline reading without empty, blank, or broken programmatic AdMob card placeholders:
+- **Connectivity-Gated Feed Arrangement**: Updated feed arrangement calls to check `Connectivity.Current.NetworkAccess == NetworkAccess.Internet` and pass this condition into `FeedSlotPlacementHelper.ArrangeFeed(..., includeAdMobPlaceholders: isOnline)`.
+- **Offline Clean Slate**: When users read feeds offline from local SQLite cache, programmatic native ad slots are skipped entirely, eliminating unfilled placeholder gaps while preserving direct sponsor campaigns and organic news.
+- **Reactive Connectivity Lifecycle (`MainViewModel`)**: Subscribed to `Connectivity.Current.ConnectivityChanged` to seamlessly re-evaluate feed arrangement when the device regains or loses network connectivity, dynamically backfilling benchmark ad slots when coming back online.
+- **Verification**: Built `NigerianNewGrid` for Windows with 0 errors/warnings and verified all 7/7 feed slot placement unit tests pass ([`FeedSlotPlacementTests.cs`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/tests/NewsApiClient.Tests/FeedSlotPlacementTests.cs)).
+
+### September 29, 2026 — Fixed Main Window Masthead Contrast in Dark Mode
+Ensured that the top app bar masthead in the mobile client (`NigerianNewGrid`) remains pure white regardless of the active app theme (light or dark mode), guaranteeing crisp contrast and brand visibility for the News Stand NG header logo (`newsstand_mast_head.png`).
+- **Resource Dictionary Brush (`Colors.xaml`)**: Defined a theme-invariant `AlwaysWhiteBrush` (`SolidColorBrush Color="White"`) in [`Colors.xaml`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/NigerianNewGrid/Resources/Styles/Colors.xaml) to decouple surface backgrounds that require fixed luminosity from theme-adaptive tokens (`WhiteBrush`).
+- **Main View Masthead (`MainPage.xaml`)**: Updated the top app bar Border background from `{StaticResource WhiteBrush}` to `{StaticResource AlwaysWhiteBrush}` in [`MainPage.xaml`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/NigerianNewGrid/MainPage.xaml). Aligned the child action buttons (Search, Refresh, Audio briefing) and live status indicators to use consistent, high-contrast light palette styling against the pure white surface across all system appearance modes.
+- **Verification**: Built and validated `NigerianNewGrid` for Windows (`net10.0-windows10.0.19041.0`) with 0 warnings and 0 errors.
+
+### September 28, 2026 — Admin Dashboard User Feedback Portal & Management Endpoint
+Implemented a dedicated administrative feedback inspection and response page on the Admin Dashboard ([`src/AdminDashboard`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/AdminDashboard)) paired with backend management capabilities in `NewsApi`:
+- **Admin Dashboard Feedback View**: Created [`Feedback.cshtml`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/AdminDashboard/Pages/Feedback.cshtml) and [`Feedback.cshtml.cs`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/AdminDashboard/Pages/Feedback.cshtml.cs) providing comprehensive review of user submissions from the mobile app settings page. Features high-level stat cards (Total Received, Average Rating with 5★ visual breakdown, Bug Count, Feature Suggestions, Email Dispatch Status), search/filter toolbar (query search, category, star rating, device platform, result limit), view switcher (Card View vs. Table View), and quick `mailto:` direct response links.
+- **Feedback Deletion API & Handling**: Extended [`IFeedbackService`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NewsApi/Services/FeedbackService.cs), [`FeedbackService`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NewsApi/Services/FeedbackService.cs), and [`FeedbackController`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NewsApi/Controllers/FeedbackController.cs) with a secure `DELETE /api/v1/feedback/{id}` endpoint protected by `ApiKeyMiddleware`, allowing admins to delete obsolete or resolved feedback items directly from the dashboard.
+- **Global Header Navigation Integration**: Added the "Feedback" navigation button across all dashboard pages ([`Index.cshtml`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/AdminDashboard/Pages/Index.cshtml), [`Videos.cshtml`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/AdminDashboard/Pages/Videos.cshtml), [`Socials.cshtml`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/AdminDashboard/Pages/Socials.cshtml), [`Analytics.cshtml`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/AdminDashboard/Pages/Analytics.cshtml), and [`Sponsors.cshtml`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/AdminDashboard/Pages/Sponsors.cshtml)).
+- **Testing & Verification**: Added unit and integration tests in [`FeedbackServiceTests.cs`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/tests/NewsApiClient.Tests/FeedbackServiceTests.cs) and [`AdminDashboardAuthTests.cs`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/tests/NewsApiClient.Tests/AdminDashboardAuthTests.cs) confirming unauthorized redirects to `/Login` and validating persistence/deletion operations (14/14 tests passing).
 
 ### September 25, 2026 — MAUI Stability Fixes, Native Ads in Discovery Feed, Admin Category AJAX Posting, and Feedback API Integration
 Addressed user requests and enhanced overall app performance across the .NET MAUI mobile app ([`NigerianNewGrid`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/NigerianNewGrid)) and Admin Dashboard ([`src/AdminDashboard`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/AdminDashboard)):
@@ -921,10 +1059,15 @@ Implemented an end-to-end anonymised user behaviour analytics pipeline across th
 - **Root Cause**: `EvaluateKeywordAlerts()` in `MainPage.xaml.cs` was calling `EvaluateFreshArticles()` without passing the persisted `NotifiedArticleIds` set as `excludedArticleIds`. Every refresh therefore re-evaluated all fresh articles, including ones already notified.
 - **Fix**: Passed `NotificationPreferences.NotifiedArticleIds` as the `excludedArticleIds` argument. `RecordNotifiedArticle()` and the dedup logic in `KeywordMatchingService` were already correct — the call site was simply not wiring them together.
 
-### September 20, 2026 — Channels Television Added as Hybrid News Source
-- **New Scraper (`ChannelsTvSitemapScraper.cs`)**: Created [ChannelsTvSitemapScraper.cs](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NewsScraperService/Scrapers/ChannelsTvSitemapScraper.cs) targeting Channels TV's Google News XML sitemap (`https://www.channelstv.com/news-sitemap.xml`) with fallback to the WordPress RSS feed (`https://www.channelstv.com/feed/`).
-- **Scraper Worker Registration (`ScraperWorker.cs`)**: Registered `ChannelsTvSitemapScraper` in [ScraperWorker.cs](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NewsScraperService/ScraperWorker.cs) fallback list for continuous scraping cycles when API dynamic source list is unavailable.
-- **Database Seeding & Auto-Migration (`DbInitializer.cs`)**: Added Channels Television (`Id: "channelstv"`) to initial seed in [DbInitializer.cs](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NewsApi/Infrastructure/DbInitializer.cs) and implemented `EnsureChannelsTvAsync` to automatically backfill the source in existing databases upon startup without requiring manual migrations.
-- **Title Deduplication Regex (`StoryDeduplicationHelper.cs`)**: Updated publisher brand suffix regex in [StoryDeduplicationHelper.cs](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NigerianNewsGrid.Client/Helpers/StoryDeduplicationHelper.cs) to match and strip both `Channels Television` and `Channels TV` suffixes during story cluster deduplication.
-- **Test Coverage (`NewSourcesTests.cs`)**: Added [NewSourcesTests.cs](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/tests/NewsApiClient.Tests/NewSourcesTests.cs) unit tests verifying Channels TV sitemap URLs, fallback configuration, and news sitemap XML node extraction (239/239 tests passing).
+### September 29, 2026 — PowerShell Tabbed Services Runner & Accurate Briefing Reception Timestamp
+- **PowerShell Runner Tabbed Execution & Window Titles (`run-services.ps1`)**:
+  - Added service titles and custom ASCII banners (`$Host.UI.RawUI.WindowTitle` and `[Console]::Title`) so each spawned service window clearly identifies itself at the top (`NewsApi`, `AdminDashboard`, `NewsScraperService`, `TtsWorker`, `Web`).
+  - Added Windows Terminal (`wt.exe`) integration supporting tabbed execution (`.\run-services.ps1 -Tabs`) where all 5 backend and frontend services run inside a single window with color-coded tabs (Cyan for API, Purple for Admin, Green for Scraper, Amber for TTS, Pink for Web). Includes automated fallback to separate PowerShell windows if Windows Terminal is not detected.
+- **Accurate Briefing Reception Timestamp Fix (`AppPreferenceKeys.cs`, `BriefingCacheService.cs`, `MainViewModel.cs`, `NewsSyncReceiver.cs`)**:
+  - **Root Cause**: The `"Updated as at ..."` header timestamp previously extracted the maximum `PublishedAt` timestamp among all ingested stories and applied `.ToLocalTime()`. Because certain RSS feeds embed GMT timestamps with unspecified `DateTimeKind` or publish slightly future-dated timestamps for caching/embargoes, timezone conversion added extra hours (+1h for WAT), consistently rendering a timestamp in the future rather than reflecting when the app last updated.
+  - **Solution**:
+    - Added `AppPreferenceKeys.LastBriefingReceivedUtc` to track the exact UTC timestamp when a briefing is received and saved to SQLite/local cache.
+    - Updated `BriefingCacheService.SaveBriefingAsync` and Android background sync (`NewsSyncReceiver.cs`) to persist `DateTime.UtcNow` upon saving updates.
+    - Enhanced `MainViewModel.UpdateTimestampStatus()` to read the reception timestamp, convert to local time, provide graceful fallback to past article times (`<= DateTime.UtcNow`) for legacy caches, and enforce a strict defensive clamp (`receivedTime > DateTime.Now -> DateTime.Now`) guaranteeing the timestamp will never be in the future.
+
 
