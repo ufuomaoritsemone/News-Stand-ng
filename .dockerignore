@@ -1,0 +1,31 @@
+# Ignore version control and IDE metadata
+.git
+.gitignore
+.vs
+.vscode
+.agents
+.gemini
+
+# Ignore build artifacts and local compilation caches
+**/bin/
+**/obj/
+**/TestResults/
+**/*.user
+**/*.suo
+
+# Ignore client mobile app (built separately for Android/iOS/Windows/macOS)
+NigerianNewGrid/
+
+# Ignore documentation, media assets, test reports, and stress tests
+*.md
+*.png
+*.jpg
+*.mp3
+*.wav
+reports/
+tests/
+docs/
+.mobiledesign/
+CodeMap.html
+run-services.bat
+run-services.ps1

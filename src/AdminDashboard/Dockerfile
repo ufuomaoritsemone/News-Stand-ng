@@ -2,7 +2,6 @@ FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 
 COPY ["src/AdminDashboard/AdminDashboard.csproj", "AdminDashboard/"]
-COPY ["src/NigerianNewsGrid.Client/NigerianNewsGrid.Client.csproj", "NigerianNewsGrid.Client/"]
 RUN dotnet restore "AdminDashboard/AdminDashboard.csproj"
 
 COPY src/ .

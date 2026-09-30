@@ -61,6 +61,17 @@ run-services.bat
  
 ## Updates
 
+### September 30, 2026 — Container Build Optimization & Dockerfile Audit
+Audited all backend microservice Dockerfiles against the latest .NET 10 architectural updates, verified end-to-end compilation with 0 warnings/errors, and introduced a root [`.dockerignore`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/.dockerignore) to prevent host asset pollution and drastically accelerate Google Cloud Build packaging:
+- **Build Context Sanitization ([`.dockerignore`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/.dockerignore))**:
+  - Excluded host `**/bin/`, `**/obj/`, and `**/TestResults/` to prevent Windows-compiled native assemblies and obj assets from corrupting Linux container compilation.
+  - Excluded the client mobile project (`NigerianNewGrid/`), docs, videos, audio samples, and Git metadata, cutting Cloud Build tarball upload sizes and build times significantly.
+- **Dockerfile Cleanup & Verification ([`AdminDashboard/Dockerfile`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/AdminDashboard/Dockerfile), [`NewsScraperService/Dockerfile`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NewsScraperService/Dockerfile))**:
+  - Removed redundant `NigerianNewsGrid.Client.csproj` restore copying from `AdminDashboard` and `NewsScraperService` Dockerfiles to streamline multi-stage build layers.
+  - Verified that `NewsApi` and `TtsWorker` retain accurate dependencies for `NigerianNewsGrid.Client` and linked trainer data contracts.
+- **Build Verification**:
+  - Successfully compiled `NewsApi`, `AdminDashboard`, `NewsScraperService`, and `TtsWorker` in Release mode with 0 errors and 0 warnings.
+
 ### September 30, 2026 — Google Cloud Console (Web GUI) Zero-CLI Deployment Option
 Added an end-to-end, browser-based deployment walkthrough in [`Deployment.md`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/Deployment.md) enabling full provisioning, container building, volume mounting, and service execution entirely through the online Google Cloud Console without requiring a local CLI:
 - **Web Console Provisioning & Cloud Run Architecture ([`Deployment.md`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/Deployment.md))**:
