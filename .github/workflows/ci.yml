@@ -31,5 +31,7 @@ jobs:
         run: dotnet build src/NewsScraperService/NewsScraperService.csproj -c Release --no-restore
       - name: Build TtsWorker
         run: dotnet build src/TtsWorker/TtsWorker.csproj -c Release --no-restore
+      - name: Build Tests
+        run: dotnet build tests/NewsApiClient.Tests/NewsApiClient.Tests.csproj -c Release --no-restore
       - name: Run Unit Tests
         run: dotnet test tests/NewsApiClient.Tests/NewsApiClient.Tests.csproj -c Release --no-build --verbosity normal

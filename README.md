@@ -67,6 +67,7 @@ Resolved the GitHub Actions CI workflow failure (`error NETSDK1004: Assets file 
   - Identified that the workflow was solely restoring `src/NewsApi/NewsApi.csproj` before attempting `--no-restore` builds on `NewsScraperService` and `TtsWorker`, causing NuGet asset resolution failures due to missing direct dependencies (`HtmlAgilityPack`, `Microsoft.ML`, `SmartReader`).
   - Updated the restore step to explicitly restore `NewsApi.csproj`, `AdminDashboard.csproj`, `NewsScraperService.csproj`, `TtsWorker.csproj`, and `NewsApiClient.Tests.csproj`.
   - Added build verification for `AdminDashboard` in Release mode.
+  - Added an explicit `Build Tests` step (`dotnet build tests/NewsApiClient.Tests/NewsApiClient.Tests.csproj -c Release --no-restore`) ahead of test execution.
   - Added automated test execution (`dotnet test tests/NewsApiClient.Tests/NewsApiClient.Tests.csproj -c Release --no-build`) verifying all 266 unit and integration tests automatically on push and pull request.
 
 ### September 30, 2026 — Container Build Optimization & Dockerfile Audit
