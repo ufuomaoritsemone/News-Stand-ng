@@ -40,7 +40,7 @@ public static class ServiceCollectionExtensions
             AutomaticDecompression = System.Net.DecompressionMethods.All,
             SslOptions = new System.Net.Security.SslClientAuthenticationOptions
             {
-                EnabledSslProtocols = System.Security.Authentication.SslProtocols.Tls12
+                EnabledSslProtocols = System.Security.Authentication.SslProtocols.Tls12 | System.Security.Authentication.SslProtocols.Tls13
             }
         });
 

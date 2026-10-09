@@ -172,7 +172,7 @@ public class SeoAnomalyEngine : ISeoAnomalyEngine
                     PredictedBenchmarkCtr = predictedCtr,
                     OpportunityGap = gap,
                     EstimatedAdditionalClicks = additionalClicks,
-                    CurrentTitle = currentTitle
+                    CurrentTitle = currentTitle ?? string.Empty
                 };
 
                 return Task.FromResult<CtrOpportunityDto?>(opportunity);

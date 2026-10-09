@@ -23,6 +23,13 @@ Projects:
 
 ## Updates
 
+### October 10, 2026 — Service Registration Review & Null Safety Fixes
+Completed a comprehensive audit of dependency injection lifetimes and resolved compiler warnings across backend services:
+- **[DI & HTTP Security ([`ServiceCollectionExtensions.cs`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NewsApi/Extensions/ServiceCollectionExtensions.cs))]**: Audited service lifetimes across all core, embedding, clustering, and background workers (`ISystemSettingsService`, `IEmbeddingProvider`, `IStoryClusteringService`, `ISeoAnomalyEngine`). Upgraded `ImageProxy` HttpClient TLS handshake to permit both `Tls12` and `Tls13`.
+- **[Nullability & Code Quality ([`StatesController.cs`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NewsApi/Controllers/StatesController.cs), [`SeoFeedbackLoopService.cs`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NewsApi/Services/SeoFeedbackLoopService.cs), [`SeoAnomalyEngine.cs`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NewsApi/Services/SeoAnomalyEngine.cs), [`FeedbackService.cs`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NewsApi/Services/FeedbackService.cs))]**: Resolved CS8601/CS8604 null reference warnings for `Source`, `Category`, `ActionType`, `CurrentTitle`, and `recipientEmail`.
+- **[Namespace Resolution ([`GeminiEmbeddingProvider.cs`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NewsApi/Services/Embeddings/GeminiEmbeddingProvider.cs))]**: Added `using NewsApi.Services;` to import [`ISystemSettingsService`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NewsApi/Services/ISystemSettingsService.cs) into [`GeminiEmbeddingProvider.cs`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NewsApi/Services/Embeddings/GeminiEmbeddingProvider.cs).
+- **[Testing & Verification]**: Verified clean C# Roslyn compilation across the entire solution.
+
 ### October 9, 2026 — Dynamic System Configuration & Admin Settings Architecture
 Implemented end-to-end runtime configuration management in the Admin Portal and backend API, allowing administrators to inspect, update, hot-reload, and test system settings (API keys, service intervals, AI toggles, and SMTP credentials) directly through the browser without container restarts:
 - **[Database Persistence & DTOs ([`SystemSetting.cs`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NewsApi/Models/SystemSetting.cs), [`NewsDbContext.cs`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NewsApi/Data/NewsDbContext.cs), [`DbInitializer.cs`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NewsApi/Infrastructure/DbInitializer.cs))]**:

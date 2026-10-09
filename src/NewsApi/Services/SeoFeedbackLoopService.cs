@@ -167,7 +167,7 @@ public class SeoFeedbackLoopService(
             {
                 return new AutomatedRemediationLogDto
                 {
-                    ActionType = actionType,
+                    ActionType = actionType ?? "General",
                     Target = target ?? "General",
                     Status = "Completed",
                     Details = $"Standard SEO remediation task completed successfully."

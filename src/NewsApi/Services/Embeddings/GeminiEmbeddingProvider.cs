@@ -2,6 +2,7 @@ using Google.GenAI;
 using Google.GenAI.Types;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using NewsApi.Services;
 
 namespace NewsApi.Services.Embeddings;
 

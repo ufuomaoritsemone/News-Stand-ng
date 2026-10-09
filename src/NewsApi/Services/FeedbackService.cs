@@ -106,7 +106,7 @@ public class FeedbackService : IFeedbackService
 
     private async Task<bool> TrySendFeedbackEmailAsync(FeedbackItem feedback, CancellationToken cancellationToken)
     {
-        var recipientEmail = _settingsService != null ? await _settingsService.GetSettingAsync("Feedback:RecipientEmail", _config["Feedback:RecipientEmail"] ?? "feedback@nigeriannewsgrid.com", cancellationToken) : _config["Feedback:RecipientEmail"] ?? "feedback@nigeriannewsgrid.com";
+        var recipientEmail = (_settingsService != null ? await _settingsService.GetSettingAsync("Feedback:RecipientEmail", _config["Feedback:RecipientEmail"] ?? "feedback@nigeriannewsgrid.com", cancellationToken) : _config["Feedback:RecipientEmail"]) ?? "feedback@nigeriannewsgrid.com";
         var smtpHost = _settingsService != null ? await _settingsService.GetSettingAsync("Feedback:Smtp:Host", _config["Feedback:Smtp:Host"], cancellationToken) : _config["Feedback:Smtp:Host"];
 
         if (string.IsNullOrWhiteSpace(smtpHost))
