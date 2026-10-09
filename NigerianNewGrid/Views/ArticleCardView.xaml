@@ -1,0 +1,160 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:models="clr-namespace:NigerianNewsGrid.Client.Models;assembly=NigerianNewsGrid.Client"
+             x:Class="NigerianNewGrid.Views.ArticleCardView"
+             x:DataType="models:BriefingItem">
+
+    <!-- GoRead Card: High-performance flattened 2-column Grid (Fix #6) -->
+    <Border Padding="0"
+            Margin="0,0,0,12"
+            Background="{StaticResource WhiteBrush}"
+            StrokeShape="RoundRectangle 16"
+            StrokeThickness="1"
+            Stroke="{StaticResource Gray100Brush}">
+        <Border.GestureRecognizers>
+            <TapGestureRecognizer Tapped="OnCardTapped" />
+        </Border.GestureRecognizers>
+
+        <!-- Flattened Grid layout replacing nested VerticalStackLayout and HorizontalStackLayouts -->
+        <Grid ColumnDefinitions="130,*"
+              RowDefinitions="Auto,*,Auto,Auto"
+              RowSpacing="4"
+              MinimumHeightRequest="140">
+
+            <!-- Column 0: Thumbnail (left panel, rounded left corners: 130x140, spans all content rows) -->
+            <Border Grid.Row="0"
+                    Grid.RowSpan="4"
+                    Grid.Column="0"
+                    StrokeThickness="0"
+                    StrokeShape="RoundRectangle 16,0,16,0"
+                    HeightRequest="140"
+                    WidthRequest="130"
+                    VerticalOptions="Fill">
+                <Image Source="{Binding ImageUrl}"
+                       Aspect="AspectFill"
+                       HeightRequest="140"
+                       WidthRequest="130"
+                       VerticalOptions="Fill" />
+            </Border>
+
+            <!-- Column 1, Row 0: Category & Sponsored Badges Row -->
+            <HorizontalStackLayout Grid.Row="0"
+                                   Grid.Column="1"
+                                   Spacing="6"
+                                   Margin="14,10,14,0"
+                                   VerticalOptions="Center">
+                <!-- Pin Icon -->
+                <Label Text="📌"
+                       FontSize="10"
+                       IsVisible="{Binding IsPinned}"
+                       VerticalOptions="Center" />
+
+                <!-- Special Placement Badge (Slots 1, 2, 3) -->
+                <Border IsVisible="{Binding IsSpecialPlacement}"
+                        Padding="6,2"
+                        BackgroundColor="{AppThemeBinding Light=#FEF3C7, Dark=#78350F}"
+                        StrokeShape="RoundRectangle 6"
+                        StrokeThickness="0"
+                        VerticalOptions="Center">
+                    <Label Text="⭐ SPECIAL SPONSOR"
+                           FontSize="9"
+                           FontAttributes="Bold"
+                           TextColor="{AppThemeBinding Light=#B45309, Dark=#FDE68A}" />
+                </Border>
+
+                <!-- Sponsored Badge Pill -->
+                <Border IsVisible="{Binding IsSponsored}"
+                        Padding="6,2"
+                        BackgroundColor="{AppThemeBinding Light=#E6F4EA, Dark=#137333}"
+                        StrokeShape="RoundRectangle 6"
+                        StrokeThickness="0"
+                        VerticalOptions="Center">
+                    <Label Text="SPONSORED"
+                           FontSize="9"
+                           FontAttributes="Bold"
+                           TextColor="{AppThemeBinding Light=#137333, Dark=#CEEAD6}" />
+                </Border>
+
+                <!-- AI Quick Read Pill -->
+                <Border IsVisible="{Binding HasAiSummary}"
+                        Padding="6,2"
+                        BackgroundColor="{AppThemeBinding Light=#E0F2FE, Dark=#075985}"
+                        StrokeShape="RoundRectangle 6"
+                        StrokeThickness="0"
+                        VerticalOptions="Center">
+                    <Label Text="⚡ QUICK READ"
+                           FontSize="9"
+                           FontAttributes="Bold"
+                           TextColor="{AppThemeBinding Light=#0284C7, Dark=#7DD3FC}" />
+                </Border>
+
+                <!-- Category label -->
+                <Label Text="{Binding Category}"
+                       FontFamily="LegacySansBook"
+                       FontSize="11"
+                       FontAttributes="Bold"
+                       TextColor="{AppThemeBinding Light={StaticResource AccentBlue}, Dark={StaticResource DarkPrimary}}"
+                       TextTransform="Uppercase"
+                       VerticalOptions="Center" />
+            </HorizontalStackLayout>
+
+            <!-- Column 1, Row 1: Headline (flexibly fills available middle height) -->
+            <Label Grid.Row="1"
+                   Grid.Column="1"
+                   Margin="14,0,14,0"
+                   Text="{Binding Title}"
+                   FontFamily="LegacySerifBold"
+                   FontSize="15"
+                   FontAttributes="Bold"
+                   MaxLines="4"
+                   LineBreakMode="WordWrap"
+                   VerticalOptions="Center"
+                   TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource DarkTextPrimary}}" />
+
+            <!-- Column 1, Row 2: Source • TimeAgo (unified into single formatted label to eliminate nested stack and 2 measure passes) -->
+            <Label Grid.Row="2"
+                   Grid.Column="1"
+                   Margin="14,0,14,0"
+                   FontFamily="LegacySansBook"
+                   FontSize="11"
+                   LineBreakMode="TailTruncation"
+                   MaxLines="1"
+                   VerticalOptions="Center">
+                <Label.FormattedText>
+                    <FormattedString>
+                        <Span Text="{Binding Source}" TextColor="{StaticResource Gray500}" />
+                        <Span Text=" • " TextColor="{StaticResource Gray400}" />
+                        <Span Text="{Binding TimeAgoText}" TextColor="{StaticResource Gray500}" />
+                    </FormattedString>
+                </Label.FormattedText>
+            </Label>
+
+            <!-- Column 1, Row 3: Action Buttons — Bookmark + WhatsApp + Share + X Share -->
+            <HorizontalStackLayout Grid.Row="3"
+                                   Grid.Column="1"
+                                   Spacing="6"
+                                   Margin="14,2,14,10"
+                                   VerticalOptions="Center">
+                <Button Text="🔖"
+                        Style="{StaticResource FeedActionSquareButtonStyle}"
+                        Clicked="OnBookmarkButtonClicked"
+                        SemanticProperties.Hint="Bookmark story" />
+                <Button Text="💬"
+                        Style="{StaticResource FeedActionSquareButtonStyle}"
+                        Clicked="OnWhatsAppButtonClicked"
+                        SemanticProperties.Hint="Share story on WhatsApp" />
+                <Button Text="𝕏"
+                        Style="{StaticResource FeedActionSquareButtonStyle}"
+                        Clicked="OnShareOnXButtonClicked"
+                        FontAttributes="Bold"
+                        SemanticProperties.Hint="Share story on X" />
+                <Button Text="↗"
+                        Style="{StaticResource FeedActionSquareButtonStyle}"
+                        Clicked="OnShareButtonClicked"
+                        FontAttributes="Bold"
+                        SemanticProperties.Hint="Share story" />
+            </HorizontalStackLayout>
+        </Grid>
+    </Border>
+</ContentView>

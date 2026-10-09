@@ -108,10 +108,7 @@ public class ArticleSearchService : IArticleSearchService
         }
 
         var sql = """
-            SELECT a."Id", a."Title", a."Summary", a."Content", a."Url", a."ImageUrl", a."Source",
-                   a."Category", a."PublishedAt", a."AudioUrl", a."Author", a."ContentType", a."IsSponsored", a."SponsorName",
-                   a."SponsorUrl", a."CampaignExpiresAt", a."IsPinned", a."TargetPosition", a."PriorityWeight", a."ImpressionCount", a."ClickCount",
-                   a."UpdatedAt"
+            SELECT a.*
             FROM "Articles" a
             INNER JOIN "Articles_fts" fts ON a."Id" = fts."Id"
             WHERE "Articles_fts" MATCH @ftsQuery
@@ -180,10 +177,7 @@ public class ArticleSearchService : IArticleSearchService
         }
 
         var sql = """
-            SELECT a."Id", a."Title", a."Summary", a."Content", a."Url", a."ImageUrl", a."Source",
-                   a."Category", a."PublishedAt", a."AudioUrl", a."Author", a."ContentType", a."IsSponsored", a."SponsorName",
-                   a."SponsorUrl", a."CampaignExpiresAt", a."IsPinned", a."TargetPosition", a."PriorityWeight", a."ImpressionCount", a."ClickCount",
-                   a."UpdatedAt"
+            SELECT a.*
             FROM "Articles" a
             WHERE a."SearchVector" @@ websearch_to_tsquery('english', @query)
               AND (@category IS NULL OR lower(a."Category") = @category)
@@ -300,29 +294,58 @@ public class ArticleSearchService : IArticleSearchService
                 .ToDictionary(g => g.Key, g => g.First().Url)
             : new Dictionary<string, string>();
 
-        return rawArticles.Select(a => new ArticleDto
+        var enrichmentMap = pageIds.Count > 0
+            ? await _db.ArticleEnrichments.AsNoTracking()
+                .Where(e => pageIds.Contains(e.ArticleId))
+                .ToDictionaryAsync(e => e.ArticleId, cancellationToken)
+            : new Dictionary<string, ArticleEnrichment>();
+
+        return rawArticles.Select(a =>
         {
-            Id = a.Id,
-            Title = a.Title,
-            Summary = a.Summary,
-            Content = a.Content,
-            Url = a.Url,
-            ImageUrl = CategoryImageMap.Resolve(a.ImageUrl, a.Category),
-            Source = string.IsNullOrWhiteSpace(a.Source) ? "General News" : a.Source,
-            Category = string.IsNullOrWhiteSpace(a.Category) ? "General" : a.Category,
-            PublishedAt = a.PublishedAt ?? DateTime.UtcNow,
-            AudioUrl = audioMap.GetValueOrDefault(a.Id) ?? a.AudioUrl,
-            Author = a.Author,
-            ContentType = string.IsNullOrWhiteSpace(a.ContentType) ? "News" : a.ContentType,
-            IsSponsored = a.IsSponsored,
-            SponsorName = a.SponsorName,
-            SponsorUrl = a.SponsorUrl,
-            CampaignExpiresAt = a.CampaignExpiresAt,
-            IsPinned = a.IsPinned,
-            TargetPosition = a.TargetPosition,
-            PriorityWeight = a.PriorityWeight,
-            ImpressionCount = a.ImpressionCount,
-            ClickCount = a.ClickCount
+            var enr = enrichmentMap.GetValueOrDefault(a.Id);
+            return new ArticleDto
+            {
+                Id = a.Id,
+                Title = a.Title,
+                Summary = a.Summary,
+                Content = a.Content,
+                Url = a.Url,
+                ImageUrl = CategoryImageMap.Resolve(a.ImageUrl, a.Category),
+                Source = string.IsNullOrWhiteSpace(a.Source) ? "General News" : a.Source,
+                Category = string.IsNullOrWhiteSpace(a.Category) ? "General" : a.Category,
+                PublishedAt = a.PublishedAt,
+                AudioUrl = audioMap.GetValueOrDefault(a.Id) ?? a.AudioUrl,
+                Author = a.Author,
+                ContentType = string.IsNullOrWhiteSpace(a.ContentType) ? "News" : a.ContentType,
+                IsSponsored = a.IsSponsored,
+                SponsorName = a.SponsorName,
+                SponsorUrl = a.SponsorUrl,
+                CampaignExpiresAt = a.CampaignExpiresAt,
+                IsPinned = a.IsPinned,
+                TargetPosition = a.TargetPosition,
+                PriorityWeight = a.PriorityWeight,
+                ImpressionCount = a.ImpressionCount,
+                ClickCount = a.ClickCount,
+                HasAiSummary = enr != null,
+                AiSummaryEngine = enr?.Engine,
+                AiSummary = enr?.FullSummary?.ExecutiveOverview ?? enr?.KeyTakeaways.FirstOrDefault(),
+                Enrichment = enr != null ? new ArticleEnrichmentDto
+                {
+                    KeyTakeaways = enr.KeyTakeaways,
+                    TimelineFacts = enr.TimelineFacts,
+                    Faqs = enr.Faqs,
+                    FullSummary = enr.FullSummary != null ? new FullSummaryDto
+                    {
+                        ExecutiveOverview = enr.FullSummary.ExecutiveOverview,
+                        ContextAndBackground = enr.FullSummary.ContextAndBackground,
+                        KeyFiguresAndEntities = enr.FullSummary.KeyFiguresAndEntities,
+                        OutlookOrNextSteps = enr.FullSummary.OutlookOrNextSteps,
+                        ReadingTimeSeconds = enr.FullSummary.ReadingTimeSeconds
+                    } : null,
+                    Engine = enr.Engine,
+                    UpdatedAt = enr.UpdatedAt ?? enr.CreatedAt
+                } : null
+            };
         }).ToList();
     }
 }

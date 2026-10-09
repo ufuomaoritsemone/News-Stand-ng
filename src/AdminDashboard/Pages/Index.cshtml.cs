@@ -27,6 +27,9 @@ public class IndexModel : PageModel
     [BindProperty(SupportsGet = true)]
     public string SearchQuery { get; set; } = string.Empty;
 
+    [BindProperty(SupportsGet = true)]
+    public string AiSummaryFilter { get; set; } = "All";
+
     public List<SourceDto> Sources { get; set; } = new();
     public List<ArticleDto> Articles { get; set; } = new();
     public List<string> Channels { get; set; } = new();
@@ -35,6 +38,7 @@ public class IndexModel : PageModel
     public int TotalArticlesCount { get; set; }
     public int TodayArticlesCount { get; set; }
     public int AudioCount { get; set; }
+    public int AiSummaryCount { get; set; }
     public bool IsUpToDate { get; set; }
 
     public async Task OnGetAsync()
@@ -104,7 +108,7 @@ public class IndexModel : PageModel
             TempData["Error"] = $"Error: {ex.Message}";
         }
 
-        return RedirectToPage(new { SelectedChannel, SelectedCategory, SearchQuery });
+        return RedirectToPage(new { SelectedChannel, SelectedCategory, SearchQuery, AiSummaryFilter });
     }
 
     public async Task<IActionResult> OnPostRemoveSourceAsync(string id)
@@ -128,7 +132,7 @@ public class IndexModel : PageModel
             TempData["Error"] = $"Error: {ex.Message}";
         }
 
-        return RedirectToPage(new { SelectedChannel, SelectedCategory, SearchQuery });
+        return RedirectToPage(new { SelectedChannel, SelectedCategory, SearchQuery, AiSummaryFilter });
     }
 
     public async Task<IActionResult> OnPostUpdateCategoryAsync(string articleId, string newCategory)
@@ -179,7 +183,76 @@ public class IndexModel : PageModel
             TempData["Error"] = errorMsg;
         }
 
-        return RedirectToPage(new { SelectedChannel, SelectedCategory, SearchQuery });
+        return RedirectToPage(new { SelectedChannel, SelectedCategory, SearchQuery, AiSummaryFilter });
+    }
+
+    public async Task<IActionResult> OnGetArticleEnrichmentAsync(string id)
+    {
+        if (string.IsNullOrWhiteSpace(id))
+        {
+            return new JsonResult(new { success = false, message = "Article ID is required." });
+        }
+
+        var client = _httpClientFactory.CreateClient("NewsApiClient");
+        var apiBaseUrl = _configuration["ApiBaseUrl"] ?? "http://localhost:56193";
+
+        try
+        {
+            var response = await client.GetAsync($"{apiBaseUrl.TrimEnd('/')}/api/v1/articles/{id}/enrichment");
+            if (response.IsSuccessStatusCode)
+            {
+                var enrichment = await response.Content.ReadFromJsonAsync<ArticleEnrichmentDto>();
+                return new JsonResult(new { success = true, enrichment });
+            }
+
+            // Fallback to ai-summary endpoint if available
+            var summaryResponse = await client.GetAsync($"{apiBaseUrl.TrimEnd('/')}/api/v1/articles/{id}/ai-summary");
+            if (summaryResponse.IsSuccessStatusCode)
+            {
+                var fullSummary = await summaryResponse.Content.ReadFromJsonAsync<FullSummaryDto>();
+                return new JsonResult(new { success = true, enrichment = new ArticleEnrichmentDto { FullSummary = fullSummary } });
+            }
+
+            return new JsonResult(new { success = false, message = "No AI summary or enrichment found for this article." });
+        }
+        catch (Exception ex)
+        {
+            return new JsonResult(new { success = false, message = $"Error fetching AI summary: {ex.Message}" });
+        }
+    }
+
+    public async Task<IActionResult> OnPostGenerateAiSummaryAsync(string id)
+    {
+        if (string.IsNullOrWhiteSpace(id))
+        {
+            return new JsonResult(new { success = false, message = "Article ID is required." });
+        }
+
+        var client = _httpClientFactory.CreateClient("NewsApiClient");
+        var apiBaseUrl = _configuration["ApiBaseUrl"] ?? "http://localhost:56193";
+
+        try
+        {
+            var response = await client.PostAsync($"{apiBaseUrl.TrimEnd('/')}/api/v1/articles/{id}/ai-summary", null);
+            if (response.IsSuccessStatusCode)
+            {
+                var fullSummary = await response.Content.ReadFromJsonAsync<FullSummaryDto>();
+                return new JsonResult(new
+                {
+                    success = true,
+                    message = "AI Executive Summary generated successfully!",
+                    fullSummary,
+                    engine = "Gemini-1.5-Flash"
+                });
+            }
+
+            var errBody = await response.Content.ReadAsStringAsync();
+            return new JsonResult(new { success = false, message = $"Generation failed ({response.StatusCode}): {errBody}" });
+        }
+        catch (Exception ex)
+        {
+            return new JsonResult(new { success = false, message = $"Error generating AI summary: {ex.Message}" });
+        }
     }
 
     private async Task LoadDataAsync()
@@ -217,6 +290,14 @@ public class IndexModel : PageModel
             {
                 url += $"&search={Uri.EscapeDataString(SearchQuery)}";
             }
+            if (AiSummaryFilter == "WithSummary")
+            {
+                url += "&hasAiSummary=true";
+            }
+            else if (AiSummaryFilter == "WithoutSummary")
+            {
+                url += "&hasAiSummary=false";
+            }
 
             var response = await client.GetAsync(url);
             if (response.IsSuccessStatusCode)
@@ -245,6 +326,7 @@ public class IndexModel : PageModel
         TodayArticlesCount = Articles.Count(a => a.PublishedAt.Date == today);
         IsUpToDate = TodayArticlesCount > 0;
         AudioCount = Articles.Count(a => !string.IsNullOrEmpty(a.AudioUrl));
+        AiSummaryCount = Articles.Count(a => a.HasAiSummary);
 
         // Available Channel List for tabs/filters
         var knownChannels = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "All" };
@@ -322,4 +404,32 @@ public class ArticleDto
     public string Category { get; set; } = "General";
     public DateTime PublishedAt { get; set; }
     public string? AudioUrl { get; set; }
+    public bool HasAiSummary { get; set; }
+    public string? AiSummaryEngine { get; set; }
+}
+
+public class ArticleEnrichmentDto
+{
+    public List<string> KeyTakeaways { get; set; } = [];
+    public List<TimelineFactDto> TimelineFacts { get; set; } = [];
+    public List<FaqItemDto> Faqs { get; set; } = [];
+    public FullSummaryDto? FullSummary { get; set; }
+    public string Engine { get; set; } = "TextRank-Extractive";
+    public DateTime? UpdatedAt { get; set; }
+}
+
+public class TimelineFactDto
+{
+    public string Fact { get; set; } = string.Empty;
+    public string? DateText { get; set; }
+    public string? Entity { get; set; }
+}
+
+public class FullSummaryDto
+{
+    public string ExecutiveOverview { get; set; } = string.Empty;
+    public List<string> ContextAndBackground { get; set; } = [];
+    public List<string> KeyFiguresAndEntities { get; set; } = [];
+    public string OutlookOrNextSteps { get; set; } = string.Empty;
+    public int ReadingTimeSeconds { get; set; } = 45;
 }

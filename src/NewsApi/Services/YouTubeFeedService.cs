@@ -377,10 +377,62 @@ public class YouTubeFeedService : IYouTubeFeedService
         return await ComputeTrendingFromChannelVelocityAsync(ct);
     }
 
+    private static readonly HashSet<string> ExcludedForeignPublishers = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "cnn", "bbc news", "fox news", "msnbc", "sky sports", "sky sports news", "sky sports premier league",
+        "sky news", "cbc news", "dw news", "al jazeera", "al jazeera english", "reuters", "associated press",
+        "firstpost", "republic world", "india global review", "mentour pilot", "max afterburner",
+        "the daily show", "piers morgan", "piers morgan uncensored", "cbn news", "tousi tv",
+        "that's football", "talksport", "the athletic", "the athletic fc podcast", "espn", "espn uk",
+        "espn fc", "newstalk", "the rising kashmir", "tbn israel", "middle east eye", "kombo's diary",
+        "janta ka reporter", "ndtv", "wion", "zee news", "times now", "aaj tak", "geo news", "ary news"
+    };
+
+    private static readonly string[] NigerianPublishers =
+    [
+        "channels television", "channels tv", "tvc news", "arise news", "arise tv",
+        "thecable", "saharatv", "sahara reporters", "nta network", "nta news", "nta",
+        "premium times", "punch newspaper", "punch ng", "vanguard newspaper", "vanguard news",
+        "guardian nigeria", "daily trust", "businessday", "news central", "news central tv",
+        "legit tv", "legit.ng", "symfoni", "donaza", "njenje media", "adeola fayehun",
+        "lajupog", "okocha happy marcel", "ifeoma edum", "ok movement", "drm news",
+        "verydarkman", "verydarkblackman", "oak tv", "wazobia", "pulse nigeria",
+        "bbc news yoruba", "bbc news hausa", "bbc news igbo", "bbc news pidgin"
+    ];
+
+    private static readonly Regex NigerianTopicPattern = new(
+        @"\b(nigeria|nigerian|tinubu|shettima|peter obi|atiku|apc|pdp|lp|wike|sanwo-olu|fubara|soludo|otti|akpabio|dangote|naira|cbn|efcc|dss|nass|inec|asuu|nysc|super eagles|afcon|npfl|nff|nollywood|davido|wizkid|burna boy|vdm|verydarkman|lagos|abuja|kano|rivers|port harcourt|delta|enugu|anambra|imo|kaduna|oyo|ibadan|benin|edo|borno|maiduguri)\b",
+        RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+    /// <summary>
+    /// Evaluates whether a video originates from a Nigerian publisher or covers a Nigerian news event,
+    /// while strictly filtering out foreign international networks (e.g. CNN, Sky Sports, Mentour Pilot, CBC).
+    /// </summary>
+    public static bool IsNigerianNewsStory(string? channelName, string? channelId, string? title, string? summary)
+    {
+        var ch = (channelName ?? string.Empty).Trim().ToLowerInvariant();
+
+        // 1. Explicitly reject known foreign networks / international sports / aviation channels
+        if (ExcludedForeignPublishers.Any(f => ch.Contains(f, StringComparison.OrdinalIgnoreCase)))
+        {
+            return false;
+        }
+
+        // 2. Accept if channel matches known Nigerian news publishers or creators
+        if (NigerianPublishers.Any(p => ch.Contains(p, StringComparison.OrdinalIgnoreCase)))
+        {
+            return true;
+        }
+
+        // 3. Accept if title or summary explicitly matches Nigerian news topics / entities
+        var text = $"{title} {summary}";
+        return NigerianTopicPattern.IsMatch(text);
+    }
+
     private async Task<int> FetchTrendingFromApiAsync(string apiKey, CancellationToken ct)
     {
         // Category 25 = News & Politics, regionCode = NG (Nigeria), chart = mostPopular
-        var url = $"https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails,statistics&chart=mostPopular&regionCode=NG&videoCategoryId=25&maxResults=30&key={apiKey}";
+        var url = $"https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails,statistics&chart=mostPopular&regionCode=NG&videoCategoryId=25&maxResults=50&key={apiKey}";
 
         using var request = new HttpRequestMessage(HttpMethod.Get, url);
         request.Headers.Add("User-Agent", "NigerianNewsGrid/1.0");
@@ -400,7 +452,16 @@ public class YouTubeFeedService : IYouTubeFeedService
             return 0;
         }
 
-        // Reset previous trending flags so only current top videos carry IsTrending = true
+        // Filter: Keep ONLY genuine Nigerian news stories / publishers and exclude foreign networks
+        var filteredItems = apiResult.Items
+            .Where(item =>
+            {
+                var s = item.Snippet;
+                return s != null && IsNigerianNewsStory(s.ChannelTitle, s.ChannelId, s.Title, s.Description);
+            })
+            .ToList();
+
+        // Reset previous trending flags so only current verified Nigerian videos carry IsTrending = true
         var previouslyTrending = await _db.VideoStories.Where(v => v.IsTrending).ToListAsync(ct);
         foreach (var prev in previouslyTrending)
         {
@@ -410,11 +471,13 @@ public class YouTubeFeedService : IYouTubeFeedService
 
         int rank = 1;
         int updatedOrAdded = 0;
+        var handledVideoIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        foreach (var item in apiResult.Items)
+        foreach (var item in filteredItems)
         {
             var videoId = item.Id?.Trim();
-            if (string.IsNullOrWhiteSpace(videoId)) continue;
+            if (string.IsNullOrWhiteSpace(videoId) || handledVideoIds.Contains(videoId)) continue;
+            handledVideoIds.Add(videoId);
 
             var snippet = item.Snippet;
             var stats = item.Statistics;
@@ -426,7 +489,7 @@ public class YouTubeFeedService : IYouTubeFeedService
             var videoUrl = $"https://www.youtube.com/watch?v={videoId}";
             var category = DetermineCategory(title, rawSummary);
             var thumbnail = ResolveBestThumbnail(snippet?.Thumbnails, videoId, category);
-            var channelName = snippet?.ChannelTitle?.Trim() ?? "YouTube News";
+            var channelName = snippet?.ChannelTitle?.Trim() ?? "Nigerian News";
             var channelId = snippet?.ChannelId?.Trim() ?? string.Empty;
             var duration = FormatDuration(contentDetails?.Duration);
             var publishedAt = snippet?.PublishedAt?.ToUniversalTime() ?? DateTime.UtcNow;
@@ -470,6 +533,41 @@ public class YouTubeFeedService : IYouTubeFeedService
             updatedOrAdded++;
         }
 
+        // If fewer than 24 Nigerian stories in YouTube trending, top up from monitored Nigerian channels
+        if (updatedOrAdded < 24)
+        {
+            var cutoff = DateTime.UtcNow.AddDays(-7);
+            var topUpCandidates = await _db.VideoStories
+                .Where(v => !v.IsTrending && v.PublishedAt >= cutoff)
+                .OrderByDescending(v => v.ViewCount)
+                .ThenByDescending(v => v.PublishedAt)
+                .Take(50)
+                .ToListAsync(ct);
+
+            foreach (var cand in topUpCandidates)
+            {
+                if (updatedOrAdded >= 24) break;
+                if (handledVideoIds.Contains(cand.VideoId)) continue;
+                if (!IsNigerianNewsStory(cand.ChannelName, cand.ChannelId, cand.Title, cand.Summary)) continue;
+
+                cand.IsTrending = true;
+                cand.TrendingRank = rank++;
+                handledVideoIds.Add(cand.VideoId);
+                updatedOrAdded++;
+            }
+        }
+
+        // Clean out any lingering foreign stories from IsTrending
+        var allTrending = await _db.VideoStories.Where(v => v.IsTrending).ToListAsync(ct);
+        foreach (var t in allTrending)
+        {
+            if (!IsNigerianNewsStory(t.ChannelName, t.ChannelId, t.Title, t.Summary))
+            {
+                t.IsTrending = false;
+                t.TrendingRank = null;
+            }
+        }
+
         await _db.SaveChangesAsync(ct);
         return updatedOrAdded;
     }
@@ -495,8 +593,9 @@ public class YouTubeFeedService : IYouTubeFeedService
             t.TrendingRank = null;
         }
 
-        // Rank by recency & view counts
+        // Filter strictly to Nigerian publishers and news stories
         var ranked = recentStories
+            .Where(v => IsNigerianNewsStory(v.ChannelName, v.ChannelId, v.Title, v.Summary))
             .OrderByDescending(v => v.ViewCount)
             .ThenByDescending(v => v.PublishedAt)
             .Take(30)

@@ -14,4 +14,5 @@ public class ArticleModel
     public string? AudioUrl { get; set; }
     public string? Author { get; set; }
     public string? ContentType { get; set; } = "News";
+    public List<Services.EntityMatch> Topics { get; set; } = [];
 }

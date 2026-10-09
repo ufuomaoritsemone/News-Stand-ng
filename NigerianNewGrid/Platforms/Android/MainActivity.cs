@@ -85,17 +85,7 @@ public class MainActivity : MauiAppCompatActivity
 
                     if (Shell.Current != null)
                     {
-                        var url = articleUrl;
-                        if (string.IsNullOrWhiteSpace(url) && !string.IsNullOrWhiteSpace(articleId))
-                        {
-                            url = await ResolveUrlFromCacheAsync(articleId);
-                        }
-
-                        if (!string.IsNullOrWhiteSpace(url))
-                        {
-                            await Shell.Current.Navigation.PushAsync(
-                                new ArticleWebPage(url, articleTitle, category: category, articleId: articleId));
-                        }
+                        await OpenArticleFromIntentAsync(articleId, articleUrl, articleTitle, category);
                     }
                 }
                 catch (Exception ex)
@@ -104,6 +94,51 @@ public class MainActivity : MauiAppCompatActivity
                 }
             });
         }
+    }
+
+    private static async Task OpenArticleFromIntentAsync(
+        string? articleId,
+        string? articleUrl,
+        string? articleTitle,
+        string? category)
+    {
+        if (Shell.Current == null) return;
+
+        // 1. Try resolving full story by GUID from local SQLite persistence (sub-10ms, offline capable)
+        if (!string.IsNullOrWhiteSpace(articleId))
+        {
+            try
+            {
+                var persistenceService = IPlatformApplication.Current?.Services.GetService<INewsPersistenceService>();
+                if (persistenceService != null)
+                {
+                    var story = await persistenceService.GetStoryByIdAsync(articleId);
+                    if (story != null && !string.IsNullOrWhiteSpace(story.Content))
+                    {
+                        await Shell.Current.Navigation.PushAsync(new ArticleWebPage(story));
+                        return;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[MainActivity] Cache lookup error: {ex.Message}");
+            }
+        }
+
+        // 2. Resolve URL if missing and launch ArticleWebPage with GUID for automatic hydration
+        var url = articleUrl;
+        if (string.IsNullOrWhiteSpace(url) && !string.IsNullOrWhiteSpace(articleId))
+        {
+            url = await ResolveUrlFromCacheAsync(articleId);
+        }
+
+        await Shell.Current.Navigation.PushAsync(
+            new ArticleWebPage(
+                url: url ?? string.Empty,
+                title: articleTitle,
+                category: category,
+                articleId: articleId));
     }
 
     private static async Task<string?> ResolveUrlFromCacheAsync(string articleId)

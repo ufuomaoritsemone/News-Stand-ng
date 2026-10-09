@@ -1,0 +1,88 @@
+{
+  "name": "The News Stand NG",
+  "short_name": "NewsStand NG",
+  "description": "Real-time Nigerian news aggregation, breaking alerts, Naira FX tracker, fuel prices, and state journalism.",
+  "start_url": "/?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0b0f17",
+  "theme_color": "#008751",
+  "categories": [
+    "news",
+    "magazines",
+    "business",
+    "politics"
+  ],
+  "lang": "en",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Naira FX Tracker",
+      "short_name": "FX Tracker",
+      "description": "Live parallel market & official CBN exchange rates",
+      "url": "/naira-exchange-rate?source=shortcut",
+      "icons": [
+        {
+          "src": "/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Fuel Price Tracker",
+      "short_name": "Fuel Prices",
+      "description": "State-by-state petrol & diesel pump rates",
+      "url": "/fuel-price-nigeria?source=shortcut",
+      "icons": [
+        {
+          "src": "/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "36 States News",
+      "short_name": "State News",
+      "description": "Hyperlocal news across all Nigerian states",
+      "url": "/states?source=shortcut",
+      "icons": [
+        {
+          "src": "/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Top Stories",
+      "short_name": "Headlines",
+      "description": "Trending national headlines",
+      "url": "/?source=shortcut",
+      "icons": [
+        {
+          "src": "/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    }
+  ]
+}

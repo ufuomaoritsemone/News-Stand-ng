@@ -32,10 +32,11 @@ public class AppOpenAdManager : IAppOpenAdManager
     private readonly ITextToSpeechService _textToSpeechService;
     private readonly ILogger<AppOpenAdManager> _logger;
 
-#pragma warning disable CS0414
-    // Prevents re-triggering while an ad is currently presented or dismissing
-    private bool _isShowingAd;
-#pragma warning restore CS0414
+    // Prevents re-triggering while an ad is currently presented or dismissing (thread-safe lock-free atomic guard)
+    private int _isShowingAd; // 0 = false, 1 = true
+    private bool IsShowingAd => Volatile.Read(ref _isShowingAd) == 1;
+    private bool TryBeginShowingAd() => Interlocked.CompareExchange(ref _isShowingAd, 1, 0) == 0;
+    private void EndShowingAd() => Interlocked.Exchange(ref _isShowingAd, 0);
 
     public AppOpenAdManager(
         IAppOpenAdService appOpenAdService,
@@ -87,7 +88,14 @@ public class AppOpenAdManager : IAppOpenAdManager
 #if ANDROID
             Android.Util.Log.Info("APP_DEBUG", "AppOpenAdManager calling _appOpenAdService.PrepareAd");
 #endif
-            _appOpenAdService.PrepareAd(unitId);
+            if (!MainThread.IsMainThread)
+            {
+                await MainThread.InvokeOnMainThreadAsync(() => _appOpenAdService.PrepareAd(unitId));
+            }
+            else
+            {
+                _appOpenAdService.PrepareAd(unitId);
+            }
 #if ANDROID
             Android.Util.Log.Info("APP_DEBUG", "AppOpenAdManager _appOpenAdService.PrepareAd DONE");
 #endif
@@ -113,7 +121,7 @@ public class AppOpenAdManager : IAppOpenAdManager
     public async Task ShowAdIfAvailableAsync()
     {
 #if ANDROID || IOS
-        if (_isShowingAd)
+        if (IsShowingAd)
         {
             _logger.LogInformation("[AppOpenAd] Ad is currently presented or dismissing; skipping duplicate request.");
             return;
@@ -139,6 +147,12 @@ public class AppOpenAdManager : IAppOpenAdManager
             return;
         }
 
+        if (!TryBeginShowingAd())
+        {
+            _logger.LogInformation("[AppOpenAd] Ad is currently presented or dismissing; skipping duplicate request.");
+            return;
+        }
+
         await ShowLoadedAdAsync();
 #else
         await Task.CompletedTask;
@@ -149,7 +163,6 @@ public class AppOpenAdManager : IAppOpenAdManager
     {
         try
         {
-            _isShowingAd = true;
             Preferences.Set(LastShownPreferenceKey, DateTime.UtcNow.Ticks);
 
             // Execute on MainThread to guarantee safe Android/iOS view-hierarchy presentation
@@ -165,13 +178,13 @@ public class AppOpenAdManager : IAppOpenAdManager
             _ = Task.Run(async () =>
             {
                 await Task.Delay(2500);
-                _isShowingAd = false;
+                EndShowingAd();
                 await PrepareAdAsync();
             });
         }
         catch (Exception ex)
         {
-            _isShowingAd = false;
+            EndShowingAd();
             _logger.LogError(ex, "[AppOpenAd] ShowAd failed");
             _ = _analytics.TrackAsync("app_open_ad_error", category: ex.Message);
         }

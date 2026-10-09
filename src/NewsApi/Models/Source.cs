@@ -7,6 +7,10 @@ public class Source
     [Key]
     public string Id { get; set; } = string.Empty;
     public string Name { get; set; } = string.Empty;
+
+    [MaxLength(100)]
+    public string? Slug { get; set; }
+
     public string? RssUrl { get; set; }
     public string? SitemapUrl { get; set; }
     public string? ScraperType { get; set; } = "Hybrid";

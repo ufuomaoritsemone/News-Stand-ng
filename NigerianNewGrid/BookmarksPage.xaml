@@ -1,10 +1,11 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-             xmlns:models="clr-namespace:NigerianNewsGrid.Client.Models;assembly=NigerianNewsGrid.Client"
-             x:Class="NigerianNewGrid.BookmarksPage"
-             Title="Bookmarks"
-             Background="{StaticResource SecondaryLightBrush}">
+              xmlns:models="clr-namespace:NigerianNewsGrid.Client.Models;assembly=NigerianNewsGrid.Client"
+              xmlns:views="clr-namespace:NigerianNewGrid.Views"
+              x:Class="NigerianNewGrid.BookmarksPage"
+              Title="Bookmarks"
+              Background="{StaticResource SecondaryLightBrush}">
 
     <Grid RowDefinitions="Auto,*" Padding="0" RowSpacing="0">
 
@@ -45,8 +46,10 @@
         <CollectionView Grid.Row="1"
                         x:Name="BookmarksView"
                         SelectionMode="None"
-                        ItemSizingStrategy="MeasureFirstItem"
                         Margin="16,12,16,0">
+            <CollectionView.ItemsLayout>
+                <LinearItemsLayout Orientation="Vertical" />
+            </CollectionView.ItemsLayout>
 
             <!-- Empty State -->
             <CollectionView.EmptyView>
@@ -71,62 +74,10 @@
                 </ContentView>
             </CollectionView.EmptyView>
 
-            <!-- Bookmark Item Template — GoRead card style with thumbnail -->
+            <!-- Bookmark Item Template — Reusable ArticleCardView -->
             <CollectionView.ItemTemplate>
                 <DataTemplate x:DataType="models:BriefingItem">
-                    <Border Padding="0"
-                            Margin="0,0,0,12"
-                            Background="{StaticResource WhiteBrush}"
-                            StrokeShape="RoundRectangle 16"
-                            StrokeThickness="1"
-                            Stroke="{StaticResource Gray100Brush}">
-                        <Border.GestureRecognizers>
-                            <TapGestureRecognizer Tapped="OnBookmarkTapped" CommandParameter="{Binding .}" />
-                        </Border.GestureRecognizers>
-                        <Grid ColumnDefinitions="130,*" ColumnSpacing="0" MinimumHeightRequest="140">
-
-                            <!-- Thumbnail Image -->
-                            <Border Grid.Column="0"
-                                    StrokeThickness="0"
-                                    StrokeShape="RoundRectangle 16,0,16,0"
-                                    HeightRequest="140"
-                                    WidthRequest="130"
-                                    VerticalOptions="Fill">
-                                <Image Source="{Binding ImageUrl}"
-                                       Aspect="AspectFill"
-                                       HeightRequest="140"
-                                       WidthRequest="130"
-                                       VerticalOptions="Fill" />
-                            </Border>
-
-                            <!-- Content -->
-                            <VerticalStackLayout Grid.Column="1"
-                                                 Padding="14,10,14,10"
-                                                 Spacing="4"
-                                                 VerticalOptions="Center">
-                                <!-- Category chip -->
-                                <Label Text="{Binding Category}"
-                                       FontFamily="LegacySansBook"
-                                       FontSize="11"
-                                       FontAttributes="Bold"
-                                       TextColor="{AppThemeBinding Light={StaticResource AccentBlue}, Dark={StaticResource DarkPrimary}}"
-                                       TextTransform="Uppercase" />
-                                <!-- Title -->
-                                <Label Text="{Binding Title}"
-                                       FontFamily="LegacySerifBold"
-                                       FontSize="15"
-                                       FontAttributes="Bold"
-                                       MaxLines="4"
-                                       LineBreakMode="WordWrap"
-                                       TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource DarkTextPrimary}}" />
-                                <!-- Source -->
-                                <Label Text="{Binding Source}"
-                                       FontFamily="LegacySansBook"
-                                       FontSize="11"
-                                       TextColor="{StaticResource Gray500}" />
-                            </VerticalStackLayout>
-                        </Grid>
-                    </Border>
+                    <views:ArticleCardView ArticleTapped="OnBookmarkTapped" />
                 </DataTemplate>
             </CollectionView.ItemTemplate>
         </CollectionView>

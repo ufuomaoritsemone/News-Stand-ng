@@ -27,8 +27,10 @@
             <a href="/Videos" class="btn btn-outline-danger btn-sm"><i class="bi bi-youtube me-1"></i> Videos</a>
             <a href="/Socials" class="btn btn-outline-info btn-sm"><i class="bi bi-twitter-x me-1"></i> Socials</a>
             <a href="/Analytics" class="btn btn-outline-success btn-sm"><i class="bi bi-bar-chart-fill me-1"></i> Analytics</a>
+            <a href="/SearchConsole" class="btn btn-outline-success btn-sm"><i class="bi bi-google me-1"></i> Search Console</a>
             <a href="/Sponsors" class="btn btn-outline-warning btn-sm"><i class="bi bi-megaphone me-1"></i> Sponsored</a>
             <a href="/Feedback" class="btn btn-outline-primary btn-sm"><i class="bi bi-chat-heart me-1"></i> Feedback</a>
+            <a href="/Comments" class="btn btn-outline-info btn-sm"><i class="bi bi-chat-square-text me-1"></i> Comments</a>
             <a href="/Categorizer" class="btn btn-outline-purple btn-sm"><i class="bi bi-cpu-fill me-1"></i> ML Categorizer</a>
             <button type="button" class="theme-toggle-btn" onclick="toggleAdminTheme()" title="Toggle Light / Dark Theme">
                 <i class="bi bi-moon-stars-fill theme-icon-dark"></i>
@@ -38,6 +40,7 @@
             <form method="get" class="d-flex gap-2">
                 <input type="hidden" name="selectedChannel" value="@Model.SelectedChannel" />
                 <input type="hidden" name="selectedCategory" value="@Model.SelectedCategory" />
+                <input type="hidden" name="aiSummaryFilter" value="@Model.AiSummaryFilter" />
                 <input type="text" name="searchQuery" value="@Model.SearchQuery" placeholder="Search keywords or topics..." class="form-control form-control-glass form-control-sm" style="width: 240px;" />
                 <button type="submit" class="btn btn-outline-light btn-sm"><i class="bi bi-search"></i> Search</button>
             </form>
@@ -63,28 +66,35 @@
 
     <!-- Stat Metrics Row -->
     <div class="row g-3 mb-4">
-        <div class="col-6 col-md-3">
+        <div class="col-6 col-md-4 col-xl">
             <div class="glass-card stat-card">
                 <div class="text-muted small text-uppercase font-weight-bold">Archived Stories</div>
                 <div class="stat-value">@Model.TotalArticlesCount</div>
                 <div class="small text-info mt-1"><i class="bi bi-archive-fill me-1"></i> Permanent Storage</div>
             </div>
         </div>
-        <div class="col-6 col-md-3">
+        <div class="col-6 col-md-4 col-xl">
             <div class="glass-card stat-card">
                 <div class="text-muted small text-uppercase font-weight-bold">Today's Fresh Stories</div>
                 <div class="stat-value">@Model.TodayArticlesCount</div>
                 <div class="small text-success mt-1"><i class="bi bi-calendar-check me-1"></i> Up to Date (@DateTime.UtcNow.ToString("yyyy-MM-dd"))</div>
             </div>
         </div>
-        <div class="col-6 col-md-3">
+        <div class="col-6 col-md-4 col-xl">
+            <div class="glass-card stat-card">
+                <div class="text-muted small text-uppercase font-weight-bold">AI Summaries</div>
+                <div class="stat-value text-warning">@Model.AiSummaryCount</div>
+                <div class="small text-warning mt-1"><i class="bi bi-stars me-1"></i> Executive Briefings</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-6 col-xl">
             <div class="glass-card stat-card">
                 <div class="text-muted small text-uppercase font-weight-bold">Active News Channels</div>
                 <div class="stat-value">@(Model.Channels.Count - 1)</div>
-                <div class="small text-warning mt-1"><i class="bi bi-rss me-1"></i> Scraped RSS Feeds</div>
+                <div class="small text-warning mt-1"><i class="bi bi-rss me-1"></i> Scraped Feeds</div>
             </div>
         </div>
-        <div class="col-6 col-md-3">
+        <div class="col-6 col-md-6 col-xl">
             <div class="glass-card stat-card">
                 <div class="text-muted small text-uppercase font-weight-bold">Active Topic / Keyword</div>
                 <div class="stat-value text-truncate" style="font-size: 1.3rem;" title="@Model.SelectedCategory">@Model.SelectedCategory</div>
@@ -109,7 +119,7 @@
                     @foreach (var ch in Model.Channels)
                     {
                         var isActive = string.Equals(Model.SelectedChannel, ch, StringComparison.OrdinalIgnoreCase);
-                        var url = Url.Page("/Index", new { selectedChannel = ch, selectedCategory = Model.SelectedCategory, searchQuery = Model.SearchQuery });
+                        var url = Url.Page("/Index", new { selectedChannel = ch, selectedCategory = Model.SelectedCategory, searchQuery = Model.SearchQuery, aiSummaryFilter = Model.AiSummaryFilter });
                         <a href="@url" class="channel-pill @(isActive ? "active" : "")">
                             @if (ch == "All")
                             {
@@ -129,11 +139,30 @@
                     @foreach (var cat in Model.Categories)
                     {
                         var isCatActive = string.Equals(Model.SelectedCategory, cat, StringComparison.OrdinalIgnoreCase);
-                        var catUrl = Url.Page("/Index", new { selectedChannel = Model.SelectedChannel, selectedCategory = cat, searchQuery = Model.SearchQuery });
+                        var catUrl = Url.Page("/Index", new { selectedChannel = Model.SelectedChannel, selectedCategory = cat, searchQuery = Model.SearchQuery, aiSummaryFilter = Model.AiSummaryFilter });
                         <a href="@catUrl" class="btn btn-sm @(isCatActive ? "btn-info text-dark" : "btn-outline-secondary text-light") rounded-pill py-1 px-3" style="font-size: 0.8rem;">
                             @cat
                         </a>
                     }
+                </div>
+
+                <!-- AI Summary Filter Sub-Tabs -->
+                <div class="d-flex align-items-center gap-2 mt-2 pt-2 border-top border-secondary border-opacity-25 flex-wrap">
+                    <span class="text-muted small me-2"><i class="bi bi-stars text-warning"></i> AI Summary:</span>
+                    @{
+                        var allAiUrl = Url.Page("/Index", new { selectedChannel = Model.SelectedChannel, selectedCategory = Model.SelectedCategory, searchQuery = Model.SearchQuery, aiSummaryFilter = "All" });
+                        var withAiUrl = Url.Page("/Index", new { selectedChannel = Model.SelectedChannel, selectedCategory = Model.SelectedCategory, searchQuery = Model.SearchQuery, aiSummaryFilter = "WithSummary" });
+                        var withoutAiUrl = Url.Page("/Index", new { selectedChannel = Model.SelectedChannel, selectedCategory = Model.SelectedCategory, searchQuery = Model.SearchQuery, aiSummaryFilter = "WithoutSummary" });
+                    }
+                    <a href="@allAiUrl" class="btn btn-sm @(Model.AiSummaryFilter == "All" ? "btn-warning text-dark fw-bold" : "btn-outline-secondary text-light") rounded-pill py-0.5 px-3" style="font-size: 0.78rem;">
+                        All Stories
+                    </a>
+                    <a href="@withAiUrl" class="btn btn-sm @(Model.AiSummaryFilter == "WithSummary" ? "btn-warning text-dark fw-bold" : "btn-outline-secondary text-light") rounded-pill py-0.5 px-3" style="font-size: 0.78rem;">
+                        <i class="bi bi-stars me-1"></i> With AI Summary (@Model.AiSummaryCount)
+                    </a>
+                    <a href="@withoutAiUrl" class="btn btn-sm @(Model.AiSummaryFilter == "WithoutSummary" ? "btn-warning text-dark fw-bold" : "btn-outline-secondary text-light") rounded-pill py-0.5 px-3" style="font-size: 0.78rem;">
+                        <i class="bi bi-cpu me-1"></i> Needs AI Summary
+                    </a>
                 </div>
             </div>
 
@@ -143,7 +172,7 @@
                     Mobile App Feed Preview 
                     <span class="badge bg-secondary rounded-pill font-weight-normal ms-2" style="font-size: 0.8rem;">@Model.Articles.Count stories</span>
                 </h4>
-                @if (Model.SelectedChannel != "All" || Model.SelectedCategory != "All" || !string.IsNullOrEmpty(Model.SearchQuery))
+                @if (Model.SelectedChannel != "All" || Model.SelectedCategory != "All" || Model.AiSummaryFilter != "All" || !string.IsNullOrEmpty(Model.SearchQuery))
                 {
                     <a href="/Index" class="btn btn-link text-info p-0 text-decoration-none small"><i class="bi bi-x-circle"></i> Clear Filters</a>
                 }
@@ -168,12 +197,19 @@
                         var cleanTitle = AdminDashboard.Pages.IndexModel.CleanHtml(article.Title);
                         var cleanSummary = AdminDashboard.Pages.IndexModel.CleanHtml(article.Summary ?? string.Empty);
                         <div class="col-md-6 col-xl-4">
-                            <div class="article-card">
+                            <div class="article-card" id="article-card-@article.Id">
                                 <div class="article-img-wrapper">
                                     <a href="@articleUrl" target="_blank" rel="noopener noreferrer" title="Read full story on @article.Source">
                                         <img src="@article.ImageUrl" alt="@cleanTitle" class="article-img" onerror="this.src='https://images.unsplash.com/photo-1585829365295-ab7cd400c167?w=600&auto=format&fit=crop&q=80'" />
                                     </a>
                                     <span class="source-badge">@article.Source</span>
+                                    @if (article.HasAiSummary)
+                                    {
+                                        var engineLabel = article.AiSummaryEngine == "Gemini-1.5-Flash" ? "Gemini 1.5" : "AI Briefing";
+                                        <span class="ai-summary-badge" title="AI Executive Briefing Available (@(article.AiSummaryEngine ?? "Gemini-1.5-Flash"))">
+                                            <i class="bi bi-stars"></i> @engineLabel
+                                        </span>
+                                    }
                                     <form method="post" asp-page-handler="UpdateCategory" class="position-absolute top-0 end-0 m-2">
                                         <input type="hidden" name="articleId" value="@article.Id" />
                                         <select name="newCategory" class="form-select form-select-sm border-info text-white bg-dark bg-opacity-90 py-0 px-2 rounded-pill shadow-sm" style="font-size: 0.72rem; height: 26px; cursor: pointer;" onchange="updateArticleCategory(this, '@article.Id')" title="Re-categorize story to train ML model">
@@ -196,7 +232,19 @@
                                     
                                     <div class="article-meta">
                                         <span><i class="bi bi-clock me-1"></i> @article.PublishedAt.ToString("MMM dd, HH:mm")</span>
-                                        <div class="d-flex align-items-center gap-1.5 ms-auto">
+                                        <div class="d-flex align-items-center gap-1.5 ms-auto flex-wrap justify-content-end">
+                                            @if (article.HasAiSummary)
+                                            {
+                                                <button type="button" class="btn-ai-summary" onclick="viewAiSummary('@article.Id', '@JavaScriptEncoder.Default.Encode(cleanTitle)', '@(article.AiSummaryEngine ?? "Gemini-1.5-Flash")')" title="View AI Executive Summary & Takeaways">
+                                                    <i class="bi bi-stars"></i> AI Summary
+                                                </button>
+                                            }
+                                            else
+                                            {
+                                                <button type="button" class="btn-ai-generate" onclick="generateAiSummary('@article.Id', this, '@JavaScriptEncoder.Default.Encode(cleanTitle)')" title="Generate AI Executive Briefing now">
+                                                    <i class="bi bi-lightning-charge"></i> Generate AI
+                                                </button>
+                                            }
                                             @if (!string.IsNullOrWhiteSpace(article.Url))
                                             {
                                                 <a href="@article.Url" target="_blank" rel="noopener noreferrer" class="btn-open-source" title="Open news source">
@@ -312,6 +360,70 @@
 
 </div>
 
+<!-- AI Executive Summary Details Modal -->
+<div class="modal fade" id="aiSummaryModal" tabindex="-1" aria-labelledby="aiSummaryModalTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content glass-card border-0 text-white shadow-lg" style="background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(20px);">
+            <div class="modal-header border-secondary border-opacity-25 pb-2">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="badge bg-purple px-2.5 py-1 rounded-pill" id="aiModalEngineBadge">
+                        <i class="bi bi-stars me-1"></i> Gemini 1.5 Flash
+                    </span>
+                    <span class="text-muted small" id="aiModalReadingTime"><i class="bi bi-clock me-1"></i> ~45 sec read</span>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body pt-3">
+                <h5 class="modal-title fw-bold text-white mb-3" id="aiSummaryModalTitle">Article Headline</h5>
+
+                <!-- Loading State -->
+                <div id="aiModalLoading" class="text-center py-4">
+                    <div class="spinner-border text-info" role="status">
+                        <span class="visually-hidden">Loading AI briefing...</span>
+                    </div>
+                    <div class="text-muted small mt-2">Retrieving AI executive briefing...</div>
+                </div>
+
+                <!-- Content Area -->
+                <div id="aiModalContent" style="display: none;">
+                    <!-- Executive Overview -->
+                    <div class="p-3 mb-3 rounded-3" style="background: rgba(168, 85, 247, 0.12); border-left: 4px solid #a855f7;">
+                        <div class="fw-bold text-warning small text-uppercase mb-1"><i class="bi bi-lightning-fill me-1"></i> Executive Overview</div>
+                        <p class="mb-0 text-light" id="aiModalOverview" style="line-height: 1.6; font-size: 0.95rem;"></p>
+                    </div>
+
+                    <!-- Key Takeaways -->
+                    <div class="mb-3">
+                        <div class="fw-bold text-info small text-uppercase mb-2"><i class="bi bi-check2-circle me-1"></i> Key Takeaways</div>
+                        <div id="aiModalTakeaways"></div>
+                    </div>
+
+                    <!-- Context & Background -->
+                    <div class="mb-3" id="aiModalContextSection" style="display:none;">
+                        <div class="fw-bold text-light small text-uppercase mb-2"><i class="bi bi-info-circle me-1"></i> Context &amp; Background</div>
+                        <ul class="text-muted small ps-3 mb-0" id="aiModalContextList"></ul>
+                    </div>
+
+                    <!-- Timeline Facts & Numbers -->
+                    <div class="mb-3" id="aiModalTimelineSection" style="display:none;">
+                        <div class="fw-bold text-warning small text-uppercase mb-2"><i class="bi bi-calendar-event me-1"></i> Key Facts &amp; Timeline</div>
+                        <div id="aiModalTimelineFacts"></div>
+                    </div>
+
+                    <!-- Structured FAQs -->
+                    <div class="mb-2" id="aiModalFaqSection" style="display:none;">
+                        <div class="fw-bold text-success small text-uppercase mb-2"><i class="bi bi-question-circle me-1"></i> Frequently Asked Questions</div>
+                        <div class="accordion accordion-flush" id="aiModalFaqAccordion"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-secondary border-opacity-25 pt-2">
+                <button type="button" class="btn btn-outline-light btn-sm" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Audio Player Modal -->
 <div class="modal fade" id="audioModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
@@ -411,6 +523,188 @@
             } catch (err) {
                 console.error('Error updating category:', err);
                 showToast('Error updating category.', 'warning');
+            }
+        }
+
+        async function viewAiSummary(articleId, title, engine) {
+            document.getElementById('aiSummaryModalTitle').innerText = title || 'Executive Briefing';
+            var engineBadge = document.getElementById('aiModalEngineBadge');
+            if (engineBadge) {
+                engineBadge.innerHTML = '<i class="bi bi-stars me-1"></i> ' + (engine || 'Gemini 1.5 Flash');
+            }
+            document.getElementById('aiModalLoading').style.display = 'block';
+            document.getElementById('aiModalContent').style.display = 'none';
+
+            var modal = new bootstrap.Modal(document.getElementById('aiSummaryModal'));
+            modal.show();
+
+            try {
+                var response = await fetch('/Index?handler=ArticleEnrichment&id=' + encodeURIComponent(articleId));
+                var data = await response.json();
+
+                if (data.success && data.enrichment) {
+                    renderEnrichmentModal(data.enrichment);
+                } else if (data.success && data.summary) {
+                    renderEnrichmentModal({ fullSummary: data.summary, engine: engine || 'Gemini-1.5-Flash' });
+                } else {
+                    document.getElementById('aiModalLoading').innerHTML = '<div class="text-warning p-3"><i class="bi bi-exclamation-circle me-1"></i> ' + (data.message || 'No AI summary available.') + '</div>';
+                }
+            } catch (err) {
+                console.error('Error fetching AI summary:', err);
+                document.getElementById('aiModalLoading').innerHTML = '<div class="text-danger p-3"><i class="bi bi-x-circle me-1"></i> Failed to load AI summary.</div>';
+            }
+        }
+
+        function renderEnrichmentModal(enr) {
+            document.getElementById('aiModalLoading').style.display = 'none';
+            document.getElementById('aiModalContent').style.display = 'block';
+
+            var full = enr.fullSummary;
+            var overviewEl = document.getElementById('aiModalOverview');
+            if (full && full.executiveOverview) {
+                overviewEl.innerText = full.executiveOverview;
+                overviewEl.parentElement.style.display = 'block';
+            } else if (enr.keyTakeaways && enr.keyTakeaways.length > 0) {
+                overviewEl.innerText = enr.keyTakeaways[0];
+                overviewEl.parentElement.style.display = 'block';
+            } else {
+                overviewEl.parentElement.style.display = 'none';
+            }
+
+            var readingTimeEl = document.getElementById('aiModalReadingTime');
+            if (full && full.readingTimeSeconds) {
+                readingTimeEl.innerHTML = '<i class="bi bi-clock me-1"></i> ~' + full.readingTimeSeconds + ' sec read';
+            }
+
+            var takeawaysEl = document.getElementById('aiModalTakeaways');
+            takeawaysEl.innerHTML = '';
+            var takeaways = (enr.keyTakeaways && enr.keyTakeaways.length > 0) ? enr.keyTakeaways : (full ? full.contextAndBackground : []);
+            if (takeaways && takeaways.length > 0) {
+                takeaways.forEach(function(t) {
+                    var div = document.createElement('div');
+                    div.className = 'ai-takeaway-item';
+                    div.innerHTML = '<i class="bi bi-check-circle-fill text-info me-2"></i>' + t;
+                    takeawaysEl.appendChild(div);
+                });
+            } else {
+                takeawaysEl.innerHTML = '<p class="text-muted small">No bullet points available.</p>';
+            }
+
+            var contextSec = document.getElementById('aiModalContextSection');
+            var contextList = document.getElementById('aiModalContextList');
+            if (full && full.contextAndBackground && full.contextAndBackground.length > 0) {
+                contextList.innerHTML = '';
+                full.contextAndBackground.forEach(function(c) {
+                    var li = document.createElement('li');
+                    li.className = 'mb-1';
+                    li.innerText = c;
+                    contextList.appendChild(li);
+                });
+                contextSec.style.display = 'block';
+            } else {
+                contextSec.style.display = 'none';
+            }
+
+            var timelineSec = document.getElementById('aiModalTimelineSection');
+            var timelineEl = document.getElementById('aiModalTimelineFacts');
+            if (enr.timelineFacts && enr.timelineFacts.length > 0) {
+                timelineEl.innerHTML = '';
+                enr.timelineFacts.forEach(function(f) {
+                    var item = document.createElement('div');
+                    item.className = 'small text-light mb-1 p-2 rounded';
+                    item.style.background = 'rgba(255,255,255,0.03)';
+                    item.innerHTML = '<span class="badge bg-warning text-dark me-2">' + (f.dateText || 'Fact') + '</span> ' + f.fact;
+                    timelineEl.appendChild(item);
+                });
+                timelineSec.style.display = 'block';
+            } else if (full && full.keyFiguresAndEntities && full.keyFiguresAndEntities.length > 0) {
+                timelineEl.innerHTML = '';
+                full.keyFiguresAndEntities.forEach(function(k) {
+                    var item = document.createElement('div');
+                    item.className = 'small text-light mb-1 p-2 rounded';
+                    item.style.background = 'rgba(255,255,255,0.03)';
+                    item.innerHTML = '<i class="bi bi-tag-fill text-warning me-2"></i>' + k;
+                    timelineEl.appendChild(item);
+                });
+                timelineSec.style.display = 'block';
+            } else {
+                timelineSec.style.display = 'none';
+            }
+
+            var faqSec = document.getElementById('aiModalFaqSection');
+            var faqAcc = document.getElementById('aiModalFaqAccordion');
+            if (enr.faqs && enr.faqs.length > 0) {
+                faqAcc.innerHTML = '';
+                enr.faqs.forEach(function(faq, idx) {
+                    var item = document.createElement('div');
+                    item.className = 'accordion-item bg-transparent border-secondary border-opacity-25';
+                    item.innerHTML = '<h2 class="accordion-header" id="heading' + idx + '">' +
+                        '<button class="accordion-button collapsed bg-transparent text-light py-2 px-0" type="button" data-bs-toggle="collapse" data-bs-target="#collapse' + idx + '">' +
+                        '<span class="fw-semibold small text-info me-2">Q:</span> <span class="small">' + faq.question + '</span></button></h2>' +
+                        '<div id="collapse' + idx + '" class="accordion-collapse collapse" data-bs-parent="#aiModalFaqAccordion">' +
+                        '<div class="accordion-body text-light small px-0 pt-1 pb-3">' + faq.answer + '</div></div>';
+                    faqAcc.appendChild(item);
+                });
+                faqSec.style.display = 'block';
+            } else {
+                faqSec.style.display = 'none';
+            }
+        }
+
+        async function generateAiSummary(articleId, btnElement, title) {
+            var origHtml = btnElement.innerHTML;
+            btnElement.disabled = true;
+            btnElement.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status"></span> Generating...';
+
+            var form = document.querySelector('form[method="post"]');
+            var tokenInput = form ? form.querySelector('input[name="__RequestVerificationToken"]') : null;
+            var token = tokenInput ? tokenInput.value : '';
+
+            var formData = new FormData();
+            formData.append('id', articleId);
+            if (token) formData.append('__RequestVerificationToken', token);
+
+            try {
+                var response = await fetch('/Index?handler=GenerateAiSummary&id=' + encodeURIComponent(articleId), {
+                    method: 'POST',
+                    body: formData,
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                });
+
+                var data = await response.json();
+                if (data.success) {
+                    showToast('AI Executive Briefing generated!');
+                    btnElement.className = 'btn-ai-summary';
+                    btnElement.innerHTML = '<i class="bi bi-stars"></i> AI Summary';
+                    btnElement.disabled = false;
+                    btnElement.onclick = function() {
+                        viewAiSummary(articleId, title, data.engine || 'Gemini-1.5-Flash');
+                    };
+
+                    var card = document.getElementById('article-card-' + articleId);
+                    if (card) {
+                        var imgWrap = card.querySelector('.article-img-wrapper');
+                        if (imgWrap && !imgWrap.querySelector('.ai-summary-badge')) {
+                            var badge = document.createElement('span');
+                            badge.className = 'ai-summary-badge';
+                            badge.title = 'AI Executive Briefing Available (Gemini 1.5 Flash)';
+                            badge.innerHTML = '<i class="bi bi-stars"></i> Gemini 1.5';
+                            imgWrap.appendChild(badge);
+                        }
+                    }
+
+                    // Open the modal right away to preview
+                    viewAiSummary(articleId, title, data.engine || 'Gemini-1.5-Flash');
+                } else {
+                    btnElement.innerHTML = origHtml;
+                    btnElement.disabled = false;
+                    showToast(data.message || 'Failed to generate AI summary', 'warning');
+                }
+            } catch (err) {
+                console.error('Error generating AI summary:', err);
+                btnElement.innerHTML = origHtml;
+                btnElement.disabled = false;
+                showToast('Error generating AI summary.', 'warning');
             }
         }
 

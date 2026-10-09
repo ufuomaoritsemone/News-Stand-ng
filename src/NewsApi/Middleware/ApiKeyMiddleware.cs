@@ -138,6 +138,20 @@ public class ApiKeyMiddleware
             return true;
         }
 
+        // Public story discussion commenting, voting, and reporting (POST only)
+        if (HttpMethods.IsPost(method) &&
+            (path.StartsWith("/api/v1/articles/", StringComparison.OrdinalIgnoreCase) && path.EndsWith("/comments", StringComparison.OrdinalIgnoreCase) ||
+             path.StartsWith("/api/v1/comments/", StringComparison.OrdinalIgnoreCase)))
+        {
+            return true;
+        }
+
+        // Public reader authentication and verification endpoints (Google OAuth & Email OTP)
+        if (path.StartsWith("/api/v1/auth", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
         return false;
     }
 }

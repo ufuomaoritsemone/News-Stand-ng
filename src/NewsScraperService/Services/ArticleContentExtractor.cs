@@ -1,4 +1,5 @@
 using System.Net.Http.Headers;
+using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using HtmlAgilityPack;
@@ -124,6 +125,30 @@ public class ArticleContentExtractor
         // --- 3. Tier 3: Meta Tag Fallbacks (OpenGraph, Twitter, Standard Meta) ---
         ExtractMetaFallback(doc, model);
 
+        // --- 3b. Tier 3b: Fallback DOM Extraction for Article Body ---
+        if (string.IsNullOrWhiteSpace(model.Content))
+        {
+            var contentNode = doc.DocumentNode.SelectSingleNode("//article")
+                ?? doc.DocumentNode.SelectSingleNode("//main")
+                ?? doc.DocumentNode.SelectSingleNode("//div[contains(@class, 'entry-content')]")
+                ?? doc.DocumentNode.SelectSingleNode("//div[contains(@class, 'post-content')]")
+                ?? doc.DocumentNode.SelectSingleNode("//div[contains(@class, 'article-content')]");
+
+            if (contentNode != null)
+            {
+                var pNodes = contentNode.SelectNodes(".//p");
+                if (pNodes != null && pNodes.Count > 0)
+                {
+                    var pTexts = pNodes.Select(p => p.InnerText.Trim()).Where(t => t.Length > 0);
+                    model.Content = string.Join("\n\n", pTexts);
+                }
+                else
+                {
+                    model.Content = contentNode.InnerText;
+                }
+            }
+        }
+
         // --- 4. Final Sanitization and Fallbacks ---
         model.Title = SanitizeText(model.Title);
         model.Summary = SanitizeText(model.Summary ?? string.Empty);
@@ -138,10 +163,11 @@ public class ArticleContentExtractor
 
         if (string.IsNullOrWhiteSpace(model.Summary) && !string.IsNullOrWhiteSpace(model.Content))
         {
-            // Generate summary from first 250 characters of content
-            model.Summary = model.Content.Length > 250
-                ? model.Content[..250].Trim() + "..."
-                : model.Content;
+            // Generate fallback summary from first 3 sentences (or 250 chars) of content
+            var firstThree = TrimToSentences(model.Content, 3);
+            model.Summary = !string.IsNullOrWhiteSpace(firstThree) && firstThree.Length <= 400
+                ? firstThree
+                : (model.Content.Length > 250 ? model.Content[..250].Trim() + "..." : model.Content);
         }
 
         if (!model.PublishedAt.HasValue)
@@ -396,7 +422,125 @@ public class ArticleContentExtractor
         return System.Net.WebUtility.HtmlDecode(clean).Trim();
     }
 
-    public static string? SanitizeContentBody(string? content)
+    private static readonly HashSet<string> KnownAbbreviations = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "mr", "mrs", "ms", "dr", "prof", "sen", "gov", "gen", "col", "capt", "lt",
+        "rev", "fr", "hon", "pres", "alh", "chief", "barr", "justice", "rep", "sgt",
+        "e.g", "i.e", "etc", "vs", "no", "vol", "p", "pp", "approx", "dept", "corp", "inc", "ltd", "co"
+    };
+
+    /// <summary>
+    /// Trims article content body to at most <paramref name="maxSentences"/> sentences (default 3)
+    /// to avoid copyright infringements and lead users to the original publisher's website.
+    /// </summary>
+    public static string? TrimToSentences(string? content, int maxSentences = 3)
+    {
+        if (string.IsNullOrWhiteSpace(content)) return null;
+        if (maxSentences <= 0) return string.Empty;
+
+        var sentences = SplitIntoSentences(content);
+        if (sentences.Count == 0) return null;
+
+        var trimmed = sentences.Take(maxSentences);
+        return string.Join(" ", trimmed).Trim();
+    }
+
+    /// <summary>
+    /// Intelligently splits text into complete sentences while respecting abbreviations, decimals, initials, and quotes.
+    /// </summary>
+    public static List<string> SplitIntoSentences(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return [];
+
+        var sentences = new List<string>();
+        var current = new StringBuilder();
+
+        for (int i = 0; i < text.Length; i++)
+        {
+            char c = text[i];
+            current.Append(c);
+
+            // Check if current char is sentence-terminating punctuation (. ! ?)
+            if (c == '.' || c == '!' || c == '?')
+            {
+                // Consume any immediately following closing quotes or brackets e.g. .", .', .”, .)
+                while (i + 1 < text.Length && (text[i + 1] == '"' || text[i + 1] == '\'' || text[i + 1] == '”' || text[i + 1] == '’' || text[i + 1] == ')' || text[i + 1] == ']'))
+                {
+                    i++;
+                    current.Append(text[i]);
+                }
+
+                // If dot, verify it is not part of an ellipsis, decimal number, initial, or known abbreviation
+                if (c == '.')
+                {
+                    // Ellipsis (e.g. .. or ...)
+                    if (i + 1 < text.Length && text[i + 1] == '.')
+                    {
+                        continue;
+                    }
+
+                    // Decimal number: preceded by digit and followed by digit (e.g. 1.5, ₦2.4m)
+                    int prevCharIdx = current.Length - 1;
+                    while (prevCharIdx >= 0 && (current[prevCharIdx] == '"' || current[prevCharIdx] == '\'' || current[prevCharIdx] == '”' || current[prevCharIdx] == '’' || current[prevCharIdx] == '.'))
+                    {
+                        prevCharIdx--;
+                    }
+                    if (prevCharIdx >= 0 && char.IsDigit(current[prevCharIdx]) && i + 1 < text.Length && char.IsDigit(text[i + 1]))
+                    {
+                        continue;
+                    }
+
+                    // Preceding abbreviation check (e.g. Dr., Gov., Mr., Sen., U.S.)
+                    var currentStr = current.ToString();
+                    var dotIndex = currentStr.LastIndexOf('.');
+                    if (dotIndex > 0)
+                    {
+                        int wordStart = dotIndex - 1;
+                        while (wordStart >= 0 && char.IsLetter(currentStr[wordStart]))
+                        {
+                            wordStart--;
+                        }
+                        wordStart++;
+                        int wordLen = dotIndex - wordStart;
+                        if (wordLen > 0)
+                        {
+                            var word = currentStr.Substring(wordStart, wordLen);
+                            // Single-letter initial / acronym (e.g. J., U., S.)
+                            if (wordLen == 1 && char.IsLetter(word[0]))
+                            {
+                                continue;
+                            }
+                            if (KnownAbbreviations.Contains(word))
+                            {
+                                continue;
+                            }
+                        }
+                    }
+                }
+
+                // Sentence boundary confirmed if followed by whitespace, newline, or end of text
+                if (i + 1 >= text.Length || char.IsWhiteSpace(text[i + 1]))
+                {
+                    var s = current.ToString().Trim();
+                    if (!string.IsNullOrEmpty(s))
+                    {
+                        sentences.Add(s);
+                        current.Clear();
+                    }
+                }
+            }
+        }
+
+        var remaining = current.ToString().Trim();
+        if (!string.IsNullOrEmpty(remaining))
+        {
+            sentences.Add(remaining);
+        }
+
+        return sentences;
+    }
+
+    public static string? SanitizeContentBody(string? content, int? maxSentences = null)
     {
         if (string.IsNullOrWhiteSpace(content)) return null;
 
@@ -427,7 +571,10 @@ public class ArticleContentExtractor
             cleanLines.Add(trimmed);
         }
 
-        return string.Join("\n\n", cleanLines).Trim();
+        var sanitized = string.Join("\n\n", cleanLines).Trim();
+        return maxSentences.HasValue && maxSentences.Value > 0
+            ? TrimToSentences(sanitized, maxSentences.Value)
+            : sanitized;
     }
 
     private static bool IsGenericImage(string? url)

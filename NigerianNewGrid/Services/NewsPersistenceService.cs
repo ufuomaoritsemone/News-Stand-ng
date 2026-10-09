@@ -24,15 +24,11 @@ public class NewsPersistenceService(
     public event EventHandler? BookmarksChanged;
     public event EventHandler? RecentlyReadChanged;
 
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        PropertyNameCaseInsensitive = true
-    };
+    private static JsonSerializerOptions JsonOptions => SharedJsonOptions.Default;
 
     public async Task InitializeAsync(CancellationToken cancellationToken = default)
     {
-#if ANDROID
+#if DEBUG && ANDROID
         Android.Util.Log.Info("APP_DEBUG", $"NewsPersistenceService.InitializeAsync START (_initialized={_initialized})");
 #endif
         if (_initialized && _database is not null) return;
@@ -42,7 +38,7 @@ public class NewsPersistenceService(
         {
             if (_initialized && _database is not null) return;
 
-#if ANDROID
+#if DEBUG && ANDROID
             Android.Util.Log.Info("APP_DEBUG", $"NewsPersistenceService opening SQLite connection at {DbPath}");
 #endif
             _database = new SQLiteAsyncConnection(DbPath, Flags);
@@ -55,21 +51,21 @@ public class NewsPersistenceService(
             {
                 logger.LogWarning(ex, "Could not set SQLite WAL mode; continuing with default journal mode");
             }
-#if ANDROID
+#if DEBUG && ANDROID
             Android.Util.Log.Info("APP_DEBUG", "NewsPersistenceService creating CachedStoryEntity table");
 #endif
             await _database.CreateTableAsync<CachedStoryEntity>().ConfigureAwait(false);
 
             _initialized = true;
             logger.LogInformation("SQLite NewsPersistenceService initialized successfully at {Path}", DbPath);
-#if ANDROID
+#if DEBUG && ANDROID
             Android.Util.Log.Info("APP_DEBUG", "NewsPersistenceService initialized successfully");
 #endif
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to initialize SQLite database at {Path}", DbPath);
-#if ANDROID
+#if DEBUG && ANDROID
             Android.Util.Log.Error("APP_DEBUG", $"NewsPersistenceService failed: {ex}");
 #endif
             throw;
@@ -97,22 +93,34 @@ public class NewsPersistenceService(
     {
         if (!_initialized || _database is null)
         {
-            await InitializeAsync(cancellationToken);
+            // Always initialize with CancellationToken.None — SQLite connection setup must
+            // never be cancelled by a caller's operation token (e.g. a 10-second load deadline).
+            // Passing a caller token here caused OperationCanceledException to fire before the
+            // _initLock semaphore was acquired, leaving _initialized=false and _database=null
+            // permanently, resulting in a frozen splash screen on subsequent calls.
+            await InitializeAsync(CancellationToken.None);
         }
-        return _database!;
+
+        if (_database is null)
+            throw new InvalidOperationException("SQLite database failed to initialize.");
+
+        return _database;
     }
 
-    public async Task<List<BriefingCategory>> GetCachedBriefingAsync(int days = 14, int topPerCategory = 0, CancellationToken cancellationToken = default)
+    public async Task<List<BriefingCategory>> GetCachedBriefingAsync(int days = 14, int topPerCategory = 0, int maxTotalStories = 60, CancellationToken cancellationToken = default)
     {
         try
         {
             var db = await GetDbAsync(cancellationToken);
             var cutoff = DateTime.UtcNow.AddDays(-days);
 
-            var entities = await db.Table<CachedStoryEntity>()
+            var query = db.Table<CachedStoryEntity>()
                 .Where(e => e.PublishedAt >= cutoff)
-                .OrderByDescending(e => e.PublishedAt)
-                .ToListAsync();
+                .OrderByDescending(e => e.PublishedAt);
+
+            var entities = maxTotalStories > 0
+                ? await query.Take(maxTotalStories).ToListAsync()
+                : await query.ToListAsync();
 
             if (entities.Count == 0)
                 return [];
@@ -207,6 +215,48 @@ public class NewsPersistenceService(
             logger.LogError(ex, "Failed to save stories to SQLite");
             return 0;
         }
+    }
+
+    public async Task<BriefingItem?> GetStoryByIdAsync(string articleId, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(articleId)) return null;
+
+        try
+        {
+            var db = await GetDbAsync(cancellationToken);
+            var entity = await db.Table<CachedStoryEntity>()
+                .Where(x => x.Id == articleId)
+                .FirstOrDefaultAsync();
+
+            if (entity != null)
+            {
+                return entity.ToBriefingItem();
+            }
+
+            // Fallback: check legacy Preferences last_briefing cache
+            var cached = Preferences.Get(AppPreferenceKeys.LastBriefing, string.Empty);
+            if (!string.IsNullOrWhiteSpace(cached))
+            {
+                var legacyCategories = JsonSerializer.Deserialize<List<BriefingCategory>>(cached, JsonOptions);
+                var legacyItem = legacyCategories?
+                    .SelectMany(c => c.Top)
+                    .FirstOrDefault(i => string.Equals(i.Id, articleId, StringComparison.OrdinalIgnoreCase));
+                if (legacyItem != null) return legacyItem;
+            }
+
+            return null;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to retrieve cached story by ID {ArticleId}", articleId);
+            return null;
+        }
+    }
+
+    public async Task SaveStoryAsync(BriefingItem story, CancellationToken cancellationToken = default)
+    {
+        if (story == null || string.IsNullOrWhiteSpace(story.Id)) return;
+        await SaveStoriesAsync([story], story.Category, cancellationToken);
     }
 
     private static async Task<int> UpsertStoriesInternalAsync(SQLiteAsyncConnection db, List<CachedStoryEntity> items)
@@ -357,19 +407,14 @@ public class NewsPersistenceService(
         try
         {
             var db = await GetDbAsync(cancellationToken);
-            var bookmarked = await db.Table<CachedStoryEntity>()
-                .Where(s => s.IsBookmarked)
-                .ToListAsync();
 
-            if (bookmarked.Count > 0)
+            // Batch update in a single transaction instead of N individual UPDATE round-trips
+            await db.RunInTransactionAsync(syncDb =>
             {
-                foreach (var item in bookmarked)
-                {
-                    item.IsBookmarked = false;
-                    await db.UpdateAsync(item);
-                }
-                BookmarksChanged?.Invoke(this, EventArgs.Empty);
-            }
+                syncDb.Execute("UPDATE CachedStoryEntity SET IsBookmarked = 0 WHERE IsBookmarked = 1");
+            });
+
+            BookmarksChanged?.Invoke(this, EventArgs.Empty);
         }
         catch (Exception ex)
         {

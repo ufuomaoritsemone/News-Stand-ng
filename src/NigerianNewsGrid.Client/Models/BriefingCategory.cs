@@ -37,6 +37,13 @@ public sealed record BriefingItem
     public bool IsAdMobPlaceholder { get; init; } = false;
     public bool IsSpecialPlacement => TargetPosition is >= 1 and <= 3;
 
+    // AI Summary & Executive Briefing Fields for Mobile
+    public bool HasAiSummary { get; init; } = false;
+    public string? AiSummary { get; init; }
+    public string? AiSummaryEngine { get; init; }
+    public List<string> KeyTakeaways { get; init; } = [];
+    public int CommentCount { get; init; } = 0;
+
     [System.Text.Json.Serialization.JsonIgnore]
     public string TimeAgoText => PublishedAt.HasValue
         ? FormatTimeAgo(PublishedAt.Value)

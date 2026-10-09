@@ -19,8 +19,8 @@ namespace NigerianNewsGrid.Client.Helpers;
 public static class FeedSlotPlacementHelper
 {
     public const int MinStandardPosition = 5;
-    public const int MaxStandardPosition = 30;
-    public const int DefaultMinOrganicSeparation = 3;
+    public const int MaxStandardPosition = 55;
+    public const int DefaultMinOrganicSeparation = 10;
 
     /// <summary>
     /// Arranges organic stories, active sponsored stories, and programmatic Native AdMob cards
@@ -29,7 +29,7 @@ public static class FeedSlotPlacementHelper
     /// <param name="organicStories">The deduplicated organic news articles.</param>
     /// <param name="sponsoredStories">Active sponsored campaigns with target placement requests.</param>
     /// <param name="includeAdMobPlaceholders">Whether to backfill unoccupied benchmark slots with Native AdMob ads.</param>
-    /// <param name="adMobBenchmarkSlots">Benchmark slots for Native AdMob ads (default: 8, 16, 24).</param>
+    /// <param name="adMobBenchmarkSlots">Benchmark slots for Native AdMob ads (default: 11, 22, 33, 44 - 4 ads spaced by 10 news feeds).</param>
     /// <param name="minSeparation">Minimum number of organic stories between two ads in the in-feed zone.</param>
     /// <returns>A unified list of BriefingItem representing the ordered feed.</returns>
     public static List<BriefingItem> ArrangeFeed(
@@ -42,7 +42,7 @@ public static class FeedSlotPlacementHelper
         ArgumentNullException.ThrowIfNull(organicStories);
         ArgumentNullException.ThrowIfNull(sponsoredStories);
 
-        adMobBenchmarkSlots ??= [8, 16, 24];
+        adMobBenchmarkSlots ??= [11, 22, 33, 44];
 
         // 1. Separate organic stories (ensure no sponsored or ad placeholders are mixed in)
         var pureOrganic = organicStories
@@ -63,7 +63,7 @@ public static class FeedSlotPlacementHelper
     }
 
     /// <summary>
-    /// Validates whether a target position is a valid special slot (1, 2, 3) or standard slot (5..30).
+    /// Validates whether a target position is a valid special slot (1, 2, 3) or standard slot (5..55).
     /// </summary>
     public static bool IsValidTargetPosition(int position)
     {

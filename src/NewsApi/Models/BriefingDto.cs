@@ -10,7 +10,7 @@ public class BriefingItemDto
     public string? Url { get; set; }
     public string? Source { get; set; }
     public string? Category { get; set; }
-    public DateTime PublishedAt { get; set; }
+    public DateTime? PublishedAt { get; set; }
     public string? ImageUrl { get; set; }
     public string? AudioUrl { get; set; }
     public string? Language { get; set; }
@@ -25,6 +25,13 @@ public class BriefingItemDto
     public bool IsPinned { get; set; }
     public int? TargetPosition { get; set; }
     public int PriorityWeight { get; set; } = 1;
+
+    // AI Summary & Enrichment Fields for Mobile
+    public bool HasAiSummary { get; set; }
+    public string? AiSummary { get; set; }
+    public string? AiSummaryEngine { get; set; }
+    public List<string> KeyTakeaways { get; set; } = new();
+    public int CommentCount { get; set; }
 }
 
 // <summary> /// DTO for briefing categories. /// </summary>

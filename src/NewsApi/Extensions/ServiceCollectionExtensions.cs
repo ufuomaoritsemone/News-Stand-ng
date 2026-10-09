@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore.Diagnostics;
 using NewsApi.Data;
 using NewsApi.Infrastructure;
 using NewsApi.Services;
+using NewsApi.Services.Embeddings;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using OpenTelemetry.Metrics;
@@ -20,11 +21,28 @@ public static class ServiceCollectionExtensions
     /// <summary>Registers all application-layer services.</summary>
     public static IServiceCollection AddApplicationServices(this IServiceCollection services)
     {
-        services.AddControllers();
+        services.AddControllers().AddJsonOptions(options =>
+        {
+            options.JsonSerializerOptions.Converters.Add(new UtcDateTimeConverter());
+            options.JsonSerializerOptions.Converters.Add(new NullableUtcDateTimeConverter());
+        });
         services.AddEndpointsApiExplorer();
         services.AddSwaggerGen();
         services.AddMemoryCache();
         services.AddHttpClient();
+        services.AddHttpClient("ImageProxy", client =>
+        {
+            client.Timeout = TimeSpan.FromSeconds(10);
+            client.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 (compatible; NewsStandNG-ImageProxy/1.0)");
+        })
+        .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
+        {
+            AutomaticDecompression = System.Net.DecompressionMethods.All,
+            SslOptions = new System.Net.Security.SslClientAuthenticationOptions
+            {
+                EnabledSslProtocols = System.Security.Authentication.SslProtocols.Tls12
+            }
+        });
 
         // Core application services with interfaces (DIP, Fixes #19, #20, #21)
         services.AddScoped<IRelatedContentService, RelatedContentService>();
@@ -33,9 +51,34 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IFeedbackService,       FeedbackService>();
         services.AddScoped<IArticleSearchService,   ArticleSearchService>();
         services.AddSingleton<ICategorizerTrainingService, CategorizerTrainingService>();
+        services.AddSingleton<ISlugService,         SlugService>();
+        services.AddScoped<IArticleSeoBackfillService, ArticleSeoBackfillService>();
+        services.AddSingleton<IndexNowBackgroundService>();
+        services.AddSingleton<IIndexNowService>(sp => sp.GetRequiredService<IndexNowBackgroundService>());
+
+        // Embeddings and Story Clustering (Phase 6)
+        services.AddSingleton<LocalFallbackEmbeddingProvider>();
+        services.AddSingleton<IEmbeddingProvider, GeminiEmbeddingProvider>();
+        services.AddScoped<IStoryClusteringService, StoryClusteringService>();
+
+        // AI / ML Article Enrichment (Phase 7)
+        services.AddScoped<IArticleEnrichmentService, ArticleEnrichmentService>();
+
+        // Search Console API & Crawl Diagnostics (Phase 9)
+        services.AddScoped<ISearchConsoleService, SearchConsoleService>();
+
+        // Continuous SEO Monitoring & ML.NET Anomaly Feedback Loop (Phase 10)
+        services.AddSingleton<ISeoAnomalyEngine, SeoAnomalyEngine>();
+        services.AddScoped<ISeoFeedbackLoopService, SeoFeedbackLoopService>();
+        services.AddSingleton<SeoMonitoringBackgroundService>();
 
         // Background services
         services.AddHostedService<BackgroundMediaSyncService>();
+        services.AddHostedService(sp => sp.GetRequiredService<IndexNowBackgroundService>());
+        services.AddHostedService<StoryClusteringBackgroundService>();
+        services.AddHostedService<ArticleEnrichmentBackgroundService>();
+        services.AddHostedService<MarketDataBackgroundService>();
+        services.AddHostedService(sp => sp.GetRequiredService<SeoMonitoringBackgroundService>());
 
         return services;
     }

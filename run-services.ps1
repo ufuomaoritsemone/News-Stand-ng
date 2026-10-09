@@ -358,6 +358,7 @@ else {
 Set-Location '$rootDir'
 `$env:ApiBaseUrl = '$apiBaseUrl'
 `$env:ApiKey = 'AIzaSyAh7soVCbg-JfW-gUKVZIQkbd0sdlE34QI'
+`$env:YOUTUBE_API_KEY = 'AIzaSyDx1_POc2EwDh9fLyUWnZjUBowIc2Y1Dpg'
 `$env:ASPNETCORE_ENVIRONMENT = 'Development'
 Write-Host '==================================================' -ForegroundColor Cyan
 Write-Host '             NewsApi ($apiBaseUrl)' -ForegroundColor Green

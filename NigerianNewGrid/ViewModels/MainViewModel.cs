@@ -6,6 +6,7 @@ using NigerianNewsGrid.Client;
 using NigerianNewsGrid.Client.Helpers;
 using NigerianNewsGrid.Client.Models;
 using NigerianNewGrid.Constants;
+using NigerianNewGrid.Extensions;
 using NigerianNewGrid.Models;
 using NigerianNewGrid.Services;
 
@@ -20,20 +21,26 @@ public partial class MainViewModel : ObservableObject, IDisposable
 {
     private readonly NewsApiClient _apiClient;
     private readonly IHttpClientFactory _httpClientFactory;
-    private readonly IKeywordMatchingService _keywordMatchingService;
+    private readonly IKeywordAlertCoordinator _keywordAlertCoordinator;
     private readonly INotificationService _notificationService;
     private readonly IBookmarkService _bookmarkService;
     private readonly IBriefingCacheService _cacheService;
-    private readonly ITextToSpeechService _ttsService;
-    private readonly IAnalyticsService _analyticsService;
+    private readonly IUserPreferencesService _userPreferences;
+    private readonly IAppEventBus _eventBus;
+    private readonly IAudioBriefingCoordinator _audioCoordinator;
     private readonly ISonicFeedbackService _sonicService;
+    private readonly IArticleInteractionService _interactionService;
     private readonly ILogger<MainViewModel> _logger;
 
     private List<BriefingCategory> _allCategories = [];
+    private List<BriefingItem> _arrangedFeed = [];
+    private string? _currentFeedLanguage;
+    private string? _resolvedApiBaseUrl;
     private CancellationTokenSource? _loadCts;
     private bool _pendingAudioBriefingAutoPlay;
 
     private const int PageSize = 15;
+    private const int MaxFeedCapacity = FeedQueueHelper.DefaultMaxFeedCapacity; // 60
 
     // ── Observable Properties ─────────────────────────────────────
     [ObservableProperty] public partial ObservableCollection<BriefingDateGroup> DateGroups { get; set; } = [];
@@ -45,6 +52,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
     [ObservableProperty] public partial bool IsCategoriesVisible { get; set; }
     [ObservableProperty] public partial bool IsPaginationVisible { get; set; }
     [ObservableProperty] public partial bool IsLoadMoreVisible { get; set; }
+    [ObservableProperty] public partial bool IsLoadingMore { get; set; }
     [ObservableProperty] public partial string LoadMoreText { get; set; } = string.Empty;
     [ObservableProperty] public partial string StoriesCountText { get; set; } = string.Empty;
     [ObservableProperty] public partial string StatusText { get; set; } = string.Empty;
@@ -65,43 +73,44 @@ public partial class MainViewModel : ObservableObject, IDisposable
     public MainViewModel(
         NewsApiClient apiClient,
         IHttpClientFactory httpClientFactory,
-        IKeywordMatchingService keywordMatchingService,
+        IKeywordAlertCoordinator keywordAlertCoordinator,
         INotificationService notificationService,
         IBookmarkService bookmarkService,
         IBriefingCacheService cacheService,
-        ITextToSpeechService ttsService,
-        IAnalyticsService analyticsService,
+        IUserPreferencesService userPreferences,
+        IAppEventBus eventBus,
+        IAudioBriefingCoordinator audioCoordinator,
         ISonicFeedbackService sonicService,
+        IArticleInteractionService interactionService,
         ILogger<MainViewModel> logger)
     {
-        Console.WriteLine(">>> [DIAGNOSTIC] MainViewModel constructor START");
+        _logger                  = logger;
+        _logger.LogDebug("MainViewModel constructor START");
         _apiClient               = apiClient;
         _httpClientFactory       = httpClientFactory;
-        _keywordMatchingService  = keywordMatchingService;
+        _keywordAlertCoordinator = keywordAlertCoordinator;
         _notificationService     = notificationService;
         _bookmarkService         = bookmarkService;
         _cacheService            = cacheService;
-        _ttsService              = ttsService;
-        _analyticsService        = analyticsService;
+        _userPreferences         = userPreferences;
+        _eventBus                = eventBus;
+        _audioCoordinator        = audioCoordinator;
         _sonicService            = sonicService;
-        _logger                  = logger;
+        _interactionService      = interactionService;
 
+        _audioCoordinator.StateChanged += OnAudioCoordinatorStateChanged;
         _bookmarkService.BookmarksChanged += OnBookmarkServiceChanged;
-        AppNotificationBridge.PlayAudioBriefingRequested += OnPlayAudioBriefingRequested;
-        AppNotificationBridge.NewStoriesAvailable += OnNewStoriesAvailable;
-        AppNotificationBridge.AppResumed += OnAppResumedFromBridge;
+        _eventBus.PlayAudioBriefingRequested += OnPlayAudioBriefingRequested;
+        _eventBus.NewStoriesAvailable += OnNewStoriesAvailable;
+        _eventBus.AppResumed += OnAppResumedFromBridge;
         Connectivity.Current.ConnectivityChanged += OnConnectivityChanged;
 
-        if (NotificationPreferences.AudioBriefingsEnabled)
+        if (_userPreferences.AudioBriefingsEnabled)
         {
-#if ANDROID
-            Android.Util.Log.Info("APP_DEBUG", "MainViewModel ScheduleAudioBriefings");
-#endif
+            _logger.LogDebug("MainViewModel ScheduleAudioBriefings");
             _notificationService.ScheduleAudioBriefings();
         }
-#if ANDROID
-        Android.Util.Log.Info("APP_DEBUG", "MainViewModel constructor FINISHED");
-#endif
+        _logger.LogDebug("MainViewModel constructor FINISHED");
     }
 
     // ── Commands ──────────────────────────────────────────────────
@@ -110,23 +119,17 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
     public async Task InitializeAsync()
     {
-#if ANDROID
-        Android.Util.Log.Info("APP_DEBUG", $"MainViewModel.InitializeAsync START (hasLoadedOnce={_hasLoadedOnce})");
-#endif
+        _logger.LogDebug("MainViewModel.InitializeAsync START (hasLoadedOnce={HasLoadedOnce})", _hasLoadedOnce);
         if (_hasLoadedOnce) return;
         _hasLoadedOnce = true;
         await LoadBriefingAsync();
-#if ANDROID
-        Android.Util.Log.Info("APP_DEBUG", "MainViewModel.InitializeAsync END");
-#endif
+        _logger.LogDebug("MainViewModel.InitializeAsync END");
     }
 
     [RelayCommand]
     public async Task LoadBriefingAsync(bool isPullToRefresh = false)
     {
-#if ANDROID
-        Android.Util.Log.Info("APP_DEBUG", "MainViewModel.LoadBriefingAsync START");
-#endif
+        _logger.LogDebug("MainViewModel.LoadBriefingAsync START");
         _loadCts?.Cancel();
         _loadCts?.Dispose();
         _loadCts = new CancellationTokenSource();
@@ -139,21 +142,20 @@ public partial class MainViewModel : ObservableObject, IDisposable
         try
         {
             var language = Preferences.Get(AppPreferenceKeys.PreferredLanguage, "English");
-#if ANDROID
-            Android.Util.Log.Info("APP_DEBUG", $"MainViewModel.LoadBriefingAsync language={language}, checking cache");
-#endif
+            if (_currentFeedLanguage != language)
+            {
+                _arrangedFeed = [];
+                _currentFeedLanguage = language;
+            }
+            _logger.LogDebug("MainViewModel.LoadBriefingAsync language={Language}, checking cache", language);
 
             // 1. Instant Cache-First Display (Stale-While-Revalidate)
             if (_allCategories.Count == 0)
             {
-#if ANDROID
-                Android.Util.Log.Info("APP_DEBUG", "MainViewModel.LoadBriefingAsync calling GetCachedBriefingAsync");
-#endif
-                var cached = await _cacheService.GetCachedBriefingAsync();
-#if ANDROID
-                Android.Util.Log.Info("APP_DEBUG", $"MainViewModel.LoadBriefingAsync GetCachedBriefingAsync returned {cached?.Count ?? 0} categories");
-#endif
-                if (cached.Count > 0)
+                _logger.LogDebug("MainViewModel.LoadBriefingAsync calling GetCachedBriefingAsync");
+                var cached = await _cacheService.GetCachedBriefingAsync(maxTotalStories: MaxFeedCapacity);
+                _logger.LogDebug("MainViewModel.LoadBriefingAsync GetCachedBriefingAsync returned {Count} categories", cached?.Count ?? 0);
+                if (cached is { Count: > 0 })
                 {
                     _allCategories = cached;
                     DisplayedCount = PageSize;
@@ -199,7 +201,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
             {
                 if (_allCategories.Count == 0)
                 {
-                    categories = await _cacheService.GetCachedBriefingAsync();
+                    categories = await _cacheService.GetCachedBriefingAsync(maxTotalStories: MaxFeedCapacity);
                     if (categories.Count == 0)
                         categories = _cacheService.GetFallbackSampleBriefing(language);
                     _allCategories = categories;
@@ -217,15 +219,15 @@ public partial class MainViewModel : ObservableObject, IDisposable
             DisplayedCount = PageSize;
 
             RefreshDisplayedStories();
-            EvaluateKeywordAlerts(_allCategories);
-            UpdateTimestampStatus();
+            _keywordAlertCoordinator.EvaluateKeywordAlerts(_allCategories);
+            UpdateTimestampStatus(isPullToRefresh);
             HasNewStoriesAvailable = false;
             NewStoriesCount = 0;
 
             if (_pendingAudioBriefingAutoPlay)
             {
                 _pendingAudioBriefingAutoPlay = false;
-                _ = PlayAudioBriefingAsync();
+                PlayAudioBriefingAsync().SafeFireAndForget(_logger, "PendingAudioBriefingAutoPlay");
             }
         }
         catch (OperationCanceledException)
@@ -235,7 +237,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
             if (_allCategories.Count > 0)
             {
                 RefreshDisplayedStories();
-                UpdateTimestampStatus();
+                UpdateTimestampStatus(isPullToRefresh);
             }
         }
         catch (Exception ex)
@@ -254,7 +256,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
             // Fire video load as a background task — never blocks refresh completion.
             // Uses a fresh token so a subsequent pull-to-refresh can cancel it cleanly.
-            _ = LoadVideoFeedsAsync(CancellationToken.None);
+            LoadVideoFeedsAsync(CancellationToken.None).SafeFireAndForget(_logger, "LoadVideoFeeds");
         }
     }
 
@@ -284,32 +286,30 @@ public partial class MainViewModel : ObservableObject, IDisposable
     public void OnAppResumed()
     {
         _lastResumeUtc = DateTime.UtcNow;
-        _ = CheckForNewStoriesAsync();
+        CheckForNewStoriesAsync().SafeFireAndForget(_logger, "CheckForNewStories:Resume");
     }
 
     private void OnNewStoriesAvailable(int count)
     {
-        _ = CheckForNewStoriesAsync();
+        CheckForNewStoriesAsync(count).SafeFireAndForget(_logger, "CheckForNewStories:NewAvailable");
     }
 
-    private async Task CheckForNewStoriesAsync()
+    private async Task CheckForNewStoriesAsync(int? fallbackCount = null)
     {
         // Don't show pill if currently loading or if initial load hasn't completed
         if (_allCategories.Count == 0 || IsLoading || IsRefreshing) return;
 
         try
         {
-            var cached = await _cacheService.GetCachedBriefingAsync(topPerCategory: 10);
+            var cached = await _cacheService.GetCachedBriefingAsync(topPerCategory: 10, maxTotalStories: MaxFeedCapacity);
             if (cached.Count > 0)
             {
-                var displayedIds = new HashSet<string>(
-                    _allCategories.SelectMany(c => c.Top)
-                                  .Select(s => s.Id)
-                                  .Where(id => !string.IsNullOrEmpty(id))
-                );
-
-                int newCount = cached.SelectMany(c => c.Top)
-                    .Count(s => !string.IsNullOrEmpty(s.Id) && !displayedIds.Contains(s.Id));
+                var candidateStories = cached.SelectMany(c => c.Top).ToList();
+                int newCount = FeedQueueHelper.CountNewStories(_arrangedFeed, candidateStories, onlyNewerThanFeed: true);
+                if (newCount == 0 && fallbackCount.HasValue && fallbackCount.Value > 0)
+                {
+                    newCount = fallbackCount.Value;
+                }
 
                 MainThread.BeginInvokeOnMainThread(() =>
                 {
@@ -324,6 +324,15 @@ public partial class MainViewModel : ObservableObject, IDisposable
                         HasNewStoriesAvailable = false;
                         NewStoriesCount = 0;
                     }
+                });
+            }
+            else if (fallbackCount.HasValue && fallbackCount.Value > 0)
+            {
+                MainThread.BeginInvokeOnMainThread(() =>
+                {
+                    NewStoriesCount = fallbackCount.Value;
+                    NewStoriesPillText = fallbackCount.Value == 1 ? "1 new story available" : $"{fallbackCount.Value} new stories available";
+                    HasNewStoriesAvailable = true;
                 });
             }
         }
@@ -341,16 +350,16 @@ public partial class MainViewModel : ObservableObject, IDisposable
         HasNewStoriesAvailable = false;
         NewStoriesCount = 0;
 
-        _ = _sonicService.PlayRefreshChimeAsync();
+        _sonicService.PlayRefreshChimeAsync().SafeFireAndForget(_logger, "ApplyNewStories:Chime");
 
-        // Stale-while-revalidate reload from SQLite cache (capped at top 10 per category)
-        var cached = await _cacheService.GetCachedBriefingAsync(topPerCategory: 10);
+        // Stale-while-revalidate reload from SQLite cache (capped at top 10 per category, max 60 total)
+        var cached = await _cacheService.GetCachedBriefingAsync(topPerCategory: 10, maxTotalStories: MaxFeedCapacity);
         if (cached.Count > 0)
         {
             _allCategories = cached;
             DisplayedCount = PageSize;
             RefreshDisplayedStories();
-            UpdateTimestampStatus();
+            UpdateTimestampStatus(isUserInitiated: true);
         }
         else
         {
@@ -377,115 +386,66 @@ public partial class MainViewModel : ObservableObject, IDisposable
             return;
         }
 
-        _ = _sonicService.PlayRefreshChimeAsync();
+        _sonicService.PlayRefreshChimeAsync().SafeFireAndForget(_logger, "Refresh:Chime");
         await LoadBriefingAsync(isPullToRefresh: true);
     }
 
     [RelayCommand]
     public void LoadMoreStories()
     {
-        DisplayedCount += PageSize;
-        RefreshDisplayedStories();
+        if (DisplayedCount >= TotalAvailableStories || TotalAvailableStories == 0) return;
+
+        var previousCount = DisplayedCount;
+        DisplayedCount = Math.Min(DisplayedCount + PageSize, MaxFeedCapacity);
+
+        // Append the next batch into the existing DateGroups WITHOUT clearing them,
+        // so that the scroll position remains completely stable and doesn't jump back to the top!
+        AppendDisplayedStories(previousCount, DisplayedCount);
     }
 
     [RelayCommand]
     public async Task PlayAudioBriefingAsync()
     {
-        // 1. If actively speaking -> Pause
-        if (_ttsService.IsSpeaking && !_ttsService.IsPaused)
-        {
-            _ttsService.Pause();
-            IsSpeaking = false;
-            IsPaused = true;
-            UpdateAudioButtonState();
-            SemanticScreenReader.Announce("Daily briefing audio paused.");
-            return;
-        }
-
-        // 2. If paused -> Resume
-        if (IsPaused || _ttsService.IsPaused)
-        {
-            var language = Preferences.Get(AppPreferenceKeys.PreferredLanguage, "English");
-            IsSpeaking = true;
-            IsPaused = false;
-            UpdateAudioButtonState();
-            SemanticScreenReader.Announce($"Resuming daily audio briefing in {language}…");
-
-            var completed = await _ttsService.ResumeBriefingAsync(language);
-            IsSpeaking = _ttsService.IsSpeaking;
-            IsPaused = _ttsService.IsPaused;
-            UpdateAudioButtonState();
-
-            if (completed && !IsPaused)
-            {
-                _ = _analyticsService.TrackAsync("audio_listen_complete", null, $"Daily Audio Briefing ({language})", "Daily Briefing");
-            }
-            return;
-        }
-
-        // 3. Idle / Stopped -> Start Play from beginning
-        var rawStories = _allCategories
-            .SelectMany(c => c.Top)
-            .ToList();
-
-        // Eliminate duplicate stories from competing news sources
-        var topStories = StoryDeduplicationHelper.DeduplicateStories(
-            rawStories,
-            s => s.Title,
-            s => s.Summary,
-            s => s.Source)
-            .Take(8)
-            .ToList();
-
-        if (topStories.Count == 0)
-            return;
-
         var prefLanguage = Preferences.Get(AppPreferenceKeys.PreferredLanguage, "English");
-        IsSpeaking = true;
-        IsPaused = false;
-        UpdateAudioButtonState();
-        SemanticScreenReader.Announce($"Playing daily audio briefing in {prefLanguage}…");
-
-        var firstStory = topStories.FirstOrDefault();
-        _ = _analyticsService.TrackAsync("audio_listen_start", firstStory?.Id, $"Daily Audio Briefing ({prefLanguage})", "Daily Briefing");
-
-        var isFinished = await _ttsService.SpeakBriefingAsync(topStories, prefLanguage);
-        IsSpeaking = _ttsService.IsSpeaking;
-        IsPaused = _ttsService.IsPaused;
-        UpdateAudioButtonState();
-
-        if (isFinished && !IsPaused)
-        {
-            _ = _analyticsService.TrackAsync("audio_listen_complete", firstStory?.Id, $"Daily Audio Briefing ({prefLanguage})", "Daily Briefing");
-        }
+        await _audioCoordinator.TogglePlayPauseAsync(_allCategories, prefLanguage);
     }
 
-    private void UpdateAudioButtonState()
+    private void OnAudioCoordinatorStateChanged(object? sender, EventArgs e)
     {
-        if (IsSpeaking)
-        {
-            AudioButtonText = "⏸";
-            AudioButtonHint = "Pause daily audio briefing";
-        }
-        else if (IsPaused)
-        {
-            AudioButtonText = "▶";
-            AudioButtonHint = "Resume daily audio briefing";
-        }
-        else
-        {
-            AudioButtonText = "🎧";
-            AudioButtonHint = "Play daily audio briefing";
-        }
+        IsSpeaking = _audioCoordinator.IsSpeaking;
+        IsPaused = _audioCoordinator.IsPaused;
+        AudioButtonText = _audioCoordinator.AudioButtonText;
+        AudioButtonHint = _audioCoordinator.AudioButtonHint;
     }
 
     [RelayCommand]
-    public void ToggleBookmark(BriefingItem item)
+    public async Task OpenArticleAsync(BriefingItem? item)
     {
-        ArgumentNullException.ThrowIfNull(item);
-        bool added = _bookmarkService.ToggleBookmark(item);
-        string msg = added ? $"Saved: {item.Title}" : "Bookmark removed.";
-        SemanticScreenReader.Announce(msg);
+        await _interactionService.OpenArticleAsync(item);
+    }
+
+    [RelayCommand]
+    public async Task OpenVideoAsync(VideoStoryItem? story)
+    {
+        await _interactionService.OpenVideoAsync(story);
+    }
+
+    [RelayCommand]
+    public void ToggleBookmark(BriefingItem? item)
+    {
+        _interactionService.ToggleBookmark(item);
+    }
+
+    [RelayCommand]
+    public async Task ShareArticleAsync(BriefingItem? item)
+    {
+        await _interactionService.ShareArticleAsync(item);
+    }
+
+    [RelayCommand]
+    public async Task ShareArticleOnXAsync(BriefingItem? item)
+    {
+        await _interactionService.ShareArticleOnXAsync(item);
     }
 
     [RelayCommand]
@@ -502,51 +462,116 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
     private void RefreshDisplayedStories()
     {
-        var rawStories = _allCategories
-            .SelectMany(c => c.Top)
-            .ToList();
-
-        // 1. Separate organic and direct-sponsored stories
-        var rawOrganic = rawStories
-            .Where(s => !s.IsSponsored && !s.IsAdMobPlaceholder)
-            .OrderByDescending(i => i.PublishedAt ?? DateTime.MinValue)
-            .ToList();
-
-        // Deduplicate organic stories from competing news outlets
-        var uniqueOrganic = StoryDeduplicationHelper.DeduplicateStories(
-            rawOrganic,
-            i => i.Title,
-            i => i.Summary,
-            i => i.Source)
-            .ToList();
-
-        var uniqueSponsored = rawStories
-            .Where(s => s.IsSponsored && !s.IsAdMobPlaceholder)
-            .GroupBy(s => s.Id)
-            .Select(g => g.First())
-            .ToList();
-
-        // 2. Arrange feed with deterministic placement (Special slots 1-3, in-feed 5-30, and AdMob placeholders)
+        // Run heavy LINQ/sorting/grouping on a background thread to keep the UI responsive.
+        // The results are marshalled back to the UI thread for collection update.
+        var allCategories = _allCategories;
+        var currentFeed = _arrangedFeed;
+        var displayedCount = DisplayedCount;
         var isOnline = Connectivity.Current.NetworkAccess == NetworkAccess.Internet;
-        var allUniqueStories = FeedSlotPlacementHelper.ArrangeFeed(
-            uniqueOrganic,
-            uniqueSponsored,
-            includeAdMobPlaceholders: isOnline);
 
-        TotalAvailableStories = allUniqueStories.Count;
-        var paginated = allUniqueStories.Take(DisplayedCount).ToList();
-
-        var groups = BuildDateGroups(paginated);
-        DateGroups         = new ObservableCollection<BriefingDateGroup>(groups);
-        IsEmptyStateVisible = groups.Count == 0;
-
-        // Track impressions for sponsored articles visible in the active feed
-        foreach (var story in paginated.Where(s => s.IsSponsored && !s.IsAdMobPlaceholder && !string.IsNullOrWhiteSpace(s.Id)))
+        Task.Run(() =>
         {
-            _ = _apiClient.TrackArticleImpressionAsync(story.Id);
-        }
+            var rawStories = allCategories
+                .SelectMany(c => c.Top)
+                .ToList();
 
-        UpdatePaginationState();
+            var arrangedFeed = FeedQueueHelper.EnqueueWithEviction(
+                currentFeed: currentFeed,
+                incomingStories: rawStories,
+                includeAdMobPlaceholders: isOnline,
+                maxCapacity: MaxFeedCapacity);
+
+            var totalAvailable = Math.Min(arrangedFeed.Count, MaxFeedCapacity);
+            var paginated = arrangedFeed.Take(displayedCount).ToList();
+            var groups = BuildDateGroups(paginated);
+
+            // Collect sponsored article IDs for impression tracking
+            var sponsoredIds = paginated
+                .Where(s => s.IsSponsored && !s.IsAdMobPlaceholder && !string.IsNullOrWhiteSpace(s.Id))
+                .Select(s => s.Id)
+                .ToList();
+
+            MainThread.BeginInvokeOnMainThread(() =>
+            {
+                _arrangedFeed = arrangedFeed;
+                TotalAvailableStories = totalAvailable;
+
+                // Update DateGroups in-place to avoid full teardown/rebuild flicker.
+                // Replacing the collection reference forces BindableLayout to detach
+                // and re-create every visual item; in-place update is smoother.
+                DateGroups.Clear();
+                foreach (var g in groups)
+                {
+                    DateGroups.Add(g);
+                }
+
+                IsEmptyStateVisible = groups.Count == 0;
+                IsLoadingMore = false;
+                UpdatePaginationState();
+            });
+
+            // Track impressions off the UI thread
+            foreach (var id in sponsoredIds)
+            {
+                _apiClient.TrackArticleImpressionAsync(id).SafeFireAndForget(_logger, "TrackImpression");
+            }
+        }).SafeFireAndForget(_logger, "RefreshDisplayedStories");
+    }
+
+    private void AppendDisplayedStories(int startIndex, int targetCount)
+    {
+        var arrangedFeed = _arrangedFeed;
+
+        Task.Run(() =>
+        {
+            var nextItems = arrangedFeed.Skip(startIndex).Take(targetCount - startIndex).ToList();
+            if (nextItems.Count == 0) return;
+
+            // Collect sponsored article IDs for impression tracking
+            var sponsoredIds = nextItems
+                .Where(s => s.IsSponsored && !s.IsAdMobPlaceholder && !string.IsNullOrWhiteSpace(s.Id))
+                .Select(s => s.Id)
+                .ToList();
+
+            MainThread.BeginInvokeOnMainThread(() =>
+            {
+                foreach (var item in nextItems)
+                {
+                    var itemDate = (item.PublishedAt?.ToLocalTime().Date) ?? DateTime.Today;
+                    var existingGroup = DateGroups.FirstOrDefault(g => g.Date == itemDate);
+
+                    if (existingGroup != null)
+                    {
+                        existingGroup.Add(item);
+                    }
+                    else
+                    {
+                        var (header, relative) = itemDate switch
+                        {
+                            _ when itemDate == DateTime.Today             => ($"Today · {itemDate:dddd, MMMM d, yyyy}", "Today"),
+                            _ when itemDate == DateTime.Today.AddDays(-1) => ($"Yesterday · {itemDate:dddd, MMMM d, yyyy}", "Yesterday"),
+                            _                                             => (itemDate.ToString("dddd, MMMM d, yyyy"), itemDate.ToString("MMM d"))
+                        };
+
+                        var newGroup = new BriefingDateGroup([item])
+                        {
+                            Date          = itemDate,
+                            DateHeader    = header,
+                            RelativeLabel = relative
+                        };
+
+                        DateGroups.Add(newGroup);
+                    }
+                }
+
+                UpdatePaginationState();
+            });
+
+            foreach (var id in sponsoredIds)
+            {
+                _apiClient.TrackArticleImpressionAsync(id).SafeFireAndForget(_logger, "TrackImpression");
+            }
+        }).SafeFireAndForget(_logger, "AppendDisplayedStories");
     }
 
     private void UpdatePaginationState()
@@ -573,7 +598,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         }
     }
 
-    private void UpdateTimestampStatus()
+    private void UpdateTimestampStatus(bool isUserInitiated = false)
     {
         DateTime receivedTime = DateTime.MinValue;
 
@@ -607,7 +632,13 @@ public partial class MainViewModel : ObservableObject, IDisposable
         }
 
         StatusText = $"Updated as at {receivedTime:d MMM yyyy, h:mm tt}";
-        SemanticScreenReader.Announce(StatusText);
+
+        // Only announce to screen reader on user-initiated actions (pull-to-refresh, pill tap)
+        // to avoid overly chatty accessibility noise from background refreshes.
+        if (isUserInitiated)
+        {
+            SemanticScreenReader.Announce(StatusText);
+        }
     }
 
     private void OnBookmarksChanged()
@@ -616,38 +647,6 @@ public partial class MainViewModel : ObservableObject, IDisposable
         RefreshDisplayedStories();
     }
 
-    private void EvaluateKeywordAlerts(List<BriefingCategory> categories)
-    {
-        if (!NotificationPreferences.KeywordAlertsEnabled) return;
-
-        try
-        {
-            var allStories = categories
-                .SelectMany(c => c.Top)
-                .Where(s => !string.IsNullOrWhiteSpace(s.Id))
-                .ToList();
-
-            var matches = _keywordMatchingService.EvaluateFreshArticles(
-                allStories,
-                NotificationPreferences.MonitoredKeywords,
-                excludedArticleIds: NotificationPreferences.NotifiedArticleIds);
-
-            foreach (var match in matches)
-            {
-                NotificationPreferences.RecordNotifiedArticle(match.Article.Id);
-                _notificationService.ShowKeywordAlertNotification(
-                    match.MatchedKeyword, match.Article.Title,
-                    match.Article.Id, match.Article.Url, match.Article.Category);
-            }
-
-            if (matches.Count > 0)
-                NotificationPreferences.LastKeywordAlertEvaluationUtc = DateTime.UtcNow;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Keyword evaluation error.");
-        }
-    }
 
     public static List<BriefingDateGroup> BuildDateGroups(List<BriefingItem> stories) =>
         BriefingDateGroup.BuildDateGroups(stories);
@@ -666,9 +665,12 @@ public partial class MainViewModel : ObservableObject, IDisposable
     // ── API Base URL Resolution (kept in VM so navigation code stays thin) ──
     private async Task<string> ResolveApiBaseUrlAsync(CancellationToken ct = default)
     {
-#if ANDROID
-        Android.Util.Log.Info("APP_DEBUG", "MainViewModel.ResolveApiBaseUrlAsync START");
-#endif
+        _logger.LogDebug("MainViewModel.ResolveApiBaseUrlAsync START");
+        if (!string.IsNullOrWhiteSpace(_resolvedApiBaseUrl))
+        {
+            return _resolvedApiBaseUrl;
+        }
+
         var saved = Preferences.Get(AppPreferenceKeys.ApiBaseUrl, string.Empty);
         var probe = _httpClientFactory.CreateClient("ProbeClient");
 
@@ -677,12 +679,22 @@ public partial class MainViewModel : ObservableObject, IDisposable
         // if the saved URL fails — avoids the 8-10s probe delay on every pull-to-refresh.
         if (!string.IsNullOrWhiteSpace(saved))
         {
+            if (Connectivity.Current.NetworkAccess != NetworkAccess.Internet)
+            {
+                _resolvedApiBaseUrl = saved;
+                return saved;
+            }
+
             try
             {
                 using var quickCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
                 quickCts.CancelAfter(TimeSpan.FromMilliseconds(1500));
                 var resp = await probe.GetAsync($"{saved.TrimEnd('/')}/healthz/liveness", quickCts.Token);
-                if (resp.IsSuccessStatusCode) return saved;
+                if (resp.IsSuccessStatusCode)
+                {
+                    _resolvedApiBaseUrl = saved;
+                    return saved;
+                }
             }
             catch (Exception ex) when (ex is not OperationCanceledException { CancellationToken.IsCancellationRequested: true } oce || oce.CancellationToken == ct)
             {
@@ -691,18 +703,24 @@ public partial class MainViewModel : ObservableObject, IDisposable
             Preferences.Remove(AppPreferenceKeys.ApiBaseUrl);
         }
 
+        // If offline and no working saved URL, return the platform default without probing
+        if (Connectivity.Current.NetworkAccess != NetworkAccess.Internet)
+        {
+            var offlineFallback = AppNetworkConstants.DefaultLocalApiUrl;
+            _resolvedApiBaseUrl = offlineFallback;
+            return offlineFallback;
+        }
+
         string[] candidates = DeviceInfo.Platform == DevicePlatform.Android
             ? [
+                "http://10.0.2.2:56193",
                 "http://localhost:56193",
                 "http://127.0.0.1:56193",
-                "http://10.0.2.2:56193",
-                "http://localhost:5000",
-                "http://127.0.0.1:5000",
                 "http://10.0.2.2:5000",
+                "http://localhost:5000",
                 "http://host.docker.internal:56193",
-                "http://host.docker.internal:5000",
-                "http://localhost:8080",
-                "http://10.0.2.2:8080"
+                "http://10.0.2.2:8080",
+                AppNetworkConstants.ProductionApiUrl
               ]
             : [
                 "http://localhost:56193",
@@ -710,8 +728,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
                 "http://localhost:5000",
                 "http://127.0.0.1:5000",
                 "http://host.docker.internal:56193",
-                "http://host.docker.internal:5000",
-                "http://localhost:8080"
+                "http://localhost:8080",
+                AppNetworkConstants.ProductionApiUrl
               ];
 
         string? resolved = null;
@@ -736,13 +754,13 @@ public partial class MainViewModel : ObservableObject, IDisposable
         if (resolved is not null)
         {
             Preferences.Set(AppPreferenceKeys.ApiBaseUrl, resolved);
+            _resolvedApiBaseUrl = resolved;
             return resolved;
         }
 
-        var fallback = DeviceInfo.Platform == DevicePlatform.Android
-            ? "http://10.0.2.2:56193"
-            : "http://localhost:56193";
+        var fallback = AppNetworkConstants.DefaultLocalApiUrl;
         Preferences.Set(AppPreferenceKeys.ApiBaseUrl, fallback);
+        _resolvedApiBaseUrl = fallback;
         return fallback;
     }
 
@@ -766,7 +784,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
     {
         if (!string.IsNullOrWhiteSpace(articleId))
         {
-            _ = _apiClient.TrackArticleClickAsync(articleId);
+            _apiClient.TrackArticleClickAsync(articleId).SafeFireAndForget(_logger, "TrackArticleClick");
         }
     }
 
@@ -866,11 +884,12 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
     public void Dispose()
     {
-        _ttsService.Cancel();
+        _audioCoordinator.StateChanged -= OnAudioCoordinatorStateChanged;
+        _audioCoordinator.Dispose();
         _bookmarkService.BookmarksChanged -= OnBookmarkServiceChanged;
-        AppNotificationBridge.PlayAudioBriefingRequested -= OnPlayAudioBriefingRequested;
-        AppNotificationBridge.NewStoriesAvailable -= OnNewStoriesAvailable;
-        AppNotificationBridge.AppResumed -= OnAppResumedFromBridge;
+        _eventBus.PlayAudioBriefingRequested -= OnPlayAudioBriefingRequested;
+        _eventBus.NewStoriesAvailable -= OnNewStoriesAvailable;
+        _eventBus.AppResumed -= OnAppResumedFromBridge;
         Connectivity.Current.ConnectivityChanged -= OnConnectivityChanged;
         _loadCts?.Cancel();
         _loadCts?.Dispose();

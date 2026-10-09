@@ -41,6 +41,13 @@ public class CachedStoryEntity
     public int PriorityWeight { get; set; } = 1;
     public bool IsAdMobPlaceholder { get; set; }
 
+    // AI Summary & Enrichment fields
+    public bool HasAiSummary { get; set; }
+    public string? AiSummary { get; set; }
+    public string? AiSummaryEngine { get; set; }
+    public string? KeyTakeawaysJson { get; set; }
+    public int CommentCount { get; set; }
+
     // Local tracking state
     [Indexed]
     public bool IsBookmarked { get; set; }
@@ -60,7 +67,7 @@ public class CachedStoryEntity
         Summary = Summary,
         Content = Content,
         Url = Url,
-        ImageUrl = ImageUrl,
+        ImageUrl = string.IsNullOrWhiteSpace(ImageUrl) ? "https://images.unsplash.com/photo-1585829365295-ab7cd400c167?w=600&auto=format&fit=crop&q=80" : ImageUrl,
         Source = Source,
         Category = Category,
         PublishedAt = PublishedAt,
@@ -75,7 +82,14 @@ public class CachedStoryEntity
         IsPinned = IsPinned,
         TargetPosition = TargetPosition,
         PriorityWeight = PriorityWeight,
-        IsAdMobPlaceholder = IsAdMobPlaceholder
+        IsAdMobPlaceholder = IsAdMobPlaceholder,
+        HasAiSummary = HasAiSummary,
+        AiSummary = AiSummary,
+        AiSummaryEngine = AiSummaryEngine,
+        KeyTakeaways = !string.IsNullOrWhiteSpace(KeyTakeawaysJson)
+            ? System.Text.Json.JsonSerializer.Deserialize<List<string>>(KeyTakeawaysJson) ?? []
+            : [],
+        CommentCount = CommentCount
     };
 
     /// <summary>
@@ -104,6 +118,11 @@ public class CachedStoryEntity
         TargetPosition = item.TargetPosition,
         PriorityWeight = item.PriorityWeight,
         IsAdMobPlaceholder = item.IsAdMobPlaceholder,
+        HasAiSummary = item.HasAiSummary,
+        AiSummary = item.AiSummary,
+        AiSummaryEngine = item.AiSummaryEngine,
+        KeyTakeawaysJson = item.KeyTakeaways.Count > 0 ? System.Text.Json.JsonSerializer.Serialize(item.KeyTakeaways) : null,
+        CommentCount = item.CommentCount,
         CachedAtUtc = DateTime.UtcNow
     };
 }

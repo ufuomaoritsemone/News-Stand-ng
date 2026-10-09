@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using NigerianNewsGrid.Client.Models;
 using NigerianNewGrid.Services;
 
@@ -5,14 +6,18 @@ namespace NigerianNewGrid.Models;
 
 /// <summary>
 /// Groups briefing stories by publish date for CollectionView display.
-/// Moved from MainPage.xaml.cs to follow Single Responsibility Principle (Fix #34).
+/// Inherits from ObservableCollection to support incremental in-place item appending without resetting scroll position.
 /// </summary>
-public class BriefingDateGroup
+public class BriefingDateGroup : ObservableCollection<BriefingItem>
 {
     public DateTime Date { get; set; }
     public string DateHeader { get; set; } = string.Empty;
     public string RelativeLabel { get; set; } = string.Empty;
-    public List<BriefingItem> Stories { get; set; } = [];
+    public IList<BriefingItem> Stories => this;
+
+    public BriefingDateGroup() { }
+
+    public BriefingDateGroup(IEnumerable<BriefingItem> items) : base(items) { }
 
     public static List<BriefingDateGroup> BuildDateGroups(List<BriefingItem> stories)
     {
@@ -29,12 +34,11 @@ public class BriefingDateGroup
                     _                                         => (date.ToString("dddd, MMMM d, yyyy"), date.ToString("MMM d"))
                 };
 
-                return new BriefingDateGroup
+                return new BriefingDateGroup(g)
                 {
                     Date          = date,
                     DateHeader    = header,
-                    RelativeLabel = relative,
-                    Stories       = g.ToList()
+                    RelativeLabel = relative
                 };
             })
             .ToList();

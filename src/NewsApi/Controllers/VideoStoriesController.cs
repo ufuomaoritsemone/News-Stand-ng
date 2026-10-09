@@ -166,8 +166,14 @@ public class VideoStoriesController : ControllerBase
             .OrderBy(v => v.TrendingRank ?? int.MaxValue)
             .ThenByDescending(v => v.ViewCount)
             .ThenByDescending(v => v.PublishedAt)
-            .Take(effectiveLimit)
+            .Take(effectiveLimit * 2)
             .ToListAsync(cancellationToken);
+
+        // Strict guard: Ensure no foreign network videos leak into the Nigerian trending feed
+        trendingStories = trendingStories
+            .Where(s => YouTubeFeedService.IsNigerianNewsStory(s.ChannelName, s.ChannelId, s.Title, s.Summary))
+            .Take(effectiveLimit)
+            .ToList();
 
         foreach (var s in trendingStories)
         {
@@ -244,6 +250,7 @@ public class VideoStoriesController : ControllerBase
         try
         {
             var count = await _ytService.SyncTrendingNewsAsync(cancellationToken);
+            (_cache as MemoryCache)?.Clear();
             return Ok(new { message = $"Successfully synced trending YouTube news. {count} stories updated.", updatedCount = count });
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
@@ -263,6 +270,7 @@ public class VideoStoriesController : ControllerBase
         {
             var channelCount = await _ytService.SyncAllChannelsAsync(cancellationToken);
             var trendingCount = await _ytService.SyncTrendingNewsAsync(cancellationToken);
+            (_cache as MemoryCache)?.Clear();
             return Ok(new
             {
                 message = "Successfully synchronized all YouTube channels and trending feeds.",
