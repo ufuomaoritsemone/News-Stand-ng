@@ -15,7 +15,7 @@ namespace NewsApi.Migrations
         protected override void BuildModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
-            modelBuilder.HasAnnotation("ProductVersion", "10.0.11");
+            modelBuilder.HasAnnotation("ProductVersion", "10.0.12");
 
             modelBuilder.Entity("NewsApi.Models.Article", b =>
                 {
@@ -43,6 +43,10 @@ namespace NewsApi.Migrations
                     b.Property<string>("ContentType")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("Excerpt")
+                        .HasMaxLength(300)
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("ImageUrl")
                         .HasColumnType("TEXT");
 
@@ -55,7 +59,23 @@ namespace NewsApi.Migrations
                     b.Property<bool>("IsSponsored")
                         .HasColumnType("INTEGER");
 
+                    b.Property<int>("PriorityWeight")
+                        .HasColumnType("INTEGER");
+
                     b.Property<DateTime?>("PublishedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SeoDescription")
+                        .HasMaxLength(160)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SeoTitle")
+                        .HasMaxLength(70)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Slug")
+                        .IsRequired()
+                        .HasMaxLength(120)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Source")
@@ -70,8 +90,14 @@ namespace NewsApi.Migrations
                     b.Property<string>("Summary")
                         .HasColumnType("TEXT");
 
+                    b.Property<int?>("TargetPosition")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("Title")
                         .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Url")
@@ -91,13 +117,38 @@ namespace NewsApi.Migrations
 
                     b.HasIndex("PublishedAt");
 
+                    b.HasIndex("Slug")
+                        .IsUnique();
+
                     b.HasIndex("Source");
 
                     b.HasIndex("Title");
 
+                    b.HasIndex("UpdatedAt");
+
                     b.HasIndex("Url");
 
                     b.ToTable("Articles");
+                });
+
+            modelBuilder.Entity("NewsApi.Models.ArticleTopic", b =>
+                {
+                    b.Property<string>("ArticleId")
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("TopicId")
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<float>("Confidence")
+                        .HasColumnType("REAL");
+
+                    b.HasKey("ArticleId", "TopicId");
+
+                    b.HasIndex("TopicId");
+
+                    b.ToTable("ArticleTopics");
                 });
 
             modelBuilder.Entity("NewsApi.Models.AudioAsset", b =>
@@ -188,6 +239,65 @@ namespace NewsApi.Migrations
                     b.HasIndex("CreatedAt");
 
                     b.ToTable("CategoryCorrections");
+                });
+
+            modelBuilder.Entity("NewsApi.Models.CommentReport", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CommentId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsResolved")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ReportedBy")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CommentId");
+
+                    b.HasIndex("CreatedAt");
+
+                    b.ToTable("CommentReports");
+                });
+
+            modelBuilder.Entity("NewsApi.Models.CommentVote", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CommentId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("VoteType")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CommentId", "UserId")
+                        .IsUnique();
+
+                    b.ToTable("CommentVotes");
                 });
 
             modelBuilder.Entity("NewsApi.Models.FeedbackItem", b =>
@@ -346,9 +456,118 @@ namespace NewsApi.Migrations
                     b.Property<string>("SitemapUrl")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("Slug")
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
                     b.HasKey("Id");
 
+                    b.HasIndex("Slug")
+                        .IsUnique();
+
                     b.ToTable("Sources");
+                });
+
+            modelBuilder.Entity("NewsApi.Models.StoryComment", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ArticleId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ArticleTitle")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("AuthorAvatar")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("AuthorId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("AuthorName")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Downvotes")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsPinned")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ParentCommentId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("ReportCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Upvotes")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ArticleId");
+
+                    b.HasIndex("CreatedAt");
+
+                    b.HasIndex("ParentCommentId");
+
+                    b.HasIndex("Status");
+
+                    b.ToTable("StoryComments");
+                });
+
+            modelBuilder.Entity("NewsApi.Models.Topic", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Slug")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedAt");
+
+                    b.HasIndex("Slug")
+                        .IsUnique();
+
+                    b.HasIndex("Type");
+
+                    b.ToTable("Topics");
                 });
 
             modelBuilder.Entity("NewsApi.Models.UserEvent", b =>
@@ -401,6 +620,50 @@ namespace NewsApi.Migrations
                     b.HasIndex("OccurredAt");
 
                     b.ToTable("UserEvents");
+                });
+
+            modelBuilder.Entity("NewsApi.Models.UserVerification", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("AttemptCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("AvatarUrl")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Channel")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("DisplayName")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Identifier")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsVerified")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("OtpHash")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ExpiresAt");
+
+                    b.HasIndex("Identifier");
+
+                    b.ToTable("UserVerifications");
                 });
 
             modelBuilder.Entity("NewsApi.Models.VideoChannel", b =>
@@ -508,6 +771,35 @@ namespace NewsApi.Migrations
                     b.HasIndex("VideoId");
 
                     b.ToTable("VideoStories");
+                });
+
+            modelBuilder.Entity("NewsApi.Models.ArticleTopic", b =>
+                {
+                    b.HasOne("NewsApi.Models.Article", "Article")
+                        .WithMany("ArticleTopics")
+                        .HasForeignKey("ArticleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("NewsApi.Models.Topic", "Topic")
+                        .WithMany("ArticleTopics")
+                        .HasForeignKey("TopicId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Article");
+
+                    b.Navigation("Topic");
+                });
+
+            modelBuilder.Entity("NewsApi.Models.Article", b =>
+                {
+                    b.Navigation("ArticleTopics");
+                });
+
+            modelBuilder.Entity("NewsApi.Models.Topic", b =>
+                {
+                    b.Navigation("ArticleTopics");
                 });
 #pragma warning restore 612, 618
         }

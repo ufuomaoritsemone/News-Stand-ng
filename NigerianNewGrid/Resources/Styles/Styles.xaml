@@ -459,4 +459,41 @@
         <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource ButtonTextLight}, Dark={StaticResource ButtonTextDark}}" />
     </Style>
 
+    <!-- ── Compact Action Square Button (Bookmark, Share, 𝕏 in story cards) ── -->
+    <Style TargetType="Button" x:Key="FeedActionSquareButtonStyle">
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="HeightRequest" Value="36" />
+        <Setter Property="WidthRequest" Value="36" />
+        <Setter Property="MinimumHeightRequest" Value="36" />
+        <Setter Property="MinimumWidthRequest" Value="36" />
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="CornerRadius" Value="10" />
+        <Setter Property="BorderWidth" Value="1.5" />
+        <Setter Property="BorderColor" Value="{AppThemeBinding Light={StaticResource ButtonBorderLight}, Dark={StaticResource ButtonBorderDark}}" />
+        <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource ButtonBgLight}, Dark={StaticResource ButtonSecondaryBgDark}}" />
+        <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource ButtonTextLight}, Dark={StaticResource ButtonTextDark}}" />
+    </Style>
+
+    <!-- ── Top App Bar Toolbar Icon Button (Search, Refresh) ── -->
+    <Style TargetType="Button" x:Key="ToolbarPillButtonStyle">
+        <Setter Property="Padding" Value="10,6" />
+        <Setter Property="FontSize" Value="15" />
+        <Setter Property="CornerRadius" Value="14" />
+        <Setter Property="BorderWidth" Value="1.5" />
+        <Setter Property="BorderColor" Value="{AppThemeBinding Light={StaticResource ButtonBorderLight}, Dark={StaticResource ButtonBorderDark}}" />
+        <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource ButtonBgLight}, Dark={StaticResource ButtonSecondaryBgDark}}" />
+        <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource ButtonTextLight}, Dark={StaticResource ButtonTextDark}}" />
+    </Style>
+
+    <!-- ── Top App Bar Audio Briefing Button ── -->
+    <Style TargetType="Button" x:Key="AudioToolbarButtonStyle">
+        <Setter Property="Padding" Value="10,6" />
+        <Setter Property="FontSize" Value="16" />
+        <Setter Property="CornerRadius" Value="14" />
+        <Setter Property="BorderWidth" Value="1.5" />
+        <Setter Property="BorderColor" Value="{AppThemeBinding Light={StaticResource AccentOrange}, Dark={StaticResource DarkAccentOrange}}" />
+        <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource AccentOrangeLight}, Dark={StaticResource DarkAccentOrangeLight}}" />
+        <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource AccentOrange}, Dark={StaticResource DarkAccentOrange}}" />
+    </Style>
+
 </ResourceDictionary>

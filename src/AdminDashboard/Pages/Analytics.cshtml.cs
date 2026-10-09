@@ -74,6 +74,12 @@ public class AnalyticsSummaryDto
     public int WidgetRefreshes { get; set; }
     public int WidgetClicks { get; set; }
     public int NetWidgetDeployments { get; set; }
+    // PWA Web App adoption metrics
+    public int PwaInstalls { get; set; }
+    public int PwaStandaloneOpens { get; set; }
+    public int PwaAndroidInstalls { get; set; }
+    public int PwaIosInstalls { get; set; }
+    public int PwaDesktopInstalls { get; set; }
     public int PeriodDays { get; set; }
     public List<TopArticleDto> TopArticles { get; set; } = [];
     public List<DailyCountDto> DailyBreakdown { get; set; } = [];

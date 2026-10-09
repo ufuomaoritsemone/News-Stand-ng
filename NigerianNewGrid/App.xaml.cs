@@ -1,4 +1,5 @@
 using NigerianNewGrid.Constants;
+using NigerianNewGrid.Extensions;
 using NigerianNewGrid.Services;
 
 namespace NigerianNewGrid;
@@ -11,14 +12,14 @@ public partial class App : Application
 
     public App(IServiceProvider serviceProvider, IAnalyticsService analytics, IAppOpenAdManager appOpenAdManager)
     {
-#if ANDROID
+#if DEBUG && ANDROID
         Android.Util.Log.Info("APP_DEBUG", "App constructor START");
 #endif
         _serviceProvider = serviceProvider;
         _analytics = analytics;
         _appOpenAdManager = appOpenAdManager;
         InitializeComponent();
-#if ANDROID
+#if DEBUG && ANDROID
         Android.Util.Log.Info("APP_DEBUG", "App InitializeComponent DONE");
 #endif
     }
@@ -27,11 +28,11 @@ public partial class App : Application
 
     protected override Window CreateWindow(IActivationState? activationState)
     {
-#if ANDROID
+#if DEBUG && ANDROID
         Android.Util.Log.Info("APP_DEBUG", "App.CreateWindow STARTED");
 #endif
         var hasSeenOnboarding = Preferences.Get(AppPreferenceKeys.HasSeenOnboarding, false);
-#if ANDROID
+#if DEBUG && ANDROID
         Android.Util.Log.Info("APP_DEBUG", $"App.CreateWindow hasSeenOnboarding = {hasSeenOnboarding}");
 #endif
 
@@ -41,21 +42,21 @@ public partial class App : Application
             rootPage = hasSeenOnboarding
                 ? _serviceProvider.GetRequiredService<AppShell>()
                 : _serviceProvider.GetRequiredService<OnboardingPage>();
-#if ANDROID
+#if DEBUG && ANDROID
             Android.Util.Log.Info("APP_DEBUG", $"App.CreateWindow rootPage resolved: {rootPage?.GetType().Name}");
 #endif
         }
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"App.CreateWindow ERROR resolving rootPage: {ex}");
-#if ANDROID
+#if DEBUG && ANDROID
             Android.Util.Log.Error("APP_DEBUG", $"App.CreateWindow ERROR resolving rootPage: {ex}");
 #endif
             throw;
         }
 
         var window = new Window(rootPage!);
-#if ANDROID
+#if DEBUG && ANDROID
         Android.Util.Log.Info("APP_DEBUG", "App.CreateWindow Window created successfully");
 #endif
 
@@ -63,8 +64,8 @@ public partial class App : Application
         window.Resumed += (_, _) =>
         {
             if (!_isColdStartCompleted) return;
-            _ = _analytics.TrackAsync("app_open");
-            _ = _appOpenAdManager.ShowAdIfAvailableAsync();
+            _analytics.TrackAsync("app_open").SafeFireAndForget(context: "ResumeTrack");
+            _appOpenAdManager.ShowAdIfAvailableAsync().SafeFireAndForget(context: "ResumeAd");
             AppNotificationBridge.TriggerAppResumed();
         };
 
@@ -73,20 +74,20 @@ public partial class App : Application
 
     protected override void OnStart()
     {
-#if ANDROID
+#if DEBUG && ANDROID
         Android.Util.Log.Info("APP_DEBUG", "App.OnStart START");
 #endif
         base.OnStart();
-#if ANDROID
+#if DEBUG && ANDROID
         Android.Util.Log.Info("APP_DEBUG", "App.OnStart base.OnStart DONE");
 #endif
         // Initialize SQLite news cache in background on startup
         var persistence = _serviceProvider.GetService<INewsPersistenceService>();
-        _ = persistence?.InitializeAsync();
+        persistence?.InitializeAsync().SafeFireAndForget(context: "SQLiteInit");
 
         // Track initial cold-start; pre-load the App Open Ad silently in background so home screen is instant
-        _ = _analytics.TrackAsync("app_open");
-        _ = _appOpenAdManager.PrepareAdAsync();
+        _analytics.TrackAsync("app_open").SafeFireAndForget(context: "ColdStartTrack");
+        _appOpenAdManager.PrepareAdAsync().SafeFireAndForget(context: "PrepareAd");
 
         // Ensure background sync schedule is active if background updates are enabled
         if (NotificationPreferences.BackgroundUpdatesEnabled)
@@ -96,7 +97,7 @@ public partial class App : Application
         }
 
         _isColdStartCompleted = true;
-#if ANDROID
+#if DEBUG && ANDROID
         Android.Util.Log.Info("APP_DEBUG", "App.OnStart FINISHED");
 #endif
     }
@@ -105,7 +106,7 @@ public partial class App : Application
     {
         base.OnSleep();
         // Flush any pending events when the app moves to background
-        _ = _analytics.FlushAsync();
+        _analytics.FlushAsync().SafeFireAndForget(context: "FlushOnSleep");
 
         // Trigger immediate widget refresh so home screen mirrors latest stories
         var syncService = _serviceProvider.GetService<IBackgroundSyncService>();

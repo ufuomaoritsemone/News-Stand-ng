@@ -1,5 +1,6 @@
 using System.Xml.Linq;
 using NewsScraperService.Models;
+using NewsScraperService.Services;
 
 namespace NewsScraperService.Scrapers;
 
@@ -49,6 +50,7 @@ public abstract class RssScraperBase : IScraper
                     Title = title,
                     Url = link,
                     Summary = description ?? content,
+                    Content = !string.IsNullOrWhiteSpace(content) ? ArticleContentExtractor.SanitizeContentBody(content) : null,
                     PublishedAt = published,
                     Source = SourceName,
                     ImageUrl = imageUrl,
@@ -71,6 +73,7 @@ public abstract class RssScraperBase : IScraper
                     if (DateTimeOffset.TryParse(pub, out var dto)) published = dto.UtcDateTime;
                     var summary = entry.Elements().FirstOrDefault(e => e.Name.LocalName == "summary")?.Value 
                                   ?? entry.Elements().FirstOrDefault(e => e.Name.LocalName == "content")?.Value;
+                    var entryContent = entry.Elements().FirstOrDefault(e => e.Name.LocalName == "content")?.Value;
 
                     var imageUrl = ExtractImageUrl(entry, summary, null);
 
@@ -79,6 +82,7 @@ public abstract class RssScraperBase : IScraper
                         Title = title,
                         Url = link,
                         Summary = summary,
+                        Content = !string.IsNullOrWhiteSpace(entryContent) ? ArticleContentExtractor.SanitizeContentBody(entryContent) : null,
                         PublishedAt = published,
                         Source = SourceName,
                         ImageUrl = imageUrl,

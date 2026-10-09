@@ -322,26 +322,27 @@
                                 Feed Placement Slot
                             </label>
                             <select name="NewCampaign.TargetPosition" class="form-select form-control-glass">
-                                <optgroup label="⭐ Special Premium Placements (Top Hero)">
+                                <optgroup label="🌟 Core Strategic Placements (buletin Web & Mobile)">
                                     @{
                                         var occupied = Model.GetOccupiedSlots();
                                     }
-                                    <option value="1">1st Story — Top Hero Slot @(occupied.ContainsKey(1) ? $"(Occupied: {occupied[1]})" : "(Available)")</option>
-                                    <option value="2">2nd Story — Premium Slot @(occupied.ContainsKey(2) ? $"(Occupied: {occupied[2]})" : "(Available)")</option>
-                                    <option value="3">3rd Story — Premium Slot @(occupied.ContainsKey(3) ? $"(Occupied: {occupied[3]})" : "(Available)")</option>
+                                    <option value="3" selected>Placement 1: In-Feed Slot #3 ("The Sweet Spot") @(occupied.ContainsKey(3) ? $"(Occupied: {occupied[3]})" : "(Recommended)")</option>
+                                    <option value="1">Placement 2: Partner Perspectives Shelf (Primary Spotlight) @(occupied.ContainsKey(1) ? $"(Occupied: {occupied[1]})" : "(Available)")</option>
+                                    <option value="2">Placement 2: Partner Perspectives Shelf (Secondary) @(occupied.ContainsKey(2) ? $"(Occupied: {occupied[2]})" : "(Available)")</option>
+                                    <option value="4">Placement 3: In-Article / Reader Drawer Footer Callout @(occupied.ContainsKey(4) ? $"(Occupied: {occupied[4]})" : "(Available)")</option>
                                 </optgroup>
-                                <optgroup label="📰 In-Feed Placements (5th to 30th Position)">
+                                <optgroup label="📰 In-Feed Deep Scroll Placements (5th to 30th Position)">
                                     @for (int slot = 5; slot <= 30; slot++)
                                     {
                                         var isOcc = occupied.ContainsKey(slot);
-                                        <option value="@slot" selected="@(slot == 5)">
+                                        <option value="@slot">
                                             Position @slot @(isOcc ? $"(Occupied: {occupied[slot]})" : "(Available)")
                                         </option>
                                     }
                                 </optgroup>
                             </select>
                             <div class="form-text text-muted" style="font-size: 0.72rem;">
-                                Note: Position 4 is reserved as organic editorial buffer. In-feed ads maintain minimum 3-story separation.
+                                In-feed placement #3 inserts the sponsored card seamlessly into the news grid, while Partner Perspectives showcases brand cards directly beneath the hero carousel.
                             </div>
                         </div>
 

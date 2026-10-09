@@ -11,6 +11,8 @@ var host = Host.CreateDefaultBuilder(args)
         services.AddSingleton<ArticleContentExtractor>();
         services.AddSingleton<UrlFrontierManager>();
         services.AddSingleton<IArticleEnricher, ArticleEnricher>();
+        services.AddSingleton<GazetteerEntityExtractor>();
+        services.AddSingleton<IEntityExtractor, LlmEntityExtractor>();
         services.AddHostedService<ScraperWorker>();
     })
     .Build();

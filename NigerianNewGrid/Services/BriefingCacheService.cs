@@ -12,20 +12,16 @@ namespace NigerianNewGrid.Services;
 /// </summary>
 public class BriefingCacheService(
     ILogger<BriefingCacheService> logger,
-    INewsPersistenceService newsPersistenceService,
+    IStoryRepository newsPersistenceService,
     IBackgroundSyncService? backgroundSyncService = null) : IBriefingCacheService
 {
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        PropertyNamingPolicy        = JsonNamingPolicy.CamelCase,
-        PropertyNameCaseInsensitive = true
-    };
+    private static JsonSerializerOptions JsonOptions => SharedJsonOptions.Default;
 
-    public async Task<List<BriefingCategory>> GetCachedBriefingAsync(int topPerCategory = 0)
+    public async Task<List<BriefingCategory>> GetCachedBriefingAsync(int topPerCategory = 0, int maxTotalStories = 60)
     {
         try
         {
-            var sqliteCategories = await newsPersistenceService.GetCachedBriefingAsync(days: 14, topPerCategory: topPerCategory);
+            var sqliteCategories = await newsPersistenceService.GetCachedBriefingAsync(days: 14, topPerCategory: topPerCategory, maxTotalStories: maxTotalStories);
             if (sqliteCategories is { Count: > 0 })
                 return sqliteCategories;
 
@@ -74,10 +70,12 @@ public class BriefingCacheService(
 
     public List<BriefingCategory> GetFallbackSampleBriefing(string language)
     {
-        BriefingItem MakeItem(string title, string summary, string url, string source, string category) =>
-            new()
+        BriefingItem MakeItem(string title, string summary, string url, string source, string category)
+        {
+            var hash = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(url ?? title))).ToLowerInvariant();
+            return new()
             {
-                Id          = Guid.NewGuid().ToString(),
+                Id          = $"fallback_{category.ToLowerInvariant()}_{hash[..12]}",
                 Title       = title,
                 Summary     = summary,
                 Url         = url,
@@ -87,6 +85,7 @@ public class BriefingCacheService(
                 PublishedAt = DateTime.UtcNow.AddHours(-2),
                 VoiceName   = $"{language} Female"
             };
+        }
 
         return
         [

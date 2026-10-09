@@ -49,7 +49,7 @@ public partial class BookmarksPage : ContentPage
     {
         try
         {
-            if (e.Parameter is BriefingItem item && !string.IsNullOrWhiteSpace(item.Url))
+            if (e.Parameter is BriefingItem item && (!string.IsNullOrWhiteSpace(item.Url) || !string.IsNullOrWhiteSpace(item.Id)))
             {
                 await Navigation.PushAsync(new ArticleWebPage(item));
             }

@@ -21,6 +21,26 @@ public class Article
     public string? Author { get; set; }
     public string? ContentType { get; set; } = "News";
 
+    // SEO, Permalinks & Structured Data
+    [Required]
+    [MaxLength(120)]
+    public string Slug { get; set; } = string.Empty;
+
+    [MaxLength(300)]
+    public string? Excerpt { get; set; }
+
+    [MaxLength(70)]
+    public string? SeoTitle { get; set; }
+
+    [MaxLength(160)]
+    public string? SeoDescription { get; set; }
+
+    // Navigation properties
+    public ICollection<ArticleTopic> ArticleTopics { get; set; } = [];
+    public ArticleEmbedding? Embedding { get; set; }
+    public ICollection<StoryClusterArticle> StoryClusterArticles { get; set; } = [];
+    public ArticleEnrichment? Enrichment { get; set; }
+
     // Direct In-House Sponsorship Engine Fields
     public bool IsSponsored { get; set; } = false;
     public string? SponsorName { get; set; }

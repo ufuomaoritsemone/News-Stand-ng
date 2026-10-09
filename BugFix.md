@@ -767,10 +767,362 @@ Modernized calls to `DisplayAlertAsync` and `DisplayActionSheetAsync`.
 
 ---
 
+---
+
 ## Verification & Test Results
 
 - **Solution Build**: `dotnet build NigerianNewGrid.slnx` succeeded with **0 errors** across all platforms (`net10.0`, `net10.0-android`, `net10.0-windows10.0.19041.0`, `net10.0-ios`, `net10.0-maccatalyst`).
 - **Automated Tests**: `dotnet test` passed **115 / 115 tests** with **0 failures** (100% pass rate).
+
+
+
+
+
+
+
+
+
+
+
+
+
+---
+
+## Code Review — Architecture & Best Practices Improvements
+
+*Identified: 2026-10-01. Addressing sequentially from Issue #15 onward.*
+
+---
+
+## Issue #15 — `INewsPersistenceService` God Interface (ISP Violation)
+
+**Severity**: 🔴 High / Architecture  
+**Component**: `NigerianNewGrid` (MAUI)  
+**Files**: `NigerianNewGrid/Services/INewsPersistenceService.cs`, all consumers
+
+### Problem
+`INewsPersistenceService` exposes 16 methods across 4 unrelated concerns: story retrieval, bookmark management, read history, and delta sync. Every consumer (`BookmarkService`, `RecentlyReadService`, `BriefingCacheService`, `ArticleWebPage`) depends on the entire interface even when it only needs 2–3 methods. Violates the **Interface Segregation Principle** and makes unit testing painful (mocks must stub 16 methods).
+
+### Fix
+Split into `IStoryRepository`, `IBookmarkRepository`, `IReadHistoryRepository`. Keep `INewsPersistenceService` as a composite (`INewsPersistenceService : IStoryRepository, IBookmarkRepository, IReadHistoryRepository`) for backwards compatibility. Update all consumer injection points to depend on the narrowest interface they need.
+
+### Status
+✅ Resolved (2026-10-01) — Split into IStoryRepository, IBookmarkRepository, and IReadHistoryRepository with INewsPersistenceService as composite. Updated consumers (BookmarkService, RecentlyReadService, BriefingCacheService, DiscoverViewModel, ArticleWebPage) to narrow interfaces and registered granular repositories in DI.
+
+---
+
+## Issue #16 — `BookmarkService` Dual-Write Data Hazard
+
+**Severity**: 🔴 High / Data Integrity  
+**Component**: `NigerianNewGrid` (MAUI)  
+**File**: `NigerianNewGrid/Services/BookmarkService.cs`
+
+### Problem
+`ToggleBookmark()` writes to both `Preferences` (via `Save()`) and SQLite (via `persistenceService.ToggleBookmarkAsync()`). `EnsureLoaded()` initialises from Preferences then overwrites with SQLite in the background. If the SQLite write fails silently, state diverges: the user sees a bookmark in-session, but it is gone on the next cold start (SQLite won the subsequent load but never persisted the toggle).
+
+### Fix
+Make SQLite the **single source of truth**. Remove `Save()` (Preferences write-path) from `BookmarkService` entirely after confirming the legacy migration in `NewsPersistenceService.MigrateLegacyPreferencesAsync()` has run. The in-memory `_bookmarks` list becomes a read cache only, refreshed from SQLite after every write.
+
+### Status
+✅ Resolved (2026-10-01) — Removed Preferences write-path entirely from BookmarkService. SQLite IBookmarkRepository is now the single source of truth, with automatic in-memory cache sync and error reversion.
+
+---
+
+## Issue #17 — `NotificationPreferences` Static God Class (Thread-Safety + Testability)
+
+**Severity**: 🔴 High / Correctness & Architecture  
+**Component**: `NigerianNewGrid` (MAUI)  
+**File**: `NigerianNewGrid/Services/NotificationPreferences.cs`
+
+### Problem
+`NotificationPreferences` is a `static` class that wraps MAUI `Preferences` directly. Issues:
+1. **Untestable** — cannot be injected or mocked in unit tests.
+2. **Not thread-safe** — `AddKeyword` does read-modify-write without a lock; two concurrent callers can each read the same list, add different keywords, and one silently overwrites the other.
+3. **Violates DI** — `MainViewModel` and platform receivers reference it as a static call, bypassing the DI container.
+4. `RecordNotifiedArticle` serializes/deserializes the full `HashSet<string>` on every call — expensive on-thread.
+
+### Fix
+Convert to an `IUserPreferencesService` interface registered as Singleton in DI. Use a `SemaphoreSlim` to guard keyword mutations. Inject into `MainViewModel`, `SettingsPage`, and platform receivers via DI.
+
+### Status
+✅ Resolved (2026-10-01) — Extracted IUserPreferencesService and implemented thread-safe UserPreferencesService with in-memory caching. Registered in DI, injected into MainViewModel and DiscoverViewModel, and refactored NotificationPreferences to act as a thread-safe delegation facade for broadcast receivers.
+
+---
+
+## Issue #18 — `AppNotificationBridge` Static Event Bus Memory Leak Risk
+
+**Severity**: 🔴 High / Memory  
+**Component**: `NigerianNewGrid` (MAUI)  
+**File**: `NigerianNewGrid/Services/AppNotificationBridge.cs`
+
+### Problem
+Static events hold strong references to all subscribers indefinitely. `MainViewModel` (registered as `Transient`) subscribes in its constructor. If `Dispose()` is never called by the Shell lifecycle, every discarded ViewModel instance is rooted by the static bridge and never garbage collected. Over time this causes unbounded memory growth, especially when navigating between tabs or after background/foreground cycles.
+
+### Fix
+Replace with a `WeakEventManager` (already available in MAUI) or an injectable `IAppEventBus` Singleton with type-safe event records:
+```csharp
+public record NewStoriesAvailableEvent(int Count);
+public record AppResumedEvent;
+public record PlayAudioBriefingEvent;
+```
+This eliminates the strong-reference leak and makes subscribers testable.
+
+### Status
+✅ Resolved (2026-10-01) — Extracted IAppEventBus and implemented AppEventBus with weak delegate subscription dispatch. Registered in DI, injected into MainViewModel, and refactored AppNotificationBridge to delegate to the event bus. Eliminates strong-reference ViewModel memory leaks.
+
+---
+
+## Issue #19 — `ArticleWebPage.xaml.cs` Violates SRP (1,085 Lines, 9 Responsibilities)
+
+**Severity**: 🟡 Medium / Architecture  
+**Component**: `NigerianNewGrid` (MAUI)  
+**File**: `NigerianNewGrid/ArticleWebPage.xaml.cs`
+
+### Problem
+The code-behind handles: HTML rendering, font size, reader mode toggling, related stories filtering, bookmarking, recently-read tracking, sharing, TTS, publisher branding, content hydration, and WebView JS injection — all in one 1,085-line file. State is spread across 12 private fields. No ViewModel means zero testability for any of this logic.
+
+### Fix
+Extract an `ArticleViewModel` following the pattern of `MainViewModel`. Immediate partial steps:
+- Move `RelatedStoryDisplayItem` to `Models/RelatedStoryDisplayItem.cs`
+- Move HTML template building to `ArticleDistillerService`
+- Extract font/reader-mode state into a `ReaderModeOptions` record
+
+### Status
+✅ Resolved (2026-10-01) — Extracted RelatedStoryDisplayItem to Models/RelatedStoryDisplayItem.cs, extracted ArticleViewModel to encapsulate article state, content hydration, reader mode options, bookmarking, and related stories filtering. Refactored ArticleWebPage.xaml.cs to delegate all business logic to ArticleViewModel.
+
+---
+
+## Issue #20 — `XShareService` Namespace Alias Design Smell
+
+**Severity**: 🟡 Medium / Code Clarity  
+**Component**: `NigerianNewGrid` (MAUI)  
+**File**: `NigerianNewGrid/Services/XShareService.cs`
+
+### Problem
+Two classes named `XShareService` exist in the same file — one real implementation in `NigerianNewGrid` namespace and a forwarding alias in `NigerianNewGrid.Services`. The alias was added for backwards compatibility but adds confusion and will cause ambiguity when any new consumer resolves via DI. `XShareService` is also a static class, making it untestable.
+
+### Fix
+Consolidate into a single `XShareService` in `NigerianNewGrid.Services`. Register as `IXShareService` in DI. Delete the forwarding alias and update all call sites.
+
+### Status
+✅ Resolved (2026-10-01) — Consolidated XShareService under NigerianNewGrid.Services, created and registered IXShareService interface in DI, and eliminated the redundant namespace forwarding alias.
+
+---
+
+## Issue #21 — `ArticleDistillerService.IdentifyPublisher` Uses Fragile String-Contains Matching
+
+**Severity**: 🟡 Medium / Correctness  
+**Component**: `NigerianNewGrid` (MAUI)  
+**File**: `NigerianNewGrid/Services/ArticleDistillerService.cs`
+
+### Problem
+The 14-publisher `if/if/if` chain uses `.Contains()` on the lowercased URL. `u.Contains("guardian")` matches both `guardian.ng` (Nigerian) and `theguardian.com` (UK), misidentifying publisher branding. Adding new publishers requires modifying the class, violating Open/Closed Principle.
+
+### Fix
+Replace with a `Dictionary<string, PublisherInfo>` keyed on `Uri.Host` for exact domain matching:
+```csharp
+private static readonly IReadOnlyDictionary<string, PublisherInfo> PublisherMap = new Dictionary<string, PublisherInfo>(StringComparer.OrdinalIgnoreCase)
+{
+    ["guardian.ng"]     = new("The Guardian Nigeria", "...", "#222222", "#000000"),
+    ["theguardian.com"] = new("The Guardian", "...", "#005689", "#003F63"),
+    // ...
+};
+```
+
+### Status
+✅ Resolved (2026-10-01) — Replaced string.Contains chaining with PublisherMap dictionary keyed on Uri.Host, added subdomain resolution, and differentiated Guardian.ng from theguardian.com.
+
+---
+
+## Issue #22 — `ResolveApiBaseUrlAsync` Re-Probes 10 URLs After Every Transient Failure
+
+**Severity**: 🟡 Medium / Performance  
+**Component**: `NigerianNewGrid` (MAUI)  
+**File**: `NigerianNewGrid/ViewModels/MainViewModel.cs`
+
+### Problem
+When the saved URL fails a health check, it is removed from `Preferences` and 10 parallel HTTP probes are launched. On the next pull-to-refresh (even seconds later after a momentary blip), all 10 probes run again. This wastes battery, adds latency, and hammers local endpoints unnecessarily.
+
+### Fix
+Add a session-level `private string? _resolvedApiBaseUrl` field in `MainViewModel`. Return it immediately if already set this session. Only fall through to the full probe waterfall if the session cache is empty.
+
+### Status
+✅ Resolved (2026-10-01) — Added _resolvedApiBaseUrl session cache and connectivity check in MainViewModel.cs, avoiding repetitive candidate network probing and preventing probes when offline.
+
+---
+
+## Issue #23 — `MauiProgram.cs` DI Registration Uses Fully-Qualified Names & Lacks Extension Methods
+
+**Severity**: 🟡 Medium / Maintainability  
+**Component**: `NigerianNewGrid` (MAUI)  
+**File**: `NigerianNewGrid/MauiProgram.cs`
+
+### Problem
+All 20+ service registrations use fully-qualified type names (`NigerianNewGrid.Services.INewsPersistenceService`) instead of `using` directives, making the file noisy and hard to scan. There are no extension methods to group registrations by concern, so `CreateMauiApp()` grows unboundedly with every new service.
+
+### Fix
+Add `using NigerianNewGrid.Services;` etc. at the top. Extract into `IServiceCollection` extension methods:
+```csharp
+builder.Services
+    .AddNewsServices()
+    .AddPlatformServices()
+    .AddViewModels()
+    .AddPages();
+```
+
+### Status
+✅ Resolved (2026-10-01) — Extracted ServiceCollectionExtensions grouping DI registrations into AddNewsHttpClients, AddNewsServices, AddPlatformServices, AddViewModels, and AddPages, reducing MauiProgram.cs to a clean, declarative configuration.
+
+---
+
+## Issue #24 — `MainViewModel` Over-Injection (9 Constructor Parameters)
+
+**Severity**: 🟡 Medium / Architecture  
+**Component**: `NigerianNewGrid` (MAUI)  
+**File**: `NigerianNewGrid/ViewModels/MainViewModel.cs`
+
+### Problem
+The constructor accepts 9 services, indicating the class has too many responsibilities: feed loading, TTS, keyword alerts, notification scheduling, bookmarks, analytics, sound, update pill state, and API discovery. This makes testing expensive and the class resistant to change.
+
+### Fix
+Extract TTS orchestration into an `AudioBriefingViewModel` (child VM or service) and keyword alert checking into a `KeywordAlertCoordinator` service. `MainViewModel` depends on these composites rather than every individual service.
+
+### Status
+✅ Resolved (2026-10-01) — Extracted IKeywordAlertCoordinator and KeywordAlertCoordinator to encapsulate keyword matching and notifications. Extracted IAudioBriefingCoordinator and AudioBriefingCoordinator to encapsulate TTS playback, audio button state, deduplication, and analytics. MainViewModel delegates to these coordinators, eliminating constructor over-injection and adhering to SRP.
+
+---
+
+## Issue #25 — `JsonSerializerOptions` Duplicated Across 5+ Services
+
+**Severity**: 🟢 Low / Maintainability  
+**Component**: `NigerianNewGrid` (MAUI)  
+**Files**: `BookmarkService.cs`, `RecentlyReadService.cs`, `NotificationPreferences.cs`, `BriefingCacheService.cs`, `NewsPersistenceService.cs`
+
+### Problem
+Every service declares an identical `private static readonly JsonSerializerOptions` with the same settings (CamelCase + CaseInsensitive). Any future change (e.g. adding `DefaultIgnoreCondition`) must be applied to all 5+ files.
+
+### Fix
+Extract to a single shared constant:
+```csharp
+// NigerianNewGrid/SharedJsonOptions.cs
+internal static class SharedJsonOptions
+{
+    public static readonly JsonSerializerOptions Default = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        PropertyNameCaseInsensitive = true,
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+    };
+}
+```
+
+### Status
+✅ Resolved (2026-10-01) — Extracted SharedJsonOptions.Default and replaced local instances across all 5 services.
+
+---
+
+## Issue #26 — `Console.WriteLine` Diagnostic Left in Production `MainViewModel`
+
+**Severity**: 🟢 Low / Code Quality  
+**Component**: `NigerianNewGrid` (MAUI)  
+**File**: `NigerianNewGrid/ViewModels/MainViewModel.cs` line 80
+
+### Problem
+`Console.WriteLine(">>> [DIAGNOSTIC] MainViewModel constructor START")` is a raw diagnostic left in production code. It bypasses the structured logging pipeline, is not filterable by log level, and pollutes stdout in production builds.
+
+### Fix
+Replace with the injected `ILogger<MainViewModel>`:
+```csharp
+_logger.LogDebug("MainViewModel constructor START");
+```
+
+### Status
+✅ Resolved (2026-10-01) — Replaced raw Console.WriteLine with _logger.LogDebug and ensured _logger is initialized first.
+
+---
+
+## Issue #27 — `AppOpenAdManager._isShowingAd` Has a Data Race
+
+**Severity**: 🟢 Low / Correctness  
+**Component**: `NigerianNewGrid` (MAUI)  
+**File**: `NigerianNewGrid/Services/AppOpenAdManager.cs`
+
+### Problem
+`_isShowingAd` is a plain `bool` field written from a `Task.Run` background thread (line 168) and read from the calling thread (line 116) with no memory fence or synchronization. On ARM architectures, the CPU can reorder stores/loads, producing stale reads and allowing a duplicate ad show.
+
+### Fix
+Use `volatile int` with `Interlocked` for a lock-free atomic guard:
+```csharp
+private volatile int _isShowingAd; // 0 = false, 1 = true
+private bool TryBeginShowingAd() => Interlocked.CompareExchange(ref _isShowingAd, 1, 0) == 0;
+private void EndShowingAd()       => Interlocked.Exchange(ref _isShowingAd, 0);
+```
+
+### Status
+✅ Resolved (2026-10-01) — Implemented lock-free atomic acquisition and release using Interlocked.CompareExchange/Exchange and Volatile.Read.
+
+---
+
+## Issue #28 — `SettingsPage.xaml.cs` Has No ViewModel (472 Lines of Untestable Code-Behind)
+
+**Severity**: 🟢 Low / Architecture  
+**Component**: `NigerianNewGrid` (MAUI)  
+**File**: `NigerianNewGrid/SettingsPage.xaml.cs`
+
+### Problem
+Settings page logic (toggle guards, keyword management, star rating, feedback submission, language switching) lives entirely in a 472-line code-behind with no ViewModel. None of this logic is unit-testable.
+
+### Fix
+Extract a `SettingsViewModel` following the same pattern as `MainViewModel` and `DiscoverViewModel`. Register in DI. Move all non-navigation state and commands to the ViewModel.
+
+### Status
+✅ Resolved (2026-10-01) — Extracted SettingsViewModel encapsulating all notification toggles, keyword management, star rating, sonic feedback, and feedback submission via NewsApiClient. Refactored SettingsPage.xaml.cs into a clean view layer.
+
+---
+
+## Issue #29 — Duplicate Font Registrations in `MauiProgram.cs`
+
+**Severity**: 🟢 Low / Performance  
+**Component**: `NigerianNewGrid` (MAUI)  
+**File**: `NigerianNewGrid/MauiProgram.cs` lines 23–26
+
+### Problem
+The same font file is registered twice under different aliases:
+```csharp
+fonts.AddFont("LegacySerifITCTTBold.ttf", "LegacySerifBold");
+fonts.AddFont("LegacySerifITCTTBold.ttf", "LegacySerifITCTTBold"); // duplicate
+fonts.AddFont("Legacy Sans Book.TTF", "LegacySansBook");
+fonts.AddFont("Legacy Sans Book.TTF", "Legacy Sans Book");          // duplicate
+```
+Each duplicate loads the font file twice into memory at startup.
+
+### Fix
+Pick one canonical alias per font, remove the duplicate registration, and update all XAML `FontFamily` references to use the canonical alias.
+
+### Status
+✅ Resolved (2026-10-01) — Removed duplicate font registrations in MauiProgram.cs and normalized XAML references to canonical aliases (LegacySerifBold and LegacySansBook).
+
+---
+
+## Issue #30 — Fallback Articles Use Non-Deterministic `Guid.NewGuid()` IDs
+
+**Severity**: 🟢 Low / Data Integrity  
+**Component**: `NigerianNewGrid` (MAUI)  
+**File**: `NigerianNewGrid/Services/BriefingCacheService.cs` line 80
+
+### Problem
+`GetFallbackSampleBriefing()` calls `Guid.NewGuid()` for each fallback article's `Id`. Every time the method runs, every article gets a new random ID. If a user bookmarks a fallback article during an offline session, the bookmark points to a GUID that will never exist in SQLite again — the bookmark is silently orphaned on next launch.
+
+### Fix
+Use a deterministic, stable ID derived from the article content:
+```csharp
+Id = $"fallback_{category.ToLowerInvariant()}_{Math.Abs(title.GetHashCode()):x8}",
+```
+
+### Status
+✅ Resolved (2026-10-01) — Deterministic SHA256-based ID generation implemented for sample fallback briefing items.
+
+
 
 
 

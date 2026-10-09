@@ -343,11 +343,12 @@ public class SponsoredCampaignItem
 
     public string PlacementDisplay => TargetPosition switch
     {
-        1 => "⭐ Special Slot #1",
-        2 => "⭐ Special Slot #2",
-        3 => "⭐ Special Slot #3",
-        >= 5 and <= 30 => $"Slot #{TargetPosition}",
-        _ => IsPinned ? "⭐ Special Slot #1 (Pinned)" : "Standard In-Feed"
+        1 => "Placement 2: Partner Shelf #1",
+        2 => "Placement 2: Partner Shelf #2",
+        3 => "Placement 1: In-Feed Slot #3 (Sweet Spot)",
+        4 => "Placement 3: Reader Drawer Footer",
+        >= 5 and <= 30 => $"In-Feed Slot #{TargetPosition}",
+        _ => IsPinned ? "⭐ Special Pinned Slot" : "Standard In-Feed"
     };
 
     public bool IsActive => IsSponsored && (CampaignExpiresAt == null || CampaignExpiresAt > DateTime.UtcNow);

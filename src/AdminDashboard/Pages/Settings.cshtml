@@ -1,0 +1,519 @@
+@page
+@model AdminDashboard.Pages.SettingsModel
+@{
+    ViewData["Title"] = "System Settings & API Keys | News Stand NG";
+}
+
+<div class="container-fluid px-4 py-3">
+
+    <!-- Header Navigation -->
+    <div class="dashboard-header d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3 mb-4">
+        <div>
+            <div class="d-flex align-items-center gap-3">
+                <h1 class="h2 mb-0 text-white brand-font">⚙️ System Configuration</h1>
+                <span class="badge bg-primary rounded-pill px-3 py-1" style="font-size: 0.72rem; letter-spacing: 0.5px;">LIVE HOT-RELOAD</span>
+                <span class="badge bg-secondary rounded-pill px-3 py-1" style="font-size: 0.72rem;">@Model.Diagnostics.EnvironmentName</span>
+            </div>
+            <p class="text-muted mb-0 mt-1">Manage external API keys, service intervals, AI parameters, and diagnostic telemetry.</p>
+        </div>
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+            <a href="/" class="btn btn-outline-light btn-sm"><i class="bi bi-house-door me-1"></i> Dashboard</a>
+            <a href="/Videos" class="btn btn-outline-danger btn-sm"><i class="bi bi-youtube me-1"></i> Videos</a>
+            <a href="/Analytics" class="btn btn-outline-success btn-sm"><i class="bi bi-bar-chart-fill me-1"></i> Analytics</a>
+            <a href="/Feedback" class="btn btn-outline-primary btn-sm"><i class="bi bi-chat-heart me-1"></i> Feedback</a>
+            <a href="/Comments" class="btn btn-outline-info btn-sm"><i class="bi bi-chat-square-text me-1"></i> Comments</a>
+            <a href="/Categorizer" class="btn btn-outline-purple btn-sm"><i class="bi bi-cpu-fill me-1"></i> ML Categorizer</a>
+            <button type="button" class="theme-toggle-btn" onclick="toggleAdminTheme()" title="Toggle Light / Dark Theme">
+                <i class="bi bi-moon-stars-fill theme-icon-dark"></i>
+                <i class="bi bi-sun-fill theme-icon-light"></i>
+                <span class="theme-toggle-label">Dark</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Feedback Alerts -->
+    @if (TempData["Message"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show glass-card border-success text-white mb-4" role="alert">
+            <i class="bi bi-check-circle-fill me-2 text-success"></i> @TempData["Message"]
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show glass-card border-danger text-white mb-4" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2 text-danger"></i> @TempData["Error"]
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    <!-- Diagnostic Probe Result Modal/Alert -->
+    @if (Model.TestResultSuccess.HasValue)
+    {
+        <div class="alert @(Model.TestResultSuccess.Value ? "alert-success border-success" : "alert-warning border-warning") alert-dismissible fade show glass-card text-white mb-4" role="alert">
+            <div class="d-flex align-items-center gap-2">
+                <i class="bi @(Model.TestResultSuccess.Value ? "bi-check2-circle text-success" : "bi-x-circle text-warning") fs-4"></i>
+                <div>
+                    <strong>[@Model.TestResultStatus Diagnostic Probe]:</strong> @Model.TestResultMessage
+                </div>
+            </div>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    <!-- System Diagnostics Bar (Read-Only Infrastructure Status) -->
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-md-3">
+            <div class="card glass-card h-100 p-3 border">
+                <div class="d-flex align-items-center justify-content-between mb-1">
+                    <span class="text-muted small text-uppercase fw-semibold">Database Engine</span>
+                    <i class="bi bi-database text-info"></i>
+                </div>
+                <div class="h5 mb-0 fw-bold text-white d-flex align-items-center gap-2">
+                    @Model.Diagnostics.DbProvider
+                    <span class="badge bg-success-subtle text-success border border-success-subtle" style="font-size: 0.65rem;">CONNECTED</span>
+                </div>
+                <small class="text-muted mt-1" style="font-size: 0.72rem;">@Model.Diagnostics.DbStatus</small>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card glass-card h-100 p-3 border">
+                <div class="d-flex align-items-center justify-content-between mb-1">
+                    <span class="text-muted small text-uppercase fw-semibold">Total Articles</span>
+                    <i class="bi bi-newspaper text-primary"></i>
+                </div>
+                <div class="h5 mb-0 fw-bold text-white">@Model.Diagnostics.TotalArticles.ToString("N0")</div>
+                <small class="text-muted mt-1" style="font-size: 0.72rem;">Across @Model.Diagnostics.TotalSources publishers</small>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card glass-card h-100 p-3 border">
+                <div class="d-flex align-items-center justify-content-between mb-1">
+                    <span class="text-muted small text-uppercase fw-semibold">Comments & Feedback</span>
+                    <i class="bi bi-chat-dots text-warning"></i>
+                </div>
+                <div class="h5 mb-0 fw-bold text-white">@(Model.Diagnostics.TotalComments + Model.Diagnostics.TotalFeedbacks)</div>
+                <small class="text-muted mt-1" style="font-size: 0.72rem;">@Model.Diagnostics.TotalFeedbacks feedbacks, @Model.Diagnostics.TotalComments comments</small>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card glass-card h-100 p-3 border">
+                <div class="d-flex align-items-center justify-content-between mb-1">
+                    <span class="text-muted small text-uppercase fw-semibold">Server Clock (UTC)</span>
+                    <i class="bi bi-clock-history text-success"></i>
+                </div>
+                <div class="h6 mb-0 fw-bold text-white">@Model.Diagnostics.ServerTimeUtc.ToString("HH:mm:ss") UTC</div>
+                <small class="text-muted mt-1" style="font-size: 0.72rem;">@Model.Diagnostics.ServerTimeUtc.ToString("yyyy-MM-dd")</small>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Configuration Form -->
+    <form method="post" asp-page-handler="Save">
+        <div class="card glass-card border shadow-sm">
+            <div class="card-header bg-transparent border-bottom p-3">
+                <ul class="nav nav-pills card-header-pills gap-2 flex-wrap" id="configTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active btn-sm" id="tab-ai" data-bs-toggle="pill" data-bs-target="#content-ai" type="button" role="tab">
+                            <i class="bi bi-robot me-1"></i> AI & Embeddings
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link btn-sm" id="tab-media" data-bs-toggle="pill" data-bs-target="#content-media" type="button" role="tab">
+                            <i class="bi bi-youtube me-1"></i> Media & YouTube
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link btn-sm" id="tab-audio" data-bs-toggle="pill" data-bs-target="#content-audio" type="button" role="tab">
+                            <i class="bi bi-mic-fill me-1"></i> Voice & Audio
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link btn-sm" id="tab-seo" data-bs-toggle="pill" data-bs-target="#content-seo" type="button" role="tab">
+                            <i class="bi bi-search me-1"></i> SEO & Search
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link btn-sm" id="tab-email" data-bs-toggle="pill" data-bs-target="#content-email" type="button" role="tab">
+                            <i class="bi bi-envelope-at-fill me-1"></i> Email & SMTP
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link btn-sm" id="tab-system" data-bs-toggle="pill" data-bs-target="#content-system" type="button" role="tab">
+                            <i class="bi bi-sliders me-1"></i> Workers & Limits
+                        </button>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="card-body p-4">
+                <div class="tab-content" id="configTabsContent">
+
+                    <!-- 1. AI & Embeddings -->
+                    <div class="tab-pane fade show active" id="content-ai" role="tabpanel">
+                        <h5 class="text-white mb-3 d-flex align-items-center gap-2">
+                            <i class="bi bi-stars text-warning"></i> Google Gemini & Semantic Intelligence
+                        </h5>
+                        <p class="text-muted small mb-4">
+                            Configures vector embeddings (<code>gemini-embedding-001</code> at 768 dimensions), article storyline clustering, automated FAQ generation, and LLM entity extraction.
+                        </p>
+
+                        <div class="row g-3">
+                            <div class="col-12 col-md-8">
+                                <label class="form-label text-light small fw-semibold">Google Gemini API Key</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-dark border-secondary text-muted"><i class="bi bi-key-fill"></i></span>
+                                    <input type="password" 
+                                           id="geminiKeyInput"
+                                           name="FormInputs[Gemini:ApiKey]" 
+                                           value="@Model.GetVal("Gemini:ApiKey")" 
+                                           class="form-control form-control-glass font-monospace" 
+                                           placeholder="AIzaSy..." />
+                                    <button class="btn btn-outline-secondary" type="button" onclick="togglePasswordVisibility('geminiKeyInput', this)" title="Show/Hide Key">
+                                        <i class="bi bi-eye"></i>
+                                    </button>
+                                </div>
+                                <small class="text-muted">Obtain a free key at <a href="https://aistudio.google.com/" target="_blank" class="text-info text-decoration-none">Google AI Studio</a>. Leave masked to keep the existing key.</small>
+                            </div>
+
+                            <div class="col-12 col-md-4 d-flex align-items-end">
+                                <button type="submit" 
+                                        formaction="?handler=TestGemini" 
+                                        formmethod="post" 
+                                        class="btn btn-outline-warning w-100">
+                                    <i class="bi bi-lightning-charge me-1"></i> Test Gemini Connection
+                                </button>
+                            </div>
+
+                            <div class="col-12 col-md-6 mt-4">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" role="switch" id="aiEnrichmentSwitch" name="FormInputs[AiEnrichment:GeminiEnabled]" value="true" @(Model.GetBool("AiEnrichment:GeminiEnabled", true) ? "checked" : "") />
+                                    <label class="form-check-label text-light fw-semibold" for="aiEnrichmentSwitch">
+                                        Automated AI Article Enrichment
+                                    </label>
+                                    <div class="text-muted small">Generates key takeaways, fact check timelines, and QA questions for top stories.</div>
+                                </div>
+                            </div>
+
+                            <div class="col-12 col-md-6 mt-4">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" role="switch" id="llmExtractionSwitch" name="FormInputs[LlmEntityExtraction:Enabled]" value="true" @(Model.GetBool("LlmEntityExtraction:Enabled", false) ? "checked" : "") />
+                                    <label class="form-check-label text-light fw-semibold" for="llmExtractionSwitch">
+                                        Tier-2 LLM Named Entity Extraction
+                                    </label>
+                                    <div class="text-muted small">Uses Gemini 1.5 Flash during RSS scraping when Nigerian Gazetteer matches are low.</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 2. Media & YouTube -->
+                    <div class="tab-pane fade" id="content-media" role="tabpanel">
+                        <h5 class="text-white mb-3 d-flex align-items-center gap-2">
+                            <i class="bi bi-youtube text-danger"></i> YouTube Data API & News Video Feeds
+                        </h5>
+                        <p class="text-muted small mb-4">
+                            Controls automated syndication of video broadcasts from Nigerian news channels (Channels Television, Arise News, TVC News) and trending regional videos.
+                        </p>
+
+                        <div class="row g-3">
+                            <div class="col-12 col-md-8">
+                                <label class="form-label text-light small fw-semibold">YouTube Data API v3 Key</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-dark border-secondary text-muted"><i class="bi bi-play-btn-fill"></i></span>
+                                    <input type="password" 
+                                           id="youtubeKeyInput"
+                                           name="FormInputs[YouTube:ApiKey]" 
+                                           value="@Model.GetVal("YouTube:ApiKey")" 
+                                           class="form-control form-control-glass font-monospace" 
+                                           placeholder="AIzaSy..." />
+                                    <button class="btn btn-outline-secondary" type="button" onclick="togglePasswordVisibility('youtubeKeyInput', this)" title="Show/Hide Key">
+                                        <i class="bi bi-eye"></i>
+                                    </button>
+                                </div>
+                                <small class="text-muted">Requires <code>YouTube Data API v3</code> enabled in Google Cloud Console.</small>
+                            </div>
+
+                            <div class="col-12 col-md-4 d-flex align-items-end">
+                                <button type="submit" 
+                                        formaction="?handler=TestYouTube" 
+                                        formmethod="post" 
+                                        class="btn btn-outline-danger w-100">
+                                    <i class="bi bi-play-circle me-1"></i> Test YouTube API Probe
+                                </button>
+                            </div>
+
+                            <div class="col-12 col-md-6 mt-3">
+                                <label class="form-label text-light small fw-semibold">Video Sync Interval (Minutes)</label>
+                                <input type="number" 
+                                       name="FormInputs[MediaSync:IntervalMinutes]" 
+                                       value="@Model.GetVal("MediaSync:IntervalMinutes", "15")" 
+                                       class="form-control form-control-glass" 
+                                       min="5" max="1440" />
+                                <small class="text-muted">How often the background worker fetches channel uploads (default: 15 minutes).</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 3. Voice & Audio -->
+                    <div class="tab-pane fade" id="content-audio" role="tabpanel">
+                        <h5 class="text-white mb-3 d-flex align-items-center gap-2">
+                            <i class="bi bi-headphones text-info"></i> Audio Briefing & Speech Synthesis
+                        </h5>
+                        <p class="text-muted small mb-4">
+                            Configures scheduled Nigerian English audio news briefings (8am & 6pm WAT) delivered to mobile and web readers.
+                        </p>
+
+                        <div class="row g-3">
+                            <div class="col-12 col-md-6">
+                                <label class="form-label text-light small fw-semibold">Preferred Voice Engine</label>
+                                <select name="FormInputs[Tts:Provider]" class="form-select form-control-glass">
+                                    <option value="EdgeNeural" selected="@(Model.GetVal("Tts:Provider") == "EdgeNeural")">Microsoft Edge Neural (Free, en-NG-EzinneNeural - Recommended)</option>
+                                    <option value="GoogleCloud" selected="@(Model.GetVal("Tts:Provider") == "GoogleCloud")">Google Cloud Neural2 (en-NG-Neural2-A - Requires API Key)</option>
+                                </select>
+                                <small class="text-muted">Edge Neural runs with zero API keys and $0 cloud fees.</small>
+                            </div>
+
+                            <div class="col-12 col-md-6">
+                                <label class="form-label text-light small fw-semibold">Google Cloud TTS API Key (Optional)</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-dark border-secondary text-muted"><i class="bi bi-cloud-arrow-up-fill"></i></span>
+                                    <input type="password" 
+                                           id="gcpTtsKeyInput"
+                                           name="FormInputs[GoogleCloud:ApiKey]" 
+                                           value="@Model.GetVal("GoogleCloud:ApiKey")" 
+                                           class="form-control form-control-glass font-monospace" 
+                                           placeholder="Optional GCP key..." />
+                                    <button class="btn btn-outline-secondary" type="button" onclick="togglePasswordVisibility('gcpTtsKeyInput', this)" title="Show/Hide Key">
+                                        <i class="bi bi-eye"></i>
+                                    </button>
+                                </div>
+                                <small class="text-muted">Only needed if selecting Google Cloud Neural2 voice provider.</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 4. SEO & Search -->
+                    <div class="tab-pane fade" id="content-seo" role="tabpanel">
+                        <h5 class="text-white mb-3 d-flex align-items-center gap-2">
+                            <i class="bi bi-globe text-success"></i> IndexNow Protocol & Search Optimization
+                        </h5>
+                        <p class="text-muted small mb-4">
+                            Enables automated real-time publication notifications to search engines (Bing, Yandex, Seznam) to index Nigerian news within minutes.
+                        </p>
+
+                        <div class="row g-3">
+                            <div class="col-12 col-md-6">
+                                <label class="form-label text-light small fw-semibold">IndexNow Key</label>
+                                <input type="text" 
+                                       name="FormInputs[IndexNow:Key]" 
+                                       value="@Model.GetVal("IndexNow:Key", "3a7b9c1d2e4f5a6b7c8d9e0f1a2b3c4d")" 
+                                       class="form-control form-control-glass font-monospace" />
+                                <small class="text-muted">32-character hexadecimal key hosted at <code>/{key}.txt</code>.</small>
+                            </div>
+
+                            <div class="col-12 col-md-6">
+                                <label class="form-label text-light small fw-semibold">Canonical Site Host</label>
+                                <input type="text" 
+                                       name="FormInputs[IndexNow:Host]" 
+                                       value="@Model.GetVal("IndexNow:Host", "newsstand.ng")" 
+                                       class="form-control form-control-glass" />
+                                <small class="text-muted">Domain submitted to search crawlers (e.g. <code>newsstand.ng</code>).</small>
+                            </div>
+
+                            <div class="col-12 mt-3">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" role="switch" id="indexNowSwitch" name="FormInputs[IndexNow:Enabled]" value="true" @(Model.GetBool("IndexNow:Enabled", true) ? "checked" : "") />
+                                    <label class="form-check-label text-light fw-semibold" for="indexNowSwitch">
+                                        Enable Instant Search Crawler Pinging
+                                    </label>
+                                    <div class="text-muted small">Submits new article URLs automatically as soon as RSS ingestion completes.</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 5. Email & SMTP -->
+                    <div class="tab-pane fade" id="content-email" role="tabpanel">
+                        <h5 class="text-white mb-3 d-flex align-items-center gap-2">
+                            <i class="bi bi-envelope-check text-primary"></i> SMTP Outgoing Server & Feedback Alerts
+                        </h5>
+                        <p class="text-muted small mb-4">
+                            Delivers reader feedback notifications to your administration inbox and sends 6-digit email OTP login codes.
+                        </p>
+
+                        <div class="row g-3">
+                            <div class="col-12 col-md-6">
+                                <label class="form-label text-light small fw-semibold">Feedback Recipient Email</label>
+                                <input type="email" 
+                                       name="FormInputs[Feedback:RecipientEmail]" 
+                                       value="@Model.GetVal("Feedback:RecipientEmail", "feedback@nigeriannewsgrid.com")" 
+                                       class="form-control form-control-glass" />
+                                <small class="text-muted">Where user ratings and bug reports are forwarded.</small>
+                            </div>
+
+                            <div class="col-12 col-md-6">
+                                <label class="form-label text-light small fw-semibold">SMTP Host</label>
+                                <input type="text" 
+                                       name="FormInputs[Feedback:Smtp:Host]" 
+                                       value="@Model.GetVal("Feedback:Smtp:Host")" 
+                                       class="form-control form-control-glass" 
+                                       placeholder="smtp.mailgun.org or smtp.gmail.com" />
+                            </div>
+
+                            <div class="col-6 col-md-3">
+                                <label class="form-label text-light small fw-semibold">SMTP Port</label>
+                                <input type="number" 
+                                       name="FormInputs[Feedback:Smtp:Port]" 
+                                       value="@Model.GetVal("Feedback:Smtp:Port", "587")" 
+                                       class="form-control form-control-glass" />
+                            </div>
+
+                            <div class="col-6 col-md-3 d-flex align-items-center pt-3">
+                                <div class="form-check form-switch mt-2">
+                                    <input class="form-check-input" type="checkbox" role="switch" id="smtpSslSwitch" name="FormInputs[Feedback:Smtp:EnableSsl]" value="true" @(Model.GetBool("Feedback:Smtp:EnableSsl", true) ? "checked" : "") />
+                                    <label class="form-check-label text-light fw-semibold" for="smtpSslSwitch">Enable SSL/TLS</label>
+                                </div>
+                            </div>
+
+                            <div class="col-12 col-md-3">
+                                <label class="form-label text-light small fw-semibold">SMTP Username</label>
+                                <input type="text" 
+                                       name="FormInputs[Feedback:Smtp:UserName]" 
+                                       value="@Model.GetVal("Feedback:Smtp:UserName")" 
+                                       class="form-control form-control-glass" />
+                            </div>
+
+                            <div class="col-12 col-md-3">
+                                <label class="form-label text-light small fw-semibold">SMTP Password / API Key</label>
+                                <div class="input-group">
+                                    <input type="password" 
+                                           id="smtpPassInput"
+                                           name="FormInputs[Feedback:Smtp:Password]" 
+                                           value="@Model.GetVal("Feedback:Smtp:Password")" 
+                                           class="form-control form-control-glass" />
+                                    <button class="btn btn-outline-secondary" type="button" onclick="togglePasswordVisibility('smtpPassInput', this)" title="Show/Hide">
+                                        <i class="bi bi-eye"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="col-12 col-md-6">
+                                <label class="form-label text-light small fw-semibold">Sender Email Address</label>
+                                <input type="email" 
+                                       name="FormInputs[Feedback:Smtp:FromEmail]" 
+                                       value="@Model.GetVal("Feedback:Smtp:FromEmail", "no-reply@nigeriannewsgrid.com")" 
+                                       class="form-control form-control-glass" />
+                            </div>
+
+                            <div class="col-12 col-md-6">
+                                <label class="form-label text-light small fw-semibold">Sender Display Name</label>
+                                <input type="text" 
+                                       name="FormInputs[Feedback:Smtp:FromName]" 
+                                       value="@Model.GetVal("Feedback:Smtp:FromName", "News Stand NG")" 
+                                       class="form-control form-control-glass" />
+                            </div>
+
+                            <!-- Test Email Dispatch -->
+                            <div class="col-12 mt-4 pt-3 border-top">
+                                <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
+                                    <div>
+                                        <h6 class="text-white mb-0"><i class="bi bi-send-check text-success me-1"></i> Test SMTP Dispatch</h6>
+                                        <small class="text-muted">Send a diagnostic email to test your credentials.</small>
+                                    </div>
+                                    <div class="d-flex gap-2">
+                                        <input type="email" 
+                                               name="TestEmailTarget" 
+                                               value="@Model.GetVal("Feedback:RecipientEmail", "feedback@nigeriannewsgrid.com")" 
+                                               class="form-control form-control-glass form-control-sm" 
+                                               style="max-width: 260px;" 
+                                               placeholder="recipient@example.com" />
+                                        <button type="submit" 
+                                                formaction="?handler=TestSmtp" 
+                                                formmethod="post" 
+                                                class="btn btn-outline-primary btn-sm text-nowrap">
+                                            <i class="bi bi-envelope-paper me-1"></i> Send Test Email
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 6. Workers & Limits -->
+                    <div class="tab-pane fade" id="content-system" role="tabpanel">
+                        <h5 class="text-white mb-3 d-flex align-items-center gap-2">
+                            <i class="bi bi-shield-lock text-purple"></i> Workers, Auth & Security Controls
+                        </h5>
+                        <p class="text-muted small mb-4">
+                            Operational intervals, rate limiting, and reader OAuth integration.
+                        </p>
+
+                        <div class="row g-3">
+                            <div class="col-12 col-md-6">
+                                <label class="form-label text-light small fw-semibold">RSS Scraper Polling Frequency (Minutes)</label>
+                                <input type="number" 
+                                       name="FormInputs[Scraper:IntervalMinutes]" 
+                                       value="@Model.GetVal("Scraper:IntervalMinutes", "15")" 
+                                       class="form-control form-control-glass" 
+                                       min="5" max="360" />
+                                <small class="text-muted">How often the RSS scraper harvests stories from Nigerian news feeds (default: 15 min).</small>
+                            </div>
+
+                            <div class="col-12 col-md-6">
+                                <label class="form-label text-light small fw-semibold">API Rate Limiting (Permit Limit)</label>
+                                <input type="number" 
+                                       name="FormInputs[RateLimiting:PermitLimit]" 
+                                       value="@Model.GetVal("RateLimiting:PermitLimit", "120")" 
+                                       class="form-control form-control-glass" 
+                                       min="20" max="1000" />
+                                <small class="text-muted">Sliding-window request limit per minute per remote IP.</small>
+                            </div>
+
+                            <div class="col-12 mt-3">
+                                <label class="form-label text-light small fw-semibold">Google OAuth 2.0 Web Client ID</label>
+                                <input type="text" 
+                                       name="FormInputs[Google:ClientId]" 
+                                       value="@Model.GetVal("Google:ClientId")" 
+                                       class="form-control form-control-glass font-monospace" />
+                                <small class="text-muted">Validates Google Sign-In tokens on <code>/api/v1/auth/google</code> for reader comments and profiles.</small>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Footer Save Bar -->
+            <div class="card-footer bg-transparent border-top p-3 d-flex align-items-center justify-content-between">
+                <span class="text-muted small">
+                    <i class="bi bi-info-circle me-1"></i> Changes take effect immediately via database hot-reload.
+                </span>
+                <button type="submit" class="btn btn-gradient px-4">
+                    <i class="bi bi-check2-circle me-1"></i> Save All Changes
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script>
+    function togglePasswordVisibility(inputId, btn) {
+        const input = document.getElementById(inputId);
+        if (!input) return;
+        const icon = btn.querySelector('i');
+        if (input.type === 'password') {
+            input.type = 'text';
+            if (icon) {
+                icon.classList.remove('bi-eye');
+                icon.classList.add('bi-eye-slash');
+            }
+        } else {
+            input.type = 'password';
+            if (icon) {
+                icon.classList.remove('bi-eye-slash');
+                icon.classList.add('bi-eye');
+            }
+        }
+    }
+</script>

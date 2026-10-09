@@ -29,7 +29,7 @@ export default function Footer({ onSelectCategory }) {
                   key={cat}
                   type="button"
                   onClick={() => onSelectCategory(cat)}
-                  style={{ textAlign: 'left', color: 'inherit', transition: 'color 0.15s' }}
+                  style={{ textAlign: 'left', color: 'inherit', transition: 'color 0.15s', background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
                   onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--emerald-bright)')}
                   onMouseLeave={(e) => (e.currentTarget.style.color = 'inherit')}
                 >
@@ -41,11 +41,35 @@ export default function Footer({ onSelectCategory }) {
 
           <div>
             <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: 12 }}>
+              STANDARDS & TRUST
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, fontSize: '0.84rem', color: 'var(--text-muted)' }}>
+              <a href="/about" style={{ color: 'inherit', textDecoration: 'none' }}>About News Stand NG</a>
+              <a href="/editorial-policy" style={{ color: 'inherit', textDecoration: 'none' }}>Editorial Policy</a>
+              <a href="/corrections" style={{ color: 'inherit', textDecoration: 'none' }}>Corrections & Retractions</a>
+              <a href="/ai-disclosure" style={{ color: 'inherit', textDecoration: 'none' }}>AI & Automation Disclosure</a>
+              <a href="/contact" style={{ color: 'inherit', textDecoration: 'none' }}>Contact & Newsrooms</a>
+              <a href="/privacy" style={{ color: 'inherit', textDecoration: 'none' }}>Privacy Policy (NDPA)</a>
+              <a href="/terms" style={{ color: 'inherit', textDecoration: 'none' }}>Terms & Fair Use</a>
+            </div>
+          </div>
+
+          <div>
+            <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: 12 }}>
               SOURCES & COVERAGE
             </div>
-            <p style={{ fontSize: '0.84rem', color: 'var(--text-muted)', maxWidth: 260, lineHeight: 1.6 }}>
-              Aggregating verified feeds from Punch, Vanguard, The Nation, BusinessDay, Daily Post, Channels TV, TVC News, and Arise News.
+            <p style={{ fontSize: '0.84rem', color: 'var(--text-muted)', maxWidth: 260, lineHeight: 1.6, marginBottom: 10 }}>
+              Aggregating verified feeds from Punch, Vanguard, Premium Times, Daily Post, Channels TV, and Arise News.
             </p>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, fontSize: '0.78rem' }}>
+              <a href="/source/punch" style={{ color: 'var(--brand-green, #10b981)', textDecoration: 'none' }}>Punch</a>
+              <span style={{ color: 'var(--border-card)' }}>•</span>
+              <a href="/source/vanguard" style={{ color: 'var(--brand-green, #10b981)', textDecoration: 'none' }}>Vanguard</a>
+              <span style={{ color: 'var(--border-card)' }}>•</span>
+              <a href="/source/premium-times" style={{ color: 'var(--brand-green, #10b981)', textDecoration: 'none' }}>Premium Times</a>
+              <span style={{ color: 'var(--border-card)' }}>•</span>
+              <a href="/source/channels-tv" style={{ color: 'var(--brand-green, #10b981)', textDecoration: 'none' }}>Channels TV</a>
+            </div>
           </div>
         </div>
 

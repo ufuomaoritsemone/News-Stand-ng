@@ -23,6 +23,7 @@
             <a href="/Sponsors" class="btn btn-outline-warning btn-sm"><i class="bi bi-megaphone me-1"></i> Sponsored</a>
             <a href="/Feedback" class="btn btn-outline-primary btn-sm"><i class="bi bi-chat-heart me-1"></i> Feedback</a>
             <a href="/Categorizer" class="btn btn-outline-purple btn-sm"><i class="bi bi-cpu-fill me-1"></i> ML Categorizer</a>
+            <a href="/SearchConsole" class="btn btn-outline-success btn-sm"><i class="bi bi-google me-1"></i> Search Console</a>
             <button type="button" class="theme-toggle-btn" onclick="toggleAdminTheme()" title="Toggle Light / Dark Theme">
                 <i class="bi bi-moon-stars-fill theme-icon-dark"></i>
                 <i class="bi bi-sun-fill theme-icon-light"></i>
@@ -103,6 +104,54 @@
                 <div class="text-muted small text-uppercase">Bookmarks</div>
                 <div class="stat-value text-danger">@(s?.BookmarksAdded ?? 0)</div>
                 <div class="small text-muted mt-1"><i class="bi bi-bookmark-fill me-1"></i> Saved</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── PWA Web App Adoption Section ── -->
+    <div class="row g-0 mb-2 mt-2">
+        <div class="col-12">
+            <div class="d-flex align-items-center gap-2 mb-3">
+                <span style="font-size:1.1rem;">📲</span>
+                <h5 class="text-white brand-font mb-0">PWA Web App Installs &amp; Adoption</h5>
+                <span class="badge bg-success bg-opacity-25 text-success ms-1" style="font-size:0.7rem;letter-spacing:.05em;">PROGRESSIVE WEB APP</span>
+            </div>
+        </div>
+    </div>
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-md-4 col-xl">
+            <div class="glass-card stat-card text-center" style="border-top:3px solid #008751;">
+                <div class="text-muted small text-uppercase">Total Installs</div>
+                <div class="stat-value text-success">@(s?.PwaInstalls ?? 0)</div>
+                <div class="small text-success mt-1"><i class="bi bi-download me-1"></i>Web App Installs</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-4 col-xl">
+            <div class="glass-card stat-card text-center" style="border-top:3px solid #3b82f6;">
+                <div class="text-muted small text-uppercase">Standalone Opens</div>
+                <div class="stat-value text-primary">@(s?.PwaStandaloneOpens ?? 0)</div>
+                <div class="small text-muted mt-1"><i class="bi bi-box-arrow-in-up-right me-1"></i>Home Screen Launches</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-4 col-xl">
+            <div class="glass-card stat-card text-center" style="border-top:3px solid #10b981;">
+                <div class="text-muted small text-uppercase">Android Installs</div>
+                <div class="stat-value text-success">@(s?.PwaAndroidInstalls ?? 0)</div>
+                <div class="small text-muted mt-1"><i class="bi bi-android2 me-1"></i>Chrome &amp; Samsung</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-4 col-xl">
+            <div class="glass-card stat-card text-center" style="border-top:3px solid #a855f7;">
+                <div class="text-muted small text-uppercase">iOS Installs</div>
+                <div class="stat-value text-purple" style="color:#c084fc;">@(s?.PwaIosInstalls ?? 0)</div>
+                <div class="small text-muted mt-1"><i class="bi bi-apple me-1"></i>Safari Home Screen</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-4 col-xl">
+            <div class="glass-card stat-card text-center" style="border-top:3px solid #06b6d4;">
+                <div class="text-muted small text-uppercase">Desktop Installs</div>
+                <div class="stat-value text-info">@(s?.PwaDesktopInstalls ?? 0)</div>
+                <div class="small text-muted mt-1"><i class="bi bi-laptop me-1"></i>Chrome &amp; Edge</div>
             </div>
         </div>
     </div>
@@ -332,6 +381,10 @@
                                 "widget_disabled"                           => "bi-grid-3x3-gap text-danger",
                                 "widget_refresh"                            => "bi-arrow-clockwise text-info",
                                 "widget_item_click"                         => "bi-hand-index-thumb text-warning",
+                                "pwa_install"                               => "bi-download text-success",
+                                "pwa_open"                                  => "bi-box-arrow-in-up-right text-primary",
+                                "pwa_prompt_shown"                          => "bi-bell text-warning",
+                                "pwa_prompt_dismissed"                      => "bi-x-circle text-muted",
                                 _                                           => "bi-dot text-muted"
                             };
                             <div class="d-flex align-items-start gap-2 py-2 border-bottom border-secondary border-opacity-10">

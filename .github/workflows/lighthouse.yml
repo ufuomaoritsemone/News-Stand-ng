@@ -1,0 +1,37 @@
+name: Lighthouse CI (Core Web Vitals & SEO)
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  lighthouse:
+    name: Lighthouse Audit & Core Web Vitals Budget
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: src/NigerianNewsGrid.Web/package.json
+
+      - name: Install Web Dependencies
+        working-directory: src/NigerianNewsGrid.Web
+        run: npm install
+
+      - name: Build React Router SSR Web Application
+        working-directory: src/NigerianNewsGrid.Web
+        run: npm run build
+
+      - name: Run Lighthouse CI with Core Web Vitals Budgets
+        run: |
+          npx -y @lhci/cli@0.14.x autorun --config=./lighthouserc.json
+        env:
+          PORT: 3000

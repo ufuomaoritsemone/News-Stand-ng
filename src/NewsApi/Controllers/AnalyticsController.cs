@@ -39,7 +39,9 @@ public class AnalyticsController : ControllerBase
             "app_open_ad_loaded", "app_open_ad_shown",
             "app_open_ad_skipped_tts_active", "app_open_ad_skipped_frequency_cap", "app_open_ad_error",
             // Widget lifecycle events
-            "widget_enabled", "widget_disabled", "widget_refresh", "widget_item_click"
+            "widget_enabled", "widget_disabled", "widget_refresh", "widget_item_click",
+            // PWA Web App lifecycle & install events
+            "pwa_install", "pwa_open", "pwa_prompt_shown", "pwa_prompt_dismissed"
         };
 
         var validEvents = events
@@ -73,6 +75,23 @@ public class AnalyticsController : ControllerBase
             string.Join(", ", validEvents.Select(e => e.DeviceId[..Math.Min(8, e.DeviceId.Length)] + "…").Distinct()));
 
         return Ok(new { stored = validEvents.Count });
+    }
+
+    /// <summary>
+    /// Records a web PWA installation event from the browser.
+    /// </summary>
+    [HttpPost("install")]
+    public async Task<IActionResult> TrackPwaInstall(
+        [FromBody] UserEventDto pwaEvent,
+        CancellationToken cancellationToken = default)
+    {
+        if (pwaEvent is null)
+            return BadRequest(new { message = "Invalid event payload." });
+
+        if (string.IsNullOrWhiteSpace(pwaEvent.EventType))
+            pwaEvent.EventType = "pwa_install";
+
+        return await TrackEvents(new List<UserEventDto> { pwaEvent }, cancellationToken);
     }
 
     /// <summary>
@@ -155,6 +174,13 @@ public class AnalyticsController : ControllerBase
         // Net active widget deployments = installs minus removals (floor 0)
         var netWidgetDeployments = Math.Max(0, widgetInstalls - widgetRemovals);
 
+        // PWA Web App adoption metrics
+        var pwaInstalls = byType.GetValueOrDefault("pwa_install", 0);
+        var pwaStandaloneOpens = byType.GetValueOrDefault("pwa_open", 0);
+        var pwaAndroidInstalls = events.Count(e => e.EventType == "pwa_install" && (e.Platform ?? "").Contains("Android", StringComparison.OrdinalIgnoreCase));
+        var pwaIosInstalls = events.Count(e => e.EventType == "pwa_install" && (e.Platform ?? "").Contains("iOS", StringComparison.OrdinalIgnoreCase));
+        var pwaDesktopInstalls = events.Count(e => e.EventType == "pwa_install" && ((e.Platform ?? "").Contains("Windows", StringComparison.OrdinalIgnoreCase) || (e.Platform ?? "").Contains("Mac", StringComparison.OrdinalIgnoreCase) || (e.Platform ?? "").Contains("Desktop", StringComparison.OrdinalIgnoreCase)));
+
         return Ok(new AnalyticsSummaryDto
         {
             TotalEvents = totalEvents,
@@ -171,6 +197,11 @@ public class AnalyticsController : ControllerBase
             WidgetRefreshes = widgetRefreshes,
             WidgetClicks = widgetClicks,
             NetWidgetDeployments = netWidgetDeployments,
+            PwaInstalls = pwaInstalls,
+            PwaStandaloneOpens = pwaStandaloneOpens,
+            PwaAndroidInstalls = pwaAndroidInstalls,
+            PwaIosInstalls = pwaIosInstalls,
+            PwaDesktopInstalls = pwaDesktopInstalls,
             TopArticles = topArticles,
             DailyBreakdown = dailyBreakdown,
             PeriodDays = days
@@ -268,6 +299,12 @@ public class AnalyticsSummaryDto
     public int WidgetClicks { get; set; }
     /// <summary>Estimated net active widget deployments (installs minus removals).</summary>
     public int NetWidgetDeployments { get; set; }
+    // PWA Web App adoption metrics
+    public int PwaInstalls { get; set; }
+    public int PwaStandaloneOpens { get; set; }
+    public int PwaAndroidInstalls { get; set; }
+    public int PwaIosInstalls { get; set; }
+    public int PwaDesktopInstalls { get; set; }
     public int PeriodDays { get; set; }
     public List<TopArticleDto> TopArticles { get; set; } = [];
     public List<DailyCountDto> DailyBreakdown { get; set; } = [];

@@ -17,6 +17,7 @@ public class ScraperWorker : BackgroundService
     private readonly ArticleContentExtractor _extractor;
     private readonly UrlFrontierManager _frontier;
     private readonly IArticleEnricher _enricher;
+    private readonly IEntityExtractor _entityExtractor;
     private readonly IHostApplicationLifetime _appLifetime;
 
     public ScraperWorker(
@@ -27,16 +28,18 @@ public class ScraperWorker : BackgroundService
         ArticleContentExtractor extractor,
         UrlFrontierManager frontier,
         IArticleEnricher enricher,
+        IEntityExtractor entityExtractor,
         IHostApplicationLifetime appLifetime)
     {
-        _logger        = logger;
-        _httpFactory   = httpFactory;
-        _configuration = configuration;
-        _categorizer   = categorizer;
-        _extractor     = extractor;
-        _frontier      = frontier;
-        _enricher      = enricher;
-        _appLifetime   = appLifetime;
+        _logger          = logger;
+        _httpFactory     = httpFactory;
+        _configuration   = configuration;
+        _categorizer     = categorizer;
+        _extractor       = extractor;
+        _frontier        = frontier;
+        _enricher        = enricher;
+        _entityExtractor = entityExtractor;
+        _appLifetime     = appLifetime;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -69,6 +72,14 @@ public class ScraperWorker : BackgroundService
                     {
                         it.Title = ArticleContentExtractor.SanitizeText(_enricher.NormalizeTitle(it.Title));
                         it.Summary = ArticleContentExtractor.SanitizeText(it.Summary ?? string.Empty);
+                        if (!string.IsNullOrWhiteSpace(it.Content))
+                        {
+                            it.Content = ArticleContentExtractor.SanitizeContentBody(it.Content);
+                        }
+                        if (string.IsNullOrWhiteSpace(it.Summary) && !string.IsNullOrWhiteSpace(it.Content))
+                        {
+                            it.Summary = ArticleContentExtractor.TrimToSentences(it.Content, 3) ?? string.Empty;
+                        }
                         if (string.IsNullOrEmpty(it.Category))
                         {
                             it.Category = _categorizer.Categorize(it.Title, it.Summary);
@@ -85,6 +96,19 @@ public class ScraperWorker : BackgroundService
                     // Populate missing images using metadata/extractor fallback (external client, no X-Api-Key)
                     await _enricher.PopulateMissingImageUrlsAsync(externalScraperClient, items, s.SourceName, stoppingToken);
 
+                    // Extract entities / topics for each article using Tier 1 Gazetteer + Tier 2 LLM fallback
+                    foreach (var it in items)
+                    {
+                        try
+                        {
+                            it.Topics = await _entityExtractor.ExtractEntitiesAsync(it.Title, it.Summary, it.Content, stoppingToken);
+                        }
+                        catch (Exception ex) when (ex is not OperationCanceledException)
+                        {
+                            _logger.LogWarning(ex, "Entity extraction failed for '{Title}'", it.Title);
+                        }
+                    }
+
                     // Push items directly to NewsApi via REST Ingestion Endpoint (internal client with X-Api-Key)
                     var ingestPayload = new
                     {
@@ -100,7 +124,15 @@ public class ScraperWorker : BackgroundService
                             i.PublishedAt,
                             i.AudioUrl,
                             i.Author,
-                            i.ContentType
+                            i.ContentType,
+                            Topics = i.Topics.Select(t => new
+                            {
+                                t.Name,
+                                t.Slug,
+                                t.Type,
+                                t.Description,
+                                t.Confidence
+                            }).ToList()
                         }).ToList()
                     };
 

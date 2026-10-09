@@ -1,5 +1,6 @@
 using Foundation;
 using UserNotifications;
+using NigerianNewGrid.Services;
 
 namespace NigerianNewGrid.Platforms.iOS;
 
@@ -45,10 +46,31 @@ public class iOSNotificationDelegate : UNUserNotificationCenterDelegate
                 {
                     try
                     {
-                        if (Shell.Current != null && !string.IsNullOrWhiteSpace(articleUrl))
+                        if (Shell.Current != null)
                         {
+                            if (!string.IsNullOrWhiteSpace(articleId))
+                            {
+                                try
+                                {
+                                    var persistenceService = IPlatformApplication.Current?.Services.GetService<INewsPersistenceService>();
+                                    if (persistenceService != null)
+                                    {
+                                        var story = await persistenceService.GetStoryByIdAsync(articleId);
+                                        if (story != null && !string.IsNullOrWhiteSpace(story.Content))
+                                        {
+                                            await Shell.Current.Navigation.PushAsync(new ArticleWebPage(story));
+                                            return;
+                                        }
+                                    }
+                                }
+                                catch (Exception ex)
+                                {
+                                    System.Diagnostics.Debug.WriteLine($"[iOSNotificationDelegate] Local cache resolution error: {ex.Message}");
+                                }
+                            }
+
                             await Shell.Current.Navigation.PushAsync(
-                                new ArticleWebPage(articleUrl, articleTitle, category: category, articleId: articleId));
+                                new ArticleWebPage(articleUrl ?? string.Empty, articleTitle, category: category, articleId: articleId));
                         }
                     }
                     catch (Exception ex)

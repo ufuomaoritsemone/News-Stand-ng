@@ -598,6 +598,64 @@ public class ArticlesControllerTests : IClassFixture<CustomWebApplicationFactory
         Assert.NotNull(politicsCategory);
         Assert.Contains(politicsCategory.Top, a => a.Title == newTitle);
     }
+
+    [Fact]
+    public async Task GetArticleShareCard_ReturnsHtmlWithTwitterAndOpenGraphTags_WhenArticleExists()
+    {
+        // 1. Ingest test article
+        var uniqueTitle = $"Share Test Story {Guid.NewGuid():N}";
+        var payload = new IngestArticlesRequest
+        {
+            Articles =
+            [
+                new ArticleIngestItem
+                {
+                    Title = uniqueTitle,
+                    Summary = "Test summary for Twitter card sharing preview.",
+                    Source = "Punch",
+                    Category = "Politics",
+                    Url = "https://punchng.com/share-test",
+                    ImageUrl = "https://example.com/share-image.jpg"
+                }
+            ]
+        };
+
+        var ingestReq = new HttpRequestMessage(HttpMethod.Post, "/api/v1/articles/ingest")
+        {
+            Content = JsonContent.Create(payload)
+        };
+        ingestReq.Headers.Add("X-Api-Key", CustomWebApplicationFactory.TestApiKey);
+        var ingestResp = await _client.SendAsync(ingestReq);
+        Assert.Equal(HttpStatusCode.OK, ingestResp.StatusCode);
+
+        // Find the article ID
+        var listResp = await _client.GetAsync("/api/v1/articles?limit=50");
+        var articles = await listResp.Content.ReadFromJsonAsync<List<ArticleDto>>();
+        Assert.NotNull(articles);
+        var matching = articles.FirstOrDefault(a => a.Title == uniqueTitle);
+        Assert.NotNull(matching);
+
+        // 2. Request share card via /share/{id}
+        var shareResp = await _client.GetAsync($"/share/{matching.Id}");
+        Assert.Equal(HttpStatusCode.OK, shareResp.StatusCode);
+        Assert.Equal("text/html", shareResp.Content.Headers.ContentType?.MediaType);
+
+        var html = await shareResp.Content.ReadAsStringAsync();
+        Assert.Contains("twitter:card", html);
+        Assert.Contains("summary_large_image", html);
+        Assert.Contains("twitter:image", html);
+        Assert.Contains("og:title", html);
+        Assert.Contains("Open in News Stand NG", html);
+        Assert.Contains("Google Play", html);
+        Assert.Contains(matching.Title, html);
+    }
+
+    [Fact]
+    public async Task GetArticleShareCard_ReturnsNotFound_WhenArticleDoesNotExist()
+    {
+        var response = await _client.GetAsync($"/share/{Guid.NewGuid()}");
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
 }
 
 /// <summary>

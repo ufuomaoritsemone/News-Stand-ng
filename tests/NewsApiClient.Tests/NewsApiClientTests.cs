@@ -155,5 +155,65 @@ namespace NigerianNewsGrid.Tests
             Assert.Equal(12000, stories[0].LikeCount);
             Assert.Equal("14:22", stories[0].Duration);
         }
+
+        [Fact]
+        public async Task GetArticleByIdAsync_ReturnsArticleWithContent_WhenApiReturnsOk()
+        {
+            var json = "{\"id\":\"guid-1234\",\"title\":\"Headline Story\",\"content\":\"Paragraph 1\\n\\nParagraph 2\",\"summary\":\"Story Summary\",\"url\":\"https://punchng.com/story-1\",\"imageUrl\":\"https://punchng.com/img.jpg\",\"category\":\"Politics\",\"source\":\"The Punch\",\"author\":\"Reporter Name\",\"contentType\":\"News\"}";
+            var response = new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(json, System.Text.Encoding.UTF8, "application/json")
+            };
+
+            var handler = new FakeHandler(response);
+            var client = new HttpClient(handler)
+            {
+                BaseAddress = new System.Uri("http://localhost")
+            };
+
+            var api = new NigerianNewsGrid.Client.NewsApiClient(client);
+            var article = await api.GetArticleByIdAsync("guid-1234");
+
+            Assert.NotNull(article);
+            Assert.Equal("guid-1234", article.Id);
+            Assert.Equal("Headline Story", article.Title);
+            Assert.Equal("Paragraph 1\n\nParagraph 2", article.Content);
+            Assert.Equal("Story Summary", article.Summary);
+            Assert.Equal("The Punch", article.Source);
+            Assert.Equal("Reporter Name", article.Author);
+        }
+
+        [Fact]
+        public async Task GetArticleByIdAsync_ReturnsNull_WhenApiReturnsNotFound()
+        {
+            var response = new HttpResponseMessage(HttpStatusCode.NotFound);
+            var handler = new FakeHandler(response);
+            var client = new HttpClient(handler)
+            {
+                BaseAddress = new System.Uri("http://localhost")
+            };
+
+            var api = new NigerianNewsGrid.Client.NewsApiClient(client);
+            var article = await api.GetArticleByIdAsync("non-existent-guid");
+
+            Assert.Null(article);
+        }
+
+        [Fact]
+        public async Task GetArticleByIdAsync_ReturnsNull_WhenIdIsNullOrWhitespace()
+        {
+            var handler = new FakeHandler(new HttpResponseMessage(HttpStatusCode.OK));
+            var client = new HttpClient(handler)
+            {
+                BaseAddress = new System.Uri("http://localhost")
+            };
+
+            var api = new NigerianNewsGrid.Client.NewsApiClient(client);
+            var articleNull = await api.GetArticleByIdAsync(null!);
+            var articleEmpty = await api.GetArticleByIdAsync("   ");
+
+            Assert.Null(articleNull);
+            Assert.Null(articleEmpty);
+        }
     }
 }

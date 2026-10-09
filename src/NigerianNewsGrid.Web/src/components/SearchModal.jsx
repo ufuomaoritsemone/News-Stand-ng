@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Search, X, Clock, ArrowRight } from 'lucide-react';
 import { api } from '../services/api';
+import { trackSearch } from '../services/analytics';
 
 export default function SearchModal({ isOpen, onClose, onSelectStory }) {
   const [query, setQuery] = useState('');
@@ -40,7 +41,9 @@ export default function SearchModal({ isOpen, onClose, onSelectStory }) {
       setLoading(true);
       try {
         const data = await api.getArticles({ search: query.trim(), pageSize: 12 });
-        setResults(Array.isArray(data) ? data : []);
+        const list = Array.isArray(data) ? data : [];
+        setResults(list);
+        trackSearch(query.trim(), list.length);
       } catch (err) {
         console.error('Search error:', err);
         setResults([]);

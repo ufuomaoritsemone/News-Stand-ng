@@ -1,0 +1,1108 @@
+[
+  {
+    "name": "Abia State",
+    "slug": "abia-state",
+    "type": "Place",
+    "description": "State in southeastern Nigeria, with Umuahia as capital and Aba as commercial hub.",
+    "aliases": ["Abia", "Abia State", "Umuahia", "Aba"]
+  },
+  {
+    "name": "Adamawa State",
+    "slug": "adamawa-state",
+    "type": "Place",
+    "description": "State in northeastern Nigeria, capital Yola.",
+    "aliases": ["Adamawa", "Adamawa State", "Yola"]
+  },
+  {
+    "name": "Akwa Ibom State",
+    "slug": "akwa-ibom-state",
+    "type": "Place",
+    "description": "Coastal oil-producing state in southern Nigeria, capital Uyo.",
+    "aliases": ["Akwa Ibom", "Akwa Ibom State", "Uyo"]
+  },
+  {
+    "name": "Anambra State",
+    "slug": "anambra-state",
+    "type": "Place",
+    "description": "Commercial state in southeastern Nigeria, capital Awka and commercial center Onitsha.",
+    "aliases": ["Anambra", "Anambra State", "Awka", "Onitsha", "Nnewi"]
+  },
+  {
+    "name": "Bauchi State",
+    "slug": "bauchi-state",
+    "type": "Place",
+    "description": "State in northeastern Nigeria, capital Bauchi.",
+    "aliases": ["Bauchi", "Bauchi State"]
+  },
+  {
+    "name": "Bayelsa State",
+    "slug": "bayelsa-state",
+    "type": "Place",
+    "description": "Oil-rich state in the Niger Delta region of southern Nigeria, capital Yenagoa.",
+    "aliases": ["Bayelsa", "Bayelsa State", "Yenagoa"]
+  },
+  {
+    "name": "Benue State",
+    "slug": "benue-state",
+    "type": "Place",
+    "description": "Agricultural state in north-central Nigeria, capital Makurdi.",
+    "aliases": ["Benue", "Benue State", "Makurdi"]
+  },
+  {
+    "name": "Borno State",
+    "slug": "borno-state",
+    "type": "Place",
+    "description": "State in northeastern Nigeria, capital Maiduguri.",
+    "aliases": ["Borno", "Borno State", "Maiduguri"]
+  },
+  {
+    "name": "Cross River State",
+    "slug": "cross-river-state",
+    "type": "Place",
+    "description": "Coastal state in southern Nigeria, capital Calabar.",
+    "aliases": ["Cross River", "Cross River State", "Calabar"]
+  },
+  {
+    "name": "Delta State",
+    "slug": "delta-state",
+    "type": "Place",
+    "description": "Oil-producing state in south-south Nigeria, capital Asaba and commercial center Warri.",
+    "aliases": ["Delta", "Delta State", "Asaba", "Warri"]
+  },
+  {
+    "name": "Ebonyi State",
+    "slug": "ebonyi-state",
+    "type": "Place",
+    "description": "State in southeastern Nigeria, capital Abakaliki.",
+    "aliases": ["Ebonyi", "Ebonyi State", "Abakaliki"]
+  },
+  {
+    "name": "Edo State",
+    "slug": "edo-state",
+    "type": "Place",
+    "description": "State in southern Nigeria, capital Benin City.",
+    "aliases": ["Edo", "Edo State", "Benin City"]
+  },
+  {
+    "name": "Ekiti State",
+    "slug": "ekiti-state",
+    "type": "Place",
+    "description": "State in southwestern Nigeria, capital Ado-Ekiti.",
+    "aliases": ["Ekiti", "Ekiti State", "Ado-Ekiti"]
+  },
+  {
+    "name": "Enugu State",
+    "slug": "enugu-state",
+    "type": "Place",
+    "description": "Historical coal city state in southeastern Nigeria, capital Enugu.",
+    "aliases": ["Enugu", "Enugu State", "Nsukka"]
+  },
+  {
+    "name": "Federal Capital Territory",
+    "slug": "abuja-fct",
+    "type": "Place",
+    "description": "Federal capital territory of Nigeria, home to the presidency at Aso Rock and the National Assembly.",
+    "aliases": ["Abuja", "FCT", "Federal Capital Territory", "Aso Rock", "Three Arms Zone"]
+  },
+  {
+    "name": "Gombe State",
+    "slug": "gombe-state",
+    "type": "Place",
+    "description": "State in northeastern Nigeria, capital Gombe.",
+    "aliases": ["Gombe", "Gombe State"]
+  },
+  {
+    "name": "Imo State",
+    "slug": "imo-state",
+    "type": "Place",
+    "description": "State in southeastern Nigeria, capital Owerri.",
+    "aliases": ["Imo", "Imo State", "Owerri"]
+  },
+  {
+    "name": "Jigawa State",
+    "slug": "jigawa-state",
+    "type": "Place",
+    "description": "State in northwestern Nigeria, capital Dutse.",
+    "aliases": ["Jigawa", "Jigawa State", "Dutse"]
+  },
+  {
+    "name": "Kaduna State",
+    "slug": "kaduna-state",
+    "type": "Place",
+    "description": "Major political and commercial state in northwestern Nigeria, capital Kaduna.",
+    "aliases": ["Kaduna", "Kaduna State", "Zaria", "Kafanchan"]
+  },
+  {
+    "name": "Kano State",
+    "slug": "kano-state",
+    "type": "Place",
+    "description": "Northern Nigeria's principal commercial and industrial hub, capital Kano.",
+    "aliases": ["Kano", "Kano State"]
+  },
+  {
+    "name": "Katsina State",
+    "slug": "katsina-state",
+    "type": "Place",
+    "description": "State in northwestern Nigeria, capital Katsina.",
+    "aliases": ["Katsina", "Katsina State", "Daura"]
+  },
+  {
+    "name": "Kebbi State",
+    "slug": "kebbi-state",
+    "type": "Place",
+    "description": "Agricultural state in northwestern Nigeria, capital Birnin Kebbi.",
+    "aliases": ["Kebbi", "Kebbi State", "Birnin Kebbi"]
+  },
+  {
+    "name": "Kogi State",
+    "slug": "kogi-state",
+    "type": "Place",
+    "description": "Confluence state in north-central Nigeria, capital Lokoja.",
+    "aliases": ["Kogi", "Kogi State", "Lokoja"]
+  },
+  {
+    "name": "Kwara State",
+    "slug": "kwara-state",
+    "type": "Place",
+    "description": "State in north-central Nigeria, capital Ilorin.",
+    "aliases": ["Kwara", "Kwara State", "Ilorin"]
+  },
+  {
+    "name": "Lagos State",
+    "slug": "lagos-state",
+    "type": "Place",
+    "description": "Nigeria's economic and financial capital, major megacity and port.",
+    "aliases": ["Lagos", "Lagos State", "Ikeja", "Victoria Island", "Lekki", "Ikoyi", "Alausa"]
+  },
+  {
+    "name": "Nasarawa State",
+    "slug": "nasarawa-state",
+    "type": "Place",
+    "description": "Mineral-rich state in north-central Nigeria, capital Lafia.",
+    "aliases": ["Nasarawa", "Nasarawa State", "Lafia", "Keffi"]
+  },
+  {
+    "name": "Niger State",
+    "slug": "niger-state",
+    "type": "Place",
+    "description": "Largest state by landmass in Nigeria, capital Minna.",
+    "aliases": ["Niger State", "Minna", "Suleja", "Bida"]
+  },
+  {
+    "name": "Ogun State",
+    "slug": "ogun-state",
+    "type": "Place",
+    "description": "Industrial manufacturing corridor in southwestern Nigeria, capital Abeokuta.",
+    "aliases": ["Ogun", "Ogun State", "Abeokuta", "Sagamu", "Ota"]
+  },
+  {
+    "name": "Ondo State",
+    "slug": "ondo-state",
+    "type": "Place",
+    "description": "State in southwestern Nigeria known for cocoa production and coastal oil, capital Akure.",
+    "aliases": ["Ondo", "Ondo State", "Akure", "Owo"]
+  },
+  {
+    "name": "Osun State",
+    "slug": "osun-state",
+    "type": "Place",
+    "description": "Cultural state in southwestern Nigeria, capital Osogbo.",
+    "aliases": ["Osun", "Osun State", "Osogbo", "Ile-Ife", "Ede"]
+  },
+  {
+    "name": "Oyo State",
+    "slug": "oyo-state",
+    "type": "Place",
+    "description": "Historical state in southwestern Nigeria, capital Ibadan.",
+    "aliases": ["Oyo", "Oyo State", "Ibadan", "Ogbomoso"]
+  },
+  {
+    "name": "Plateau State",
+    "slug": "plateau-state",
+    "type": "Place",
+    "description": "Highland state in north-central Nigeria, capital Jos.",
+    "aliases": ["Plateau", "Plateau State", "Jos", "Bukuru"]
+  },
+  {
+    "name": "Rivers State",
+    "slug": "rivers-state",
+    "type": "Place",
+    "description": "Major hydrocarbon and maritime state in southern Nigeria, capital Port Harcourt.",
+    "aliases": ["Rivers", "Rivers State", "Port Harcourt", "Bonny"]
+  },
+  {
+    "name": "Sokoto State",
+    "slug": "sokoto-state",
+    "type": "Place",
+    "description": "Seat of the Caliphate in northwestern Nigeria, capital Sokoto.",
+    "aliases": ["Sokoto", "Sokoto State"]
+  },
+  {
+    "name": "Taraba State",
+    "slug": "taraba-state",
+    "type": "Place",
+    "description": "State in northeastern Nigeria, capital Jalingo.",
+    "aliases": ["Taraba", "Taraba State", "Jalingo"]
+  },
+  {
+    "name": "Yobe State",
+    "slug": "yobe-state",
+    "type": "Place",
+    "description": "State in northeastern Nigeria, capital Damaturu.",
+    "aliases": ["Yobe", "Yobe State", "Damaturu", "Potiskum"]
+  },
+  {
+    "name": "Zamfara State",
+    "slug": "zamfara-state",
+    "type": "Place",
+    "description": "State in northwestern Nigeria, capital Gusau.",
+    "aliases": ["Zamfara", "Zamfara State", "Gusau"]
+  },
+  {
+    "name": "Bola Ahmed Tinubu",
+    "slug": "bola-tinubu",
+    "type": "Person",
+    "description": "President of the Federal Republic of Nigeria and Commander-in-Chief of the Armed Forces.",
+    "aliases": ["Bola Tinubu", "Tinubu", "President Tinubu", "President Bola Tinubu", "Asiwaju", "PBAT", "Bola Ahmed Tinubu"]
+  },
+  {
+    "name": "Kashim Shettima",
+    "slug": "kashim-shettima",
+    "type": "Person",
+    "description": "Vice President of Nigeria and former Governor of Borno State.",
+    "aliases": ["Kashim Shettima", "Shettima", "Vice President Shettima"]
+  },
+  {
+    "name": "Atiku Abubakar",
+    "slug": "atiku-abubakar",
+    "type": "Person",
+    "description": "Former Vice President of Nigeria and prominent opposition political figure.",
+    "aliases": ["Atiku Abubakar", "Atiku", "Wazirin Adamawa"]
+  },
+  {
+    "name": "Peter Obi",
+    "slug": "peter-obi",
+    "type": "Person",
+    "description": "Former Governor of Anambra State and presidential candidate of the Labour Party.",
+    "aliases": ["Peter Obi", "Obi", "Peter Gregory Obi"]
+  },
+  {
+    "name": "Rabiu Musa Kwankwaso",
+    "slug": "rabiu-kwankwaso",
+    "type": "Person",
+    "description": "Former Governor of Kano State, Senator, and national leader of the NNPP.",
+    "aliases": ["Rabiu Kwankwaso", "Kwankwaso", "Rabiu Musa Kwankwaso"]
+  },
+  {
+    "name": "Godswill Akpabio",
+    "slug": "godswill-akpabio",
+    "type": "Person",
+    "description": "President of the Senate of the Federal Republic of Nigeria.",
+    "aliases": ["Godswill Akpabio", "Akpabio", "Senate President Akpabio"]
+  },
+  {
+    "name": "Tajudeen Abbas",
+    "slug": "tajudeen-abbas",
+    "type": "Person",
+    "description": "Speaker of the House of Representatives of Nigeria.",
+    "aliases": ["Tajudeen Abbas", "Speaker Abbas", "Tajudeen"]
+  },
+  {
+    "name": "Femi Gbajabiamila",
+    "slug": "femi-gbajabiamila",
+    "type": "Person",
+    "description": "Chief of Staff to the President of Nigeria and former Speaker of the House of Representatives.",
+    "aliases": ["Femi Gbajabiamila", "Gbajabiamila", "Chief of Staff Gbajabiamila"]
+  },
+  {
+    "name": "Nyesom Wike",
+    "slug": "nyesom-wike",
+    "type": "Person",
+    "description": "Minister of the Federal Capital Territory and former Governor of Rivers State.",
+    "aliases": ["Nyesom Wike", "Wike", "FCT Minister Wike", "Ezenwo Nyesom Wike"]
+  },
+  {
+    "name": "Babajide Sanwo-Olu",
+    "slug": "babajide-sanwo-olu",
+    "type": "Person",
+    "description": "Executive Governor of Lagos State.",
+    "aliases": ["Babajide Sanwo-Olu", "Sanwo-Olu", "Governor Sanwo-Olu"]
+  },
+  {
+    "name": "Seyi Makinde",
+    "slug": "seyi-makinde",
+    "type": "Person",
+    "description": "Executive Governor of Oyo State.",
+    "aliases": ["Seyi Makinde", "Makinde", "Governor Makinde"]
+  },
+  {
+    "name": "Dapo Abiodun",
+    "slug": "dapo-abiodun",
+    "type": "Person",
+    "description": "Executive Governor of Ogun State.",
+    "aliases": ["Dapo Abiodun", "Abiodun", "Governor Abiodun"]
+  },
+  {
+    "name": "Ademola Adeleke",
+    "slug": "ademola-adeleke",
+    "type": "Person",
+    "description": "Executive Governor of Osun State.",
+    "aliases": ["Ademola Adeleke", "Adeleke", "Governor Adeleke"]
+  },
+  {
+    "name": "Charles Soludo",
+    "slug": "charles-soludo",
+    "type": "Person",
+    "description": "Executive Governor of Anambra State and former Governor of the Central Bank of Nigeria.",
+    "aliases": ["Charles Soludo", "Soludo", "Chukwuma Soludo", "Governor Soludo"]
+  },
+  {
+    "name": "Alex Otti",
+    "slug": "alex-otti",
+    "type": "Person",
+    "description": "Executive Governor of Abia State.",
+    "aliases": ["Alex Otti", "Otti", "Governor Otti"]
+  },
+  {
+    "name": "Peter Mbah",
+    "slug": "peter-mbah",
+    "type": "Person",
+    "description": "Executive Governor of Enugu State.",
+    "aliases": ["Peter Mbah", "Mbah", "Governor Mbah"]
+  },
+  {
+    "name": "Babagana Zulum",
+    "slug": "babagana-zulum",
+    "type": "Person",
+    "description": "Executive Governor of Borno State.",
+    "aliases": ["Babagana Zulum", "Zulum", "Governor Zulum", "Babagana Umara Zulum"]
+  },
+  {
+    "name": "Olayemi Cardoso",
+    "slug": "olayemi-cardoso",
+    "type": "Person",
+    "description": "Governor of the Central Bank of Nigeria.",
+    "aliases": ["Olayemi Cardoso", "Cardoso", "CBN Governor Cardoso", "Yemi Cardoso"]
+  },
+  {
+    "name": "Kayode Egbetokun",
+    "slug": "kayode-egbetokun",
+    "type": "Person",
+    "description": "Inspector General of Police of the Federal Republic of Nigeria.",
+    "aliases": ["Kayode Egbetokun", "Egbetokun", "IGP Egbetokun", "Inspector General of Police"]
+  },
+  {
+    "name": "Aliko Dangote",
+    "slug": "aliko-dangote",
+    "type": "Person",
+    "description": "Founder and President/Chief Executive of Dangote Group, African business magnate.",
+    "aliases": ["Aliko Dangote", "Dangote"]
+  },
+  {
+    "name": "Wale Edun",
+    "slug": "wale-edun",
+    "type": "Person",
+    "description": "Minister of Finance and Coordinating Minister of the Economy of Nigeria.",
+    "aliases": ["Wale Edun", "Finance Minister Edun", "Olawale Edun"]
+  },
+  {
+    "name": "Nuhu Ribadu",
+    "slug": "nuhu-ribadu",
+    "type": "Person",
+    "description": "National Security Adviser (NSA) and founding chairman of the EFCC.",
+    "aliases": ["Nuhu Ribadu", "Ribadu", "NSA Ribadu"]
+  },
+  {
+    "name": "Bosun Tijani",
+    "slug": "bosun-tijani",
+    "type": "Person",
+    "description": "Minister of Communications, Innovation and Digital Economy.",
+    "aliases": ["Bosun Tijani", "Tijani", "Communications Minister Tijani"]
+  },
+  {
+    "name": "Victor Osimhen",
+    "slug": "victor-osimhen",
+    "type": "Person",
+    "description": "Super Eagles star striker, African Footballer of the Year.",
+    "aliases": ["Victor Osimhen", "Osimhen"]
+  },
+  {
+    "name": "Ademola Lookman",
+    "slug": "ademola-lookman",
+    "type": "Person",
+    "description": "Super Eagles and Atalanta winger, UEFA Europa League hero.",
+    "aliases": ["Ademola Lookman", "Lookman"]
+  },
+  {
+    "name": "Victor Boniface",
+    "slug": "victor-boniface",
+    "type": "Person",
+    "description": "Super Eagles and Bayer Leverkusen striker.",
+    "aliases": ["Victor Boniface", "Boniface"]
+  },
+  {
+    "name": "Central Bank of Nigeria",
+    "slug": "central-bank-of-nigeria",
+    "type": "Organization",
+    "description": "The apex monetary authority of the Federal Republic of Nigeria.",
+    "aliases": ["CBN", "Central Bank of Nigeria", "Apex Bank", "Monetary Policy Committee", "MPC"]
+  },
+  {
+    "name": "Economic and Financial Crimes Commission",
+    "slug": "efcc-nigeria",
+    "type": "Organization",
+    "description": "Nigeria's primary law enforcement agency investigating financial crimes and money laundering.",
+    "aliases": ["EFCC", "Economic and Financial Crimes Commission", "Anti-graft agency"]
+  },
+  {
+    "name": "Independent National Electoral Commission",
+    "slug": "inec-nigeria",
+    "type": "Organization",
+    "description": "Electoral management body overseeing general, state, and local elections in Nigeria.",
+    "aliases": ["INEC", "Independent National Electoral Commission", "Electoral Commission"]
+  },
+  {
+    "name": "NNPC Limited",
+    "slug": "nnpc-limited",
+    "type": "Organization",
+    "description": "National petroleum company of Nigeria managing upstream, midstream, and downstream energy assets.",
+    "aliases": ["NNPC", "NNPCL", "NNPC Limited", "Nigerian National Petroleum Company"]
+  },
+  {
+    "name": "Dangote Group",
+    "slug": "dangote-group",
+    "type": "Organization",
+    "description": "Leading industrial conglomerate in West Africa with operations in cement, petroleum refining, sugar, and fertilizers.",
+    "aliases": ["Dangote Group", "Dangote Refinery", "Dangote Cement", "Dangote Sugar"]
+  },
+  {
+    "name": "All Progressives Congress",
+    "slug": "all-progressives-congress",
+    "type": "Organization",
+    "description": "Ruling political party in Nigeria founded in 2013.",
+    "aliases": ["APC", "All Progressives Congress", "Ruling Party"]
+  },
+  {
+    "name": "Peoples Democratic Party",
+    "slug": "peoples-democratic-party",
+    "type": "Organization",
+    "description": "Major political party in Nigeria founded in 1998.",
+    "aliases": ["PDP", "Peoples Democratic Party"]
+  },
+  {
+    "name": "Labour Party",
+    "slug": "labour-party-nigeria",
+    "type": "Organization",
+    "description": "Social democratic political party in Nigeria.",
+    "aliases": ["Labour Party", "LP"]
+  },
+  {
+    "name": "New Nigeria Peoples Party",
+    "slug": "nnpp-nigeria",
+    "type": "Organization",
+    "description": "Political party with significant strength across northern Nigeria.",
+    "aliases": ["NNPP", "New Nigeria Peoples Party", "Kwankwasiyya"]
+  },
+  {
+    "name": "Federal Inland Revenue Service",
+    "slug": "firs-nigeria",
+    "type": "Organization",
+    "description": "Agency responsible for assessing, collecting, and accounting for federal taxes in Nigeria.",
+    "aliases": ["FIRS", "Federal Inland Revenue Service", "Tax agency"]
+  },
+  {
+    "name": "National Bureau of Statistics",
+    "slug": "nbs-nigeria",
+    "type": "Organization",
+    "description": "Official statistical agency producing macroeconomic indicators, inflation rates, and GDP reports.",
+    "aliases": ["NBS", "National Bureau of Statistics"]
+  },
+  {
+    "name": "Debt Management Office",
+    "slug": "dmo-nigeria",
+    "type": "Organization",
+    "description": "Government bureau managing Nigeria's domestic and external debt portfolio.",
+    "aliases": ["DMO", "Debt Management Office"]
+  },
+  {
+    "name": "Nigeria Centre for Disease Control",
+    "slug": "ncdc-nigeria",
+    "type": "Organization",
+    "description": "National public health institute leading the response to disease outbreaks in Nigeria.",
+    "aliases": ["NCDC", "Nigeria Centre for Disease Control"]
+  },
+  {
+    "name": "Department of State Services",
+    "slug": "dss-nigeria",
+    "type": "Organization",
+    "description": "Primary domestic intelligence and counter-intelligence agency of Nigeria.",
+    "aliases": ["DSS", "Department of State Services", "State Security Service", "SSS"]
+  },
+  {
+    "name": "Nigeria Police Force",
+    "slug": "nigeria-police-force",
+    "type": "Organization",
+    "description": "Principal law enforcement institution in Nigeria.",
+    "aliases": ["Police", "Nigeria Police Force", "NPF", "Police Command"]
+  },
+  {
+    "name": "Federal Road Safety Corps",
+    "slug": "frsc-nigeria",
+    "type": "Organization",
+    "description": "Lead government agency for road safety management and traffic regulation in Nigeria.",
+    "aliases": ["FRSC", "Federal Road Safety Corps", "Road Safety"]
+  },
+  {
+    "name": "National Assembly of Nigeria",
+    "slug": "national-assembly-nigeria",
+    "type": "Organization",
+    "description": "Bicameral legislature of the Federal Republic of Nigeria comprising the Senate and House of Representatives.",
+    "aliases": ["National Assembly", "NASS", "Senate", "House of Representatives", "House of Reps"]
+  },
+  {
+    "name": "Super Eagles of Nigeria",
+    "slug": "super-eagles-nigeria",
+    "type": "Organization",
+    "description": "Nigeria men's national football team, three-time Africa Cup of Nations champions.",
+    "aliases": ["Super Eagles", "Nigeria national football team", "Super Eagles of Nigeria"]
+  },
+  {
+    "name": "Super Falcons of Nigeria",
+    "slug": "super-falcons-nigeria",
+    "type": "Organization",
+    "description": "Nigeria women's national football team, record 11-time African champions.",
+    "aliases": ["Super Falcons", "Super Falcons of Nigeria"]
+  },
+  {
+    "name": "Nigeria Football Federation",
+    "slug": "nff-nigeria",
+    "type": "Organization",
+    "description": "Governing body of association football in Nigeria.",
+    "aliases": ["NFF", "Nigeria Football Federation"]
+  },
+  {
+    "name": "Fuel Subsidy & Energy Reforms",
+    "slug": "fuel-subsidy-reforms",
+    "type": "Theme",
+    "description": "Developments surrounding deregulation of petroleum motor spirit (PMS), pricing, and energy transition.",
+    "aliases": ["Fuel subsidy", "PMS price", "Petrol price", "Deregulated market", "Subsidy removal", "CNG initiative"]
+  },
+  {
+    "name": "Naira & Foreign Exchange Policy",
+    "slug": "naira-fx-policy",
+    "type": "Theme",
+    "description": "Foreign exchange liquidity, currency float, monetary stabilization, and naira valuation trends.",
+    "aliases": ["Naira", "FX market", "Forex", "NAFEM", "Exchange rate", "Currency float", "Dollar rate"]
+  },
+  {
+    "name": "National Security & Counter-Banditry",
+    "slug": "national-security-nigeria",
+    "type": "Theme",
+    "description": "Military and police operations combating banditry, kidnapping, insurgency, and oil theft across Nigeria.",
+    "aliases": ["Bandits", "Banditry", "Kidnapping", "Boko Haram", "ISWAP", "Counter-terrorism", "Oil bunkering"]
+  },
+  {
+    "name": "Tax Reform & Fiscal Policy",
+    "slug": "tax-reform-fiscal-policy",
+    "type": "Theme",
+    "description": "Federal and sub-national fiscal bills, tax harmonization, executive orders, and revenue mobilization.",
+    "aliases": ["Tax reform", "Tax bill", "Withholding tax", "Company income tax", "Fiscal policy", "Value Added Tax", "VAT"]
+  },
+  {
+    "name": "National Minimum Wage & Labor",
+    "slug": "minimum-wage-labor",
+    "type": "Theme",
+    "description": "Tripartite minimum wage negotiations, civil service remuneration, labor disputes, and union actions.",
+    "aliases": ["Minimum wage", "NLC strike", "TUC", "Labor union", "Salary increase", "Wage award"]
+  },
+  {
+    "name": "Local Government Autonomy",
+    "slug": "local-government-autonomy",
+    "type": "Theme",
+    "description": "Supreme Court ruling, federal allocations, and operational independence of Nigeria's 774 local governments.",
+    "aliases": ["Local government autonomy", "LG autonomy", "Supreme Court LG", "Joint account", "774 local governments"]
+  },
+  {
+    "name": "Ikeja",
+    "slug": "ikeja",
+    "type": "Place",
+    "description": "Capital city of Lagos State and major commercial and aviation center.",
+    "aliases": ["Ikeja"]
+  },
+  {
+    "name": "Lekki",
+    "slug": "lekki",
+    "type": "Place",
+    "description": "Fast-growing metropolitan and free trade zone corridor in Lagos.",
+    "aliases": ["Lekki", "Lekki Peninsula", "Lekki Free Zone"]
+  },
+  {
+    "name": "Victoria Island",
+    "slug": "victoria-island",
+    "type": "Place",
+    "description": "Affluent financial and corporate business hub in Lagos.",
+    "aliases": ["Victoria Island", "VI Lagos"]
+  },
+  {
+    "name": "Yaba",
+    "slug": "yaba",
+    "type": "Place",
+    "description": "Renowned technology startup cluster and educational district in Lagos.",
+    "aliases": ["Yaba", "Yabacon Valley"]
+  },
+  {
+    "name": "Ikorodu",
+    "slug": "ikorodu",
+    "type": "Place",
+    "description": "Major urban population and commercial center in northeast Lagos State.",
+    "aliases": ["Ikorodu"]
+  },
+  {
+    "name": "Port Harcourt",
+    "slug": "port-harcourt",
+    "type": "Place",
+    "description": "Capital of Rivers State and principal hub of the Nigerian petroleum industry.",
+    "aliases": ["Port Harcourt", "Pitakwa", "Garden City"]
+  },
+  {
+    "name": "Ibadan",
+    "slug": "ibadan",
+    "type": "Place",
+    "description": "Capital of Oyo State and historic sprawling metropolis of south-western Nigeria.",
+    "aliases": ["Ibadan", "Ancient city of Ibadan"]
+  },
+  {
+    "name": "Benin City",
+    "slug": "benin-city",
+    "type": "Place",
+    "description": "Capital of Edo State, celebrated for its rich historical culture, arts, and trade.",
+    "aliases": ["Benin City", "Benin"]
+  },
+  {
+    "name": "Aba",
+    "slug": "aba",
+    "type": "Place",
+    "description": "Major commercial and manufacturing powerhouse in Abia State.",
+    "aliases": ["Aba", "Enyimba City"]
+  },
+  {
+    "name": "Warri",
+    "slug": "warri",
+    "type": "Place",
+    "description": "Major oil refining and commercial port city in Delta State.",
+    "aliases": ["Warri"]
+  },
+  {
+    "name": "Asaba",
+    "slug": "asaba",
+    "type": "Place",
+    "description": "Capital of Delta State situated on the western bank of the Niger River.",
+    "aliases": ["Asaba"]
+  },
+  {
+    "name": "Awka",
+    "slug": "awka",
+    "type": "Place",
+    "description": "Capital of Anambra State and historic metalworking and administrative hub.",
+    "aliases": ["Awka"]
+  },
+  {
+    "name": "Onitsha",
+    "slug": "onitsha",
+    "type": "Place",
+    "description": "Iconic commercial port on the River Niger hosting West Africa's largest main market.",
+    "aliases": ["Onitsha"]
+  },
+  {
+    "name": "Calabar",
+    "slug": "calabar",
+    "type": "Place",
+    "description": "Capital of Cross River State, renowned for tourism, heritage, and the annual Calabar Carnival.",
+    "aliases": ["Calabar", "Canaan City"]
+  },
+  {
+    "name": "Uyo",
+    "slug": "uyo",
+    "type": "Place",
+    "description": "Capital of oil-rich Akwa Ibom State and emergent modern infrastructure center.",
+    "aliases": ["Uyo"]
+  },
+  {
+    "name": "Owerri",
+    "slug": "owerri",
+    "type": "Place",
+    "description": "Capital of Imo State, known as the hospitality and cultural capital of the Heartland.",
+    "aliases": ["Owerri"]
+  },
+  {
+    "name": "Abeokuta",
+    "slug": "abeokuta",
+    "type": "Place",
+    "description": "Capital of Ogun State famed for the Olumo Rock, textile heritage, and commerce.",
+    "aliases": ["Abeokuta"]
+  },
+  {
+    "name": "Osogbo",
+    "slug": "osogbo",
+    "type": "Place",
+    "description": "Capital of Osun State and home of the UNESCO world heritage Osun-Osogbo sacred grove.",
+    "aliases": ["Osogbo"]
+  },
+  {
+    "name": "Maiduguri",
+    "slug": "maiduguri",
+    "type": "Place",
+    "description": "Capital of Borno State and historic cross-border trade center of north-eastern Nigeria.",
+    "aliases": ["Maiduguri", "Yerwa"]
+  },
+  {
+    "name": "Jos",
+    "slug": "jos",
+    "type": "Place",
+    "description": "Capital of Plateau State, celebrated for its temperate climate, mining, and scenic plateaus.",
+    "aliases": ["Jos", "J-Town"]
+  },
+  {
+    "name": "Makurdi",
+    "slug": "makurdi",
+    "type": "Place",
+    "description": "Capital of Benue State situated along the Benue River, center of agricultural commerce.",
+    "aliases": ["Makurdi"]
+  },
+  {
+    "name": "Dave Umahi",
+    "slug": "dave-umahi",
+    "type": "Person",
+    "description": "Minister of Works of Nigeria and former governor of Ebonyi State.",
+    "aliases": ["Dave Umahi", "David Umahi", "Minister Umahi"]
+  },
+  {
+    "name": "Festus Keyamo",
+    "slug": "festus-keyamo",
+    "type": "Person",
+    "description": "Minister of Aviation and Aerospace Development of Nigeria.",
+    "aliases": ["Festus Keyamo", "Keyamo"]
+  },
+  {
+    "name": "Adebayo Adelabu",
+    "slug": "adebayo-adelabu",
+    "type": "Person",
+    "description": "Minister of Power of Nigeria.",
+    "aliases": ["Adebayo Adelabu", "Adelabu"]
+  },
+  {
+    "name": "Kudirat Kekere-Ekun",
+    "slug": "kudirat-kekere-ekun",
+    "type": "Person",
+    "description": "Chief Justice of Nigeria and head of the Supreme Court of Nigeria.",
+    "aliases": ["Kudirat Kekere-Ekun", "Kekere-Ekun", "CJN Kekere-Ekun"]
+  },
+  {
+    "name": "Tony Elumelu",
+    "slug": "tony-elumelu",
+    "type": "Person",
+    "description": "Nigerian economist, philanthropist, and Chairman of Heirs Holdings and UBA.",
+    "aliases": ["Tony Elumelu", "Elumelu"]
+  },
+  {
+    "name": "Mike Adenuga",
+    "slug": "mike-adenuga",
+    "type": "Person",
+    "description": "Nigerian billionaire businessman and founder of Globacom and Conoil.",
+    "aliases": ["Mike Adenuga", "Adenuga"]
+  },
+  {
+    "name": "Abba Kabir Yusuf",
+    "slug": "abba-kabir-yusuf",
+    "type": "Person",
+    "description": "Governor of Kano State.",
+    "aliases": ["Abba Kabir Yusuf", "Abba Gida Gida", "Governor Yusuf"]
+  },
+  {
+    "name": "Uba Sani",
+    "slug": "uba-sani",
+    "type": "Person",
+    "description": "Governor of Kaduna State.",
+    "aliases": ["Uba Sani", "Governor Sani"]
+  },
+  {
+    "name": "Siminalayi Fubara",
+    "slug": "siminalayi-fubara",
+    "type": "Person",
+    "description": "Governor of Rivers State.",
+    "aliases": ["Siminalayi Fubara", "Sim Fubara", "Governor Fubara"]
+  },
+  {
+    "name": "Godwin Obaseki",
+    "slug": "godwin-obaseki",
+    "type": "Person",
+    "description": "Governor of Edo State.",
+    "aliases": ["Godwin Obaseki", "Obaseki"]
+  },
+  {
+    "name": "Charles Soludo",
+    "slug": "charles-soludo",
+    "type": "Person",
+    "description": "Governor of Anambra State and former CBN Governor.",
+    "aliases": ["Charles Soludo", "Chukwuma Soludo", "Governor Soludo"]
+  },
+  {
+    "name": "Peter Mbah",
+    "slug": "peter-mbah",
+    "type": "Person",
+    "description": "Governor of Enugu State.",
+    "aliases": ["Peter Mbah", "Governor Mbah"]
+  },
+  {
+    "name": "Sheriff Oborevwori",
+    "slug": "sheriff-oborevwori",
+    "type": "Person",
+    "description": "Governor of Delta State.",
+    "aliases": ["Sheriff Oborevwori", "Governor Oborevwori"]
+  },
+  {
+    "name": "Umo Eno",
+    "slug": "umo-eno",
+    "type": "Person",
+    "description": "Governor of Akwa Ibom State.",
+    "aliases": ["Umo Eno", "Governor Eno"]
+  },
+  {
+    "name": "Bassey Otu",
+    "slug": "bassey-otu",
+    "type": "Person",
+    "description": "Governor of Cross River State.",
+    "aliases": ["Bassey Otu", "Governor Otu"]
+  },
+  {
+    "name": "Alex Otti",
+    "slug": "alex-otti",
+    "type": "Person",
+    "description": "Governor of Abia State.",
+    "aliases": ["Alex Otti", "Governor Otti"]
+  },
+  {
+    "name": "Hope Uzodimma",
+    "slug": "hope-uzodimma",
+    "type": "Person",
+    "description": "Governor of Imo State.",
+    "aliases": ["Hope Uzodimma", "Governor Uzodimma"]
+  },
+  {
+    "name": "Babagana Zulum",
+    "slug": "babagana-zulum",
+    "type": "Person",
+    "description": "Governor of Borno State.",
+    "aliases": ["Babagana Zulum", "Zulum", "Governor Zulum"]
+  },
+  {
+    "name": "Dikko Radda",
+    "slug": "dikko-radda",
+    "type": "Person",
+    "description": "Governor of Katsina State.",
+    "aliases": ["Dikko Radda", "Governor Radda"]
+  },
+  {
+    "name": "Ahmed Aliyu",
+    "slug": "ahmed-aliyu",
+    "type": "Person",
+    "description": "Governor of Sokoto State.",
+    "aliases": ["Ahmed Aliyu", "Governor Aliyu"]
+  },
+  {
+    "name": "Dauda Lawal",
+    "slug": "dauda-lawal",
+    "type": "Person",
+    "description": "Governor of Zamfara State.",
+    "aliases": ["Dauda Lawal", "Governor Lawal"]
+  },
+  {
+    "name": "Caleb Mutfwang",
+    "slug": "caleb-mutfwang",
+    "type": "Person",
+    "description": "Governor of Plateau State.",
+    "aliases": ["Caleb Mutfwang", "Governor Mutfwang"]
+  },
+  {
+    "name": "Hyacinth Alia",
+    "slug": "hyacinth-alia",
+    "type": "Person",
+    "description": "Governor of Benue State.",
+    "aliases": ["Hyacinth Alia", "Governor Alia"]
+  },
+  {
+    "name": "BUA Group",
+    "slug": "bua-group",
+    "type": "Organization",
+    "description": "Leading foods, infrastructure, mining, and manufacturing conglomerate.",
+    "aliases": ["BUA Group", "BUA Cement", "BUA Foods", "BUA"]
+  },
+  {
+    "name": "Abdul Samad Rabiu",
+    "slug": "abdul-samad-rabiu",
+    "type": "Person",
+    "description": "Founder and Chairman of BUA Group and prominent philanthropist.",
+    "aliases": ["Abdul Samad Rabiu", "Samad Rabiu"]
+  },
+  {
+    "name": "Access Bank",
+    "slug": "access-bank",
+    "type": "Organization",
+    "description": "Major multinational commercial bank and flagship subsidiary of Access Holdings.",
+    "aliases": ["Access Bank", "Access Holdings"]
+  },
+  {
+    "name": "Zenith Bank",
+    "slug": "zenith-bank",
+    "type": "Organization",
+    "description": "Tier-1 commercial bank and financial services provider headquartered in Lagos.",
+    "aliases": ["Zenith Bank"]
+  },
+  {
+    "name": "First Bank of Nigeria",
+    "slug": "first-bank",
+    "type": "Organization",
+    "description": "Premier banking institution and one of Nigeria's oldest financial brands.",
+    "aliases": ["First Bank", "First Bank of Nigeria", "FirstBank"]
+  },
+  {
+    "name": "Guaranty Trust Bank",
+    "slug": "gtbank",
+    "type": "Organization",
+    "description": "Leading multinational financial institution and digital banking pioneer.",
+    "aliases": ["GTBank", "Guaranty Trust Bank", "GTCO"]
+  },
+  {
+    "name": "United Bank for Africa",
+    "slug": "uba",
+    "type": "Organization",
+    "description": "Pan-African financial institution operating across 20 African nations.",
+    "aliases": ["UBA", "United Bank for Africa"]
+  },
+  {
+    "name": "MTN Nigeria",
+    "slug": "mtn-nigeria",
+    "type": "Organization",
+    "description": "Largest mobile telecommunications network operator in Nigeria.",
+    "aliases": ["MTN", "MTN Nigeria"]
+  },
+  {
+    "name": "Airtel Nigeria",
+    "slug": "airtel-nigeria",
+    "type": "Organization",
+    "description": "Leading telecommunications and mobile money services provider in Nigeria.",
+    "aliases": ["Airtel", "Airtel Nigeria"]
+  },
+  {
+    "name": "Seplat Energy",
+    "slug": "seplat-energy",
+    "type": "Organization",
+    "description": "Leading indigenous energy provider listed on both NGX and London Stock Exchange.",
+    "aliases": ["Seplat", "Seplat Energy"]
+  },
+  {
+    "name": "Enyimba Football Club",
+    "slug": "enyimba-fc",
+    "type": "Organization",
+    "description": "Historic two-time CAF Champions League winning Nigerian football club based in Aba.",
+    "aliases": ["Enyimba", "Enyimba FC"]
+  },
+  {
+    "name": "Kano Pillars",
+    "slug": "kano-pillars",
+    "type": "Organization",
+    "description": "Prominent Nigerian football club based in Kano.",
+    "aliases": ["Kano Pillars", "Sai Masu Gida"]
+  },
+  {
+    "name": "Shooting Stars SC",
+    "slug": "shooting-stars-sc",
+    "type": "Organization",
+    "description": "Historic football club based in Ibadan, Oyo State.",
+    "aliases": ["Shooting Stars", "3SC", "Shooting Stars SC"]
+  },
+  {
+    "name": "Rivers United",
+    "slug": "rivers-united",
+    "type": "Organization",
+    "description": "Nigerian professional football club based in Port Harcourt, Rivers State.",
+    "aliases": ["Rivers United"]
+  },
+  {
+    "name": "Remo Stars FC",
+    "slug": "remo-stars",
+    "type": "Organization",
+    "description": "Top-tier Nigerian football club based in Ikenne, Ogun State.",
+    "aliases": ["Remo Stars", "Remo Stars FC"]
+  },
+  {
+    "name": "Asisat Oshoala",
+    "slug": "asisat-oshoala",
+    "type": "Person",
+    "description": "Record six-time African Women's Footballer of the Year and Super Falcons striker.",
+    "aliases": ["Asisat Oshoala", "Oshoala"]
+  },
+  {
+    "name": "Burna Boy",
+    "slug": "burna-boy",
+    "type": "Person",
+    "description": "Grammy Award-winning global Afrobeats superstar and African Giant.",
+    "aliases": ["Burna Boy", "Burnaboy", "Damini Ogulu"]
+  },
+  {
+    "name": "Wizkid",
+    "slug": "wizkid",
+    "type": "Person",
+    "description": "Grammy Award-winning pioneer of modern Afrobeats and Starboy.",
+    "aliases": ["Wizkid", "Ayodeji Balogun", "Starboy"]
+  },
+  {
+    "name": "Davido",
+    "slug": "davido",
+    "type": "Person",
+    "description": "Award-winning global Afrobeats icon and founder of DMW.",
+    "aliases": ["Davido", "David Adeleke", "OBO"]
+  },
+  {
+    "name": "Tiwa Savage",
+    "slug": "tiwa-savage",
+    "type": "Person",
+    "description": "Acclaimed queen of Afrobeats singer, songwriter, and filmmaker.",
+    "aliases": ["Tiwa Savage"]
+  },
+  {
+    "name": "Rema",
+    "slug": "rema",
+    "type": "Person",
+    "description": "Chart-topping global music sensation from Benin City, Edo State.",
+    "aliases": ["Rema", "Divine Ikubor"]
+  },
+  {
+    "name": "Nigeria Customs Service",
+    "slug": "customs-nigeria",
+    "type": "Organization",
+    "description": "Government agency responsible for customs, port border enforcement, and trade tariff collection.",
+    "aliases": ["Customs", "Nigeria Customs Service", "NCS"]
+  },
+  {
+    "name": "National Drug Law Enforcement Agency",
+    "slug": "ndlea-nigeria",
+    "type": "Organization",
+    "description": "Federal agency tasked with combating drug trafficking, narcotics smuggling, and illicit substance abuse.",
+    "aliases": ["NDLEA", "National Drug Law Enforcement Agency", "Narcotics agency"]
+  },
+  {
+    "name": "Nigerian Upstream Petroleum Regulatory Commission",
+    "slug": "nuprc-nigeria",
+    "type": "Organization",
+    "description": "Statutory regulator of upstream oil exploration and production in Nigeria.",
+    "aliases": ["NUPRC", "Nigerian Upstream Petroleum Regulatory Commission", "Upstream Commission"]
+  },
+  {
+    "name": "Nigerian Midstream and Downstream Petroleum Regulatory Authority",
+    "slug": "nmdpra-nigeria",
+    "type": "Organization",
+    "description": "Technical and commercial regulator of petroleum midstream and downstream operations.",
+    "aliases": ["NMDPRA", "Nigerian Midstream and Downstream Petroleum Regulatory Authority", "Midstream Downstream Authority"]
+  }
+]

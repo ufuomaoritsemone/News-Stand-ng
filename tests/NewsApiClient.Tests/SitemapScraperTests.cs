@@ -257,4 +257,138 @@ public class SitemapScraperTests
         Assert.DoesNotContain("Join our WhatsApp Channel", sanitized);
         Assert.DoesNotContain("All rights reserved.", sanitized);
     }
+
+    [Fact]
+    public void ArticleContentExtractor_SanitizeContentBody_PreservesFullTextWithoutSentenceTruncation()
+    {
+        // Arrange - 6 sentence article body
+        var fullArticle = "Sentence one establishes the context. " +
+                          "Sentence two provides official commentary. " +
+                          "Sentence three elaborates on the economic impact. " +
+                          "Sentence four details stakeholder reactions. " +
+                          "Sentence five explains regulatory compliance. " +
+                          "Sentence six outlines subsequent developments.";
+
+        // Act - default sanitization should preserve all sentences for AI summarization
+        var sanitized = ArticleContentExtractor.SanitizeContentBody(fullArticle);
+
+        // Assert
+        Assert.NotNull(sanitized);
+        Assert.Contains("Sentence one", sanitized);
+        Assert.Contains("Sentence three", sanitized);
+        Assert.Contains("Sentence four", sanitized);
+        Assert.Contains("Sentence five", sanitized);
+        Assert.Contains("Sentence six", sanitized);
+        var sentences = ArticleContentExtractor.SplitIntoSentences(sanitized);
+        Assert.Equal(6, sentences.Count);
+    }
+
+    [Fact]
+    public void ArticleContentExtractor_TrimToSentences_TrimsLongBodyToAtMostThreeSentences()
+    {
+        // Arrange
+        var body = "The Central Bank of Nigeria has issued new foreign exchange guidelines. " +
+                   "Commercial banks must now process eligible invisible transactions within 24 hours. " +
+                   "The move is aimed at enhancing liquidity and market transparency across all commercial hubs. " +
+                   "Four currency dealers were sanctioned for regulatory infractions last week. " +
+                   "Analysts predict the naira will stabilize under the newly enacted rules. " +
+                   "Further consultations with stakeholders will take place in Abuja next Tuesday.";
+
+        // Act
+        var trimmed = ArticleContentExtractor.TrimToSentences(body, 3);
+
+        // Assert
+        Assert.NotNull(trimmed);
+        Assert.Contains("The Central Bank of Nigeria has issued new foreign exchange guidelines.", trimmed);
+        Assert.Contains("Commercial banks must now process eligible invisible transactions within 24 hours.", trimmed);
+        Assert.Contains("The move is aimed at enhancing liquidity and market transparency across all commercial hubs.", trimmed);
+        Assert.DoesNotContain("Four currency dealers were sanctioned", trimmed);
+        Assert.DoesNotContain("Analysts predict the naira will stabilize", trimmed);
+        Assert.DoesNotContain("Further consultations with stakeholders", trimmed);
+
+        var sentences = ArticleContentExtractor.SplitIntoSentences(trimmed);
+        Assert.Equal(3, sentences.Count);
+    }
+
+    [Fact]
+    public void ArticleContentExtractor_TrimToSentences_PreservesBodiesWithThreeOrFewerSentences()
+    {
+        // 1 sentence
+        var oneSentence = "Nigeria secured qualification for the continental tournament.";
+        var trimmedOne = ArticleContentExtractor.TrimToSentences(oneSentence, 3);
+        Assert.Equal(oneSentence, trimmedOne);
+
+        // 2 sentences
+        var twoSentences = "First sentence of the news. Second sentence follows immediately.";
+        var trimmedTwo = ArticleContentExtractor.TrimToSentences(twoSentences, 3);
+        Assert.Equal(twoSentences, trimmedTwo);
+
+        // 3 sentences
+        var threeSentences = "First sentence here. Second sentence here. Third sentence wraps up.";
+        var trimmedThree = ArticleContentExtractor.TrimToSentences(threeSentences, 3);
+        Assert.Equal(threeSentences, trimmedThree);
+    }
+
+    [Fact]
+    public void ArticleContentExtractor_TrimToSentences_PreservesAbbreviationsDecimalsAndQuotes()
+    {
+        // Arrange
+        var body = "Gov. Sanwo-Olu inspected the ₦2.5 billion medical complex alongside Dr. Aliyu in Ikeja. " +
+                   "\"We are determined to complete this project ahead of schedule,\" the governor affirmed. " +
+                   "Officials from the U.S. and U.N. delegations were also in attendance. " +
+                   "The project will create over 5,000 direct and indirect jobs for Nigerian youth.";
+
+        // Act
+        var trimmed = ArticleContentExtractor.TrimToSentences(body, 3);
+
+        // Assert
+        Assert.NotNull(trimmed);
+        Assert.Contains("Gov. Sanwo-Olu inspected the ₦2.5 billion medical complex alongside Dr. Aliyu in Ikeja.", trimmed);
+        Assert.Contains("\"We are determined to complete this project ahead of schedule,\" the governor affirmed.", trimmed);
+        Assert.Contains("Officials from the U.S. and U.N. delegations were also in attendance.", trimmed);
+        Assert.DoesNotContain("The project will create over 5,000 direct and indirect jobs", trimmed);
+
+        var sentences = ArticleContentExtractor.SplitIntoSentences(trimmed);
+        Assert.Equal(3, sentences.Count);
+    }
+
+    [Fact]
+    public void ArticleContentExtractor_ExtractFromHtml_PreservesFullBodyForAiSummarizer()
+    {
+        // Arrange
+        var html = """
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Economic Summit 2026</title>
+        </head>
+        <body>
+            <article>
+                <p>The annual Nigerian Economic Summit commenced in Abuja on Monday morning.</p>
+                <p>President Bola Tinubu delivered the keynote address outlining five-year industrial priorities.</p>
+                <p>Cabinet ministers and private sector leaders discussed bilateral trade partnerships and power infrastructure.</p>
+                <p>A specialized task force was established to monitor implementation benchmarks.</p>
+                <p>Delegates will reconvene on Wednesday for concluding breakout sessions.</p>
+            </article>
+        </body>
+        </html>
+        """;
+
+        var extractor = new ArticleContentExtractor(NullLogger<ArticleContentExtractor>.Instance);
+
+        // Act
+        var article = extractor.ExtractFromHtml(html, "https://example.com/economic-summit", "BusinessDay");
+
+        // Assert
+        Assert.NotNull(article);
+        Assert.NotNull(article.Content);
+        Assert.Contains("The annual Nigerian Economic Summit commenced in Abuja on Monday morning.", article.Content);
+        Assert.Contains("President Bola Tinubu delivered the keynote address outlining five-year industrial priorities.", article.Content);
+        Assert.Contains("Cabinet ministers and private sector leaders discussed bilateral trade partnerships and power infrastructure.", article.Content);
+        Assert.Contains("A specialized task force was established to monitor implementation benchmarks.", article.Content);
+        Assert.Contains("Delegates will reconvene on Wednesday for concluding breakout sessions.", article.Content);
+
+        var sentences = ArticleContentExtractor.SplitIntoSentences(article.Content);
+        Assert.Equal(5, sentences.Count);
+    }
 }

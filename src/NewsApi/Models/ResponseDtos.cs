@@ -7,9 +7,13 @@ public class SourceDto
 {
     public string Id { get; set; } = string.Empty;
     public string Name { get; set; } = string.Empty;
+    public string Slug { get; set; } = string.Empty;
+    public string? Description { get; set; }
+    public string? WebsiteUrl { get; set; }
     public string? RssUrl { get; set; }
     public string? SitemapUrl { get; set; }
     public string? ScraperType { get; set; } = "Hybrid";
+    public int ArticleCount { get; set; } = 0;
 }
 
 /// <summary>

@@ -34,6 +34,8 @@
     <Compile Include="..\..\NigerianNewGrid\Services\IKeywordMatchingService.cs" Link="Services\IKeywordMatchingService.cs" />
     <Compile Include="..\..\NigerianNewGrid\Services\ArticleDistillerService.cs" Link="Services\ArticleDistillerService.cs" />
     <Compile Include="..\..\NigerianNewGrid\Services\AppNotificationBridge.cs" Link="Services\AppNotificationBridge.cs" />
+    <Compile Include="..\..\NigerianNewGrid\Services\IAppEventBus.cs" Link="Services\IAppEventBus.cs" />
+    <Compile Include="..\..\NigerianNewGrid\Services\AppEventBus.cs" Link="Services\AppEventBus.cs" />
     <Compile Include="..\..\NigerianNewGrid\Models\BriefingDateGroup.cs" Link="Models\BriefingDateGroup.cs" />
     <None Update="xunit.runner.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>

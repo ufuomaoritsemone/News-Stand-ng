@@ -179,8 +179,9 @@ public class FeedSlotPlacementTests
         Assert.True(FeedSlotPlacementHelper.IsValidTargetPosition(5));
         Assert.True(FeedSlotPlacementHelper.IsValidTargetPosition(15));
         Assert.True(FeedSlotPlacementHelper.IsValidTargetPosition(30));
+        Assert.True(FeedSlotPlacementHelper.IsValidTargetPosition(55));
         Assert.False(FeedSlotPlacementHelper.IsValidTargetPosition(0));
-        Assert.False(FeedSlotPlacementHelper.IsValidTargetPosition(31));
+        Assert.False(FeedSlotPlacementHelper.IsValidTargetPosition(56));
     }
 
     [Fact]

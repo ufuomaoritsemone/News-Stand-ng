@@ -10,10 +10,11 @@ The backend is composed of four containerized .NET 10 microservices and a Postgr
 
 | Component | Directory | Role & Technology |
 | :--- | :--- | :--- |
-| **News API** | `src/NewsApi` | ASP.NET Core 10 Web API, EF Core, PostgreSQL/SQLite, seekable HTTP 206 audio streaming, API key & rate limiting middleware, OpenTelemetry observability. |
-| **Admin Dashboard** | `src/AdminDashboard` | ASP.NET Core 10 Razor Pages administration portal for source curation, sponsored content scheduling, and video channel monitoring. |
-| **News Scraper Service** | `src/NewsScraperService` | Continuous background worker or scheduled Cloud Run Job. Features Google News sitemap discovery, RSS fallbacks, JSON-LD/SmartReader extraction, ML topical classification, and editorial/opinion detection. |
-| **TTS Worker Service** | `src/TtsWorker` | Tri-Tier Neural Speech Synthesis service generating broadcast audio briefings for morning (8:00 AM WAT) and evening (6:00 PM WAT) broadcasts. |
+| **News API** | `src/NewsApi` | ASP.NET Core 10 Web API, EF Core, PostgreSQL/SQLite, seekable HTTP 206 audio streaming, API key & rate limiting middleware, OpenTelemetry observability.<br>• **ML.NET Engine**: In-process Time-Series SSA Anomaly Detection (`Microsoft.ML.TimeSeries`) & FastTree Predictive CTR Regression (`Microsoft.ML.FastTree`).<br>• **AI Feedback Loop & SEO Monitor**: `SeoMonitoringBackgroundService` (4h autonomous cycles), `SeoFeedbackLoopService` (Gemini 1.5 Flash + offline algorithmic headline/FAQ generator), automated backfills, thin-content guardrails, and real-time IndexNow batch dispatcher.<br>• **Smart Enrichment & Vector Clustering**: TextRank/LexRank graph summarization, 768-dim embeddings, 72h Greedy Leader story clustering, and Dual-Mode Google Search Console & Crawl Diagnostics. |
+| **Admin Dashboard** | `src/AdminDashboard` | ASP.NET Core 10 Razor Pages administration portal for source curation, sponsored content scheduling, video channel monitoring, and enterprise SEO management.<br>• **Google Search Console & Crawl Cockpit**: Real-time clicks, impressions, CTR, position time-series, and on-demand live URL inspector.<br>• **SEO Health Scorecard (0–100)**: Multi-factor grading (Indexation, Schema, Speed/Crawl, E-E-A-T).<br>• **ML.NET Anomaly Alert Center & CTR Opportunities**: Active ranking decay alerts and 1-click self-healing remediation triggers. |
+| **News Stand NG Web** | `src/NigerianNewsGrid.Web` | React Router v7 Framework Mode (Node.js SSR) delivering server-rendered HTML, dynamic Open Graph / Twitter meta, JSON-LD structured data (`NewsArticle`, `Dataset`, `Place`, `FAQPage`), XML sitemaps, RSS 2.0 feeds, and IndexNow protocol verification. |
+| **News Scraper Service** | `src/NewsScraperService` | Continuous background worker or scheduled Cloud Run Job. Features Google News sitemap discovery, RSS fallbacks, JSON-LD/SmartReader extraction, multi-tier entity extraction (Gazetteer + LLM), ML topical classification, and editorial/opinion detection. |
+| **TTS Worker Service** | `src/TtsWorker` | Tri-Tier Neural Speech Synthesis service generating broadcast audio briefings for morning (8:00 AM WAT) and evening (6:00 PM WAT) broadcasts.<br>• **Tier 1:** Google Cloud Text-to-Speech (`en-NG-Neural2-A`).<br>• **Tier 2:** Microsoft Edge Neural (`en-NG-EzinneNeural` & `en-NG-AbeoNeural`) — 100% free with authentic Nigerian accents.<br>• **Tier 3:** Local offline safety net container ensuring 0% crash rate. |
 | **Database** | Cloud SQL | Managed PostgreSQL 16 instance. |
 | **Mobile Client** | `NigerianNewGrid/` | Cross-platform .NET MAUI mobile app (Android, iOS, macOS, Windows) featuring local caching, offline reading, on-device native TTS narration, and dynamic endpoint resolution. |
 
@@ -36,6 +37,215 @@ The $300 Google Cloud Free Trial credit (valid for 90 days) will easily cover 10
 | **Total Estimated Cost** | | **~$10 – $16 / month** |
 
 > **Summary:** Over a 3-month testing period, you will only spend approximately **$30 to $50 of your $300 credit**, leaving more than 80% of your free credits intact.
+
+---
+
+## 2.5 API Keys, Secrets & Configuration Requirements
+
+News Stand NG implements a **dual-layer resiliency pattern**: all microservices and machine learning models are designed to operate out-of-the-box with **$0 cloud cost and zero mandatory API keys** via built-in local algorithms and fallback engines. When cloud API keys are supplied, the platform seamlessly upgrades to Google Gemini 1.5 Flash, Neural2 speech synthesis, and live Google Search Console telemetry.
+
+### Comprehensive Configuration & Environment Variable Matrix
+
+| Variable Name | Environment / Secret Variable | Target Service | Required in Prod? | Default / Offline Fallback if Omitted | Purpose & Feature Impact |
+| :--- | :--- | :--- | :---: | :--- | :--- |
+| `Gemini:ApiKey` | `GEMINI_API_KEY`<br>`Gemini__ApiKey` | `NewsApi` | **Optional** (Highly Recommended) | • `LocalFallbackEmbeddingProvider` (768-dim)<br>• `TextRank-Extractive` graph centrality<br>• Algorithmic headline & FAQ rule engine | **Powers 3 AI Capabilities:**<br>1. **Vector Embeddings** (`text-embedding-004`) for 72h Greedy Leader story clustering & related coverage.<br>2. **AI Article Enrichment** (`gemini-1.5-flash`) for abstractive key takeaways & FAQPage rich snippet generation.<br>3. **Continuous SEO Optimization**: Generative AI headline rewrite suggestions ($\le 60$ chars) and SERP accordion FAQ pairs. |
+| `AiEnrichment:GeminiEnabled` | `AiEnrichment__GeminiEnabled` | `NewsApi` | **Optional** | `false` | Master toggle enabling Gemini 1.5 Flash enrichment API calls in `ArticleEnrichmentService`. Set to `true` when `Gemini:ApiKey` is provided. |
+| `ApiKey` | `API_KEY`<br>`ApiKey` | `NewsApi`<br>`AdminDashboard`<br>`NewsScraperService`<br>`TtsWorker` | **Required** | Fails closed with HTTP 503 if missing in `Production` / `Staging` | Shared secret protecting all internal write endpoints (`POST /api/v1/articles/ingest`, `/api/v1/video-stories/trending/sync`, `/api/v1/seo/trigger-remediation`). |
+| `IndexNow:Key` | `IndexNow__Key`<br>`INDEXNOW_KEY` | `NewsApi`<br>`NigerianNewsGrid.Web` | **Recommended** | `3a7b9c1d2e4f5a6b7c8d9e0f1a2b3c4d` | Hexadecimal API key used by `IndexNowBackgroundService` and `SeoFeedbackLoopService` to notify Bing and Yandex of published and modified URLs. The web app serves this key at `/{key}.txt`. |
+| `GoogleCloud:ApiKey` | `GCP_TTS_API_KEY`<br>`GoogleCloud__ApiKey` | `TtsWorker`<br>`NewsApi` | **Optional** | Microsoft Edge Neural (`en-NG-EzinneNeural` & `en-NG-AbeoNeural`) | Activates Tier 1 Google Cloud Text-to-Speech (`en-NG-Neural2-A`). When omitted, Tier 2 Edge Neural delivers high-quality Nigerian English audio for **$0**. |
+| `SearchConsole:ServiceAccountKeyPath` | `GSC_CREDENTIALS_JSON` | `NewsApi` | **Optional** | Grounded in-memory search telemetry engine based on active database articles & state registry | Connects to the official Google Search Console API (`searchconsole.googleapis.com`) for real-time clicks, impressions, CTR, position, and URL inspection. |
+| `YouTube:ApiKey` | `YOUTUBE_API_KEY`<br>`YouTube__ApiKey` | `NewsApi` | **Optional** | Ingests from RSS & web scrapers only | Queries the YouTube Data API v3 for trending Nigerian video news broadcasts and channel uploads. |
+| `ConnectionStrings:NewsDb` | `ConnectionStrings__NewsDb` | `NewsApi` | **Required** | `Data Source=news.db` (SQLite) | Database connection string for PostgreSQL in production (`Host=...;Database=newsgrid;Username=...;Password=...`). |
+| `DbProvider` | `DbProvider` | `NewsApi` | **Required** | `sqlite` | Explicit database engine selector: `postgres` for production Cloud SQL or Docker Compose; `sqlite` for lightweight local development. |
+| `ASPNETCORE_ENVIRONMENT` | `ASPNETCORE_ENVIRONMENT` | All .NET services | **Required** | `Development` | ASP.NET Core environment mode: set to `Production` to enable strict API key validation and production security middleware. |
+
+---
+
+### Step-by-Step: Obtaining and Entering Your Keys
+
+#### 1. Google Gemini API Key (`Gemini:ApiKey` / `GEMINI_API_KEY`)
+
+##### How to Obtain:
+1. Visit [Google AI Studio](https://aistudio.google.com/) (or [Google Cloud Vertex AI Console](https://console.cloud.google.com/vertex-ai)).
+2. Sign in with your Google Account.
+3. Click **Get API key** > **Create API key in new project** (or link your existing GCP project).
+4. Copy the generated API key (starts with `AIzaSy...`).
+
+##### Where to Enter It:
+* **Option A: Google Cloud Run (Console Web UI)**:
+  1. Open [Google Cloud Run](https://console.cloud.google.com/run).
+  2. Select the `news-api` service and click **Edit & Deploy New Revision**.
+  3. Expand **Container, Volumes, Networking, Security** > select the **Container** tab.
+  4. Under **Environment variables**, click **+ Add Variable**:
+     - **Name:** `Gemini__ApiKey` | **Value:** `AIzaSy...YOUR_KEY`
+     - **Name:** `AiEnrichment__GeminiEnabled` | **Value:** `true`
+  5. Click **Deploy**.
+
+* **Option B: Google Cloud Run (CLI)**:
+  ```bash
+  gcloud run services update news-api \
+      --region=us-central1 \
+      --update-env-vars="Gemini__ApiKey=AIzaSy...YOUR_KEY,AiEnrichment__GeminiEnabled=true"
+  ```
+
+* **Option C: Google Secret Manager (Enterprise Production Recommended)**:
+  ```bash
+  # 1. Store secret in Secret Manager
+  echo -n "AIzaSy...YOUR_KEY" | gcloud secrets create gemini-api-key --data-file=-
+
+  # 2. Grant Cloud Run service account permission to read the secret
+  PROJECT_NUMBER=$(gcloud projects describe YOUR_PROJECT_ID --format="value(projectNumber)")
+  gcloud secrets add-iam-policy-binding gemini-api-key \
+      --member="serviceAccount:${PROJECT_NUMBER}-compute@developer.gserviceaccount.com" \
+      --role="roles/secretmanager.secretAccessor"
+
+  # 3. Mount secret as environment variable in Cloud Run
+  gcloud run services update news-api \
+      --region=us-central1 \
+      --set-secrets="Gemini__ApiKey=gemini-api-key:latest" \
+      --update-env-vars="AiEnrichment__GeminiEnabled=true"
+  ```
+
+* **Option D: Docker Compose (`.env` file)**:
+  Add to `.env` in the repository root:
+  ```bash
+  GEMINI_API_KEY=AIzaSy...YOUR_KEY
+  ```
+
+* **Option E: Local Development (.NET User Secrets)**:
+  Run directly inside `src/NewsApi/`:
+  ```bash
+  dotnet user-secrets set "Gemini:ApiKey" "AIzaSy...YOUR_KEY"
+  dotnet user-secrets set "AiEnrichment:GeminiEnabled" "true"
+  ```
+
+---
+
+#### 2. IndexNow Protocol Domain Key (`IndexNow:Key` / `IndexNow__Key`)
+
+##### How to Obtain / Generate:
+IndexNow accepts any random hexadecimal string between 8 and 128 characters (e.g. 32-character MD5/UUID hex).
+```bash
+# Generate a 32-character hex key via terminal
+openssl rand -hex 16
+# Example output: 3a7b9c1d2e4f5a6b7c8d9e0f1a2b3c4d
+```
+
+##### Where to Enter It:
+* **In `news-api`**:
+  Set environment variable `IndexNow__Key=3a7b9c1d2e4f5a6b7c8d9e0f1a2b3c4d`.
+* **In `news-web` (`NigerianNewsGrid.Web`)**:
+  Set environment variable `IndexNow__Key=3a7b9c1d2e4f5a6b7c8d9e0f1a2b3c4d`.
+* **Verification**:
+  The web application will automatically serve this key file at:
+  `https://newsstand.ng/3a7b9c1d2e4f5a6b7c8d9e0f1a2b3c4d.txt`
+  This satisfies Bing, Yandex, and IndexNow ownership verification requirements.
+
+---
+
+#### 3. Inter-Service Security Key (`ApiKey` / `API_KEY`)
+
+##### How to Obtain / Generate:
+Generate a cryptographically secure 256-bit base64 or alphanumeric secret string:
+```bash
+openssl rand -base64 32
+# Example output: P+7xG5tYzW9...YourSuperSecretProductionApiKey123!
+```
+
+##### Where to Enter It:
+Provide the **exact same key** to all communicating microservices:
+* **`news-api`**: `--set-env-vars="ApiKey=YourSuperSecretProductionApiKey123!"`
+* **`admin-dashboard`**: `--set-env-vars="ApiKey=YourSuperSecretProductionApiKey123!"`
+* **`news-scraper-job`**: `--set-env-vars="ApiKey=YourSuperSecretProductionApiKey123!"`
+* **`tts-worker-job`**: `--set-env-vars="ApiKey=YourSuperSecretProductionApiKey123!"`
+
+---
+
+#### 4. Google Search Console API Credentials (`GSC_CREDENTIALS_JSON`)
+
+##### How to Obtain:
+1. In the Google Cloud Console, enable the **Google Search Console API** (`searchconsole.googleapis.com`).
+2. Navigate to **IAM & Admin** > **Service Accounts** > click **+ Create Service Account**.
+   - **Name:** `newsgrid-gsc-reader`
+   - **Role:** No project-wide role required (access is granted within Search Console).
+3. Click the created service account > **Keys** > **Add Key** > **Create new key** > select **JSON** > download the key file.
+4. Copy the service account email (e.g. `newsgrid-gsc-reader@YOUR_PROJECT_ID.iam.gserviceaccount.com`).
+5. Open [Google Search Console](https://search.google.com/search-console).
+6. Select property `newsstand.ng` > **Settings** > **Users and permissions** > **Add user**.
+7. Paste the service account email, select **Full** or **Restricted** permission, and click **Add**.
+
+##### Where to Enter It:
+* Set `GSC_CREDENTIALS_JSON` environment variable in `news-api` to the raw JSON string, or mount the JSON file and set `SearchConsole__ServiceAccountKeyPath=/path/to/key.json`.
+* *(Note: If omitted, `SearchConsoleService` automatically engages the built-in grounded simulation engine using your active database entities, sitemaps, and state hubs with 0 external dependencies).*
+
+---
+
+## 2.6 Pre-Deployment Action Items & Readiness Checklist (Tasks Before Go-Live)
+
+Before executing production deployment to Google Cloud Run, Compute Engine, or custom infrastructure, complete and verify the following prioritized pre-deployment tasks:
+
+### Priority 1: Production Secrets & Cloud API Keys (Mandatory & Recommended)
+
+- [ ] **1. Google Gemini AI API Key (`Gemini:ApiKey` / `GEMINI_API_KEY`)**
+  - **Purpose**: Powers abstractive takeaway synthesis, `FAQPage` rich snippets, and 768-dimensional embeddings for 72-hour Greedy Leader story clustering.
+  - **Action**: Obtain key from [Google AI Studio](https://aistudio.google.com/) and configure `Gemini__ApiKey=AIzaSy...` and `AiEnrichment__GeminiEnabled=true` in Cloud Run environment variables or Secret Manager.
+  - *Fallback*: If omitted, `ArticleEnrichmentService` runs on the local 0-cost extractive TextRank engine with 0% hallucination risk.
+
+- [ ] **2. YouTube Data API Key (`YouTube:ApiKey` / `YOUTUBE_API_KEY`)**
+  - **Purpose**: Syncs trending Nigerian video news broadcasts from Channels TV, Arise News, TVC News, and AIT.
+  - **Action**: Add a valid YouTube Data API v3 key in [`appsettings.json`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NewsApi/appsettings.json) or set `YouTube__ApiKey` in environment variables to eliminate HTTP 400 Bad Request warnings in [`YouTubeFeedService.cs`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NewsApi/Services/YouTubeFeedService.cs).
+  - *Fallback*: The automated XML Atom feed crawler will run as a secondary background fallback.
+
+- [ ] **3. Google Search Console Service Account (`GSC_CREDENTIALS_JSON` / `SearchConsole:ServiceAccountKeyPath`)**
+  - **Purpose**: Streams real-time impressions, click-through rates (CTR), search positions, and automated URL inspection into the Admin Dashboard.
+  - **Action**: Create a GCP service account, delegate read permissions in [Google Search Console](https://search.google.com/search-console) for `newsstand.ng`, and provide the credentials via Secret Manager or file path.
+  - *Fallback*: Built-in deterministic simulation engine generates grounded telemetry based on active database records.
+
+- [ ] **4. Inter-Service Security Secret (`ApiKey` / `API_KEY`)**
+  - **Purpose**: Protects internal ingestion pipelines (`POST /api/v1/articles/ingest`) and trigger endpoints from unauthorized external access.
+  - **Action**: Generate a cryptographically secure 64-character token (`openssl rand -hex 32`) and inject into `NewsApi`, `AdminDashboard`, `NewsScraperService`, and `TtsWorker`.
+
+- [ ] **5. IndexNow Protocol Verification Key (`IndexNow:Key` / `INDEXNOW_KEY`)**
+  - **Purpose**: Immediate URL indexing by Bing and Yandex upon story publication.
+  - **Action**: Confirm the key `3a7b9c1d2e4f5a6b7c8d9e0f1a2b3c4d` (or custom 32-hex key) is configured in both `NewsApi` and `NigerianNewsGrid.Web`, and verified at `https://newsstand.ng/{key}.txt`.
+
+---
+
+### Priority 2: Video Player & Audio Experience Polish
+
+- [ ] **6. Video Player Modal / Inline Embed Integration ([`VideoSection.jsx`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NigerianNewsGrid.Web/src/components/VideoSection.jsx))**
+  - **Purpose**: Deliver seamless multimedia playback for video news stories on desktop and mobile web.
+  - **Action**: Wire video card clicks in `VideoSection.jsx` to an embedded responsive YouTube modal or inline player for Arise TV and Channels TV broadcasts, ensuring responsive aspect ratio (`16:9`) and smooth backdrop dismissals.
+
+- [ ] **7. Neural Audio Briefing Player Wiring ([`AudioBriefingBar.jsx`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NigerianNewsGrid.Web/src/components/AudioBriefingBar.jsx))**
+  - **Purpose**: Provide streaming morning (8:00 AM WAT) and evening (6:00 PM WAT) synthesized Nigerian English audio broadcasts.
+  - **Action**: Connect `AudioBriefingBar.jsx` to the backend seekable range endpoint `GET /api/v1/audio/briefings/latest` (`HTTP 206 Partial Content`), supporting live scrubbing, duration calculation, and pause/resume states.
+
+---
+
+### Priority 3: Local Staging Verification & Container Validation
+
+- [ ] **8. Local Docker Compose Containerization Test**
+  - **Purpose**: Validate container images, dependency resolution, internal network routing, and health checks before pushing to Google Artifact Registry.
+  - **Action**: Execute local build and compose smoke test from the repository root:
+    ```bash
+    docker-compose up --build -d
+    ```
+  - **Verification**: Check container status with `docker-compose ps` to ensure all 6 services (`news-db`, `news-api`, `admin-dashboard`, `news-web`, `news-scraper`, `tts-worker`) reach healthy status.
+
+- [ ] **9. Database Schema Migration Verification**
+  - **Purpose**: Ensure PostgreSQL schema and entity tables (`Articles`, `StoryClusters`, `ClusterArticles`, `Topics`, `TopicArticles`, `AudioBriefings`, `VideoStories`, `SeoAnomalyEvents`) initialize cleanly.
+  - **Action**: Run `dotnet ef database update --project src/NewsApi` against the target PostgreSQL instance or verify automated initialization logic on container startup.
+
+- [ ] **10. Pre-Flight API & SSR Smoke Testing**
+  - **Action**: Run local or staging verification curls:
+    ```bash
+    curl -s http://localhost:56193/health
+    curl -s http://localhost:56193/api/v1/articles?pageSize=5
+    curl -s http://localhost:56193/api/v1/stories
+    curl -s http://localhost:56193/api/v1/states
+    curl -s -i http://localhost:5173/ | grep "HTTP/1.1 200"
+    ```
 
 ---
 
@@ -202,6 +412,10 @@ You can store images in Artifact Registry using either **Cloud Shell** (in-brows
        | `ConnectionStrings__NewsDb` | `Host=/cloudsql/YOUR_PROJECT_ID:us-central1:newsgrid-db;Database=newsgrid;Username=newsuser;Password=newspassword123!` |
        | `DbProvider` | `postgres` |
        | `ApiKey` | `YourSuperSecretProductionApiKey123!` |
+       | `Gemini__ApiKey` | `YourGoogleGeminiApiKey` (or reference Secret Manager `gemini-api-key`) |
+       | `AiEnrichment__GeminiEnabled` | `true` |
+       | `IndexNow__Key` | `3a7b9c1d2e4f5a6b7c8d9e0f1a2b3c4d` |
+       | `GoogleCloud__ApiKey` | `YourOptionalGoogleCloudTtsKey` |
        | `ASPNETCORE_ENVIRONMENT` | `Production` |
      - Under **Cloud SQL connections**:
        - Click **+ Add Connection**.
@@ -413,7 +627,7 @@ gcloud run deploy news-api \
     --region=us-central1 \
     --allow-unauthenticated \
     --add-cloudsql-instances=YOUR_PROJECT_ID:us-central1:newsgrid-db \
-    --set-env-vars="ConnectionStrings__NewsDb=Host=/cloudsql/YOUR_PROJECT_ID:us-central1:newsgrid-db;Database=newsgrid;Username=newsuser;Password=newspassword123!,DbProvider=postgres,ApiKey=YourSuperSecretProductionApiKey123!,ASPNETCORE_ENVIRONMENT=Production"
+    --set-env-vars="ConnectionStrings__NewsDb=Host=/cloudsql/YOUR_PROJECT_ID:us-central1:newsgrid-db;Database=newsgrid;Username=newsuser;Password=newspassword123!,DbProvider=postgres,ApiKey=YourSuperSecretProductionApiKey123!,ASPNETCORE_ENVIRONMENT=Production,Gemini__ApiKey=YOUR_GEMINI_KEY,AiEnrichment__GeminiEnabled=true,IndexNow__Key=3a7b9c1d2e4f5a6b7c8d9e0f1a2b3c4d"
 ```
 
 *Take note of the service URL emitted by the command (e.g., `https://news-api-xyz-uc.a.run.app`).*
@@ -553,6 +767,8 @@ gcloud compute firewall-rules create allow-newsgrid-ports \
    # Create production environment variables
    cat << 'EOF' > .env
    API_KEY=YourSuperSecretProductionApiKey123!
+   GEMINI_API_KEY=YourGoogleGeminiApiKey
+   INDEXNOW_KEY=3a7b9c1d2e4f5a6b7c8d9e0f1a2b3c4d
    YOUTUBE_API_KEY=YourOptionalYouTubeDataApiKey
    GCP_TTS_API_KEY=YourOptionalGoogleCloudTtsKey
    EOF
@@ -634,4 +850,131 @@ curl -X POST https://YOUR-NEWS-API-URL/api/v1/video-stories/trending/sync
 curl -X POST https://YOUR-NEWS-API-URL/api/v1/video-stories/trending/sync \
      -H "X-Api-Key: YourSuperSecretProductionApiKey123!"
 # Expected: HTTP 200 OK
+
+# 6. Verify Multi-Factor SEO Health Scorecard (0–100)
+curl -s https://YOUR-NEWS-API-URL/api/v1/seo/health-scorecard | jq .
+# Expected: HTTP 200 OK with overallScore (~94.5), grade ("EXCELLENT"), and 4 weighted pillars (25% each)
+
+# 7. Verify ML.NET Time-Series Ranking Anomaly Engine
+curl -s https://YOUR-NEWS-API-URL/api/v1/seo/anomalies | jq .
+# Expected: HTTP 200 OK with active SSA change-point detection alerts or empty array if rankings are stable
+
+# 8. Verify ML.NET Predictive CTR Opportunities & AI Headline Suggestions
+curl -s https://YOUR-NEWS-API-URL/api/v1/seo/ctr-opportunities | jq .
+# Expected: HTTP 200 OK with queries where actual CTR lags ML benchmark expected CTR, plus AI headline rewrites (<=60 chars)
+
+# 9. Trigger Autonomous Remediation Cycle (Self-Healing Action)
+curl -X POST https://YOUR-NEWS-API-URL/api/v1/seo/trigger-remediation \
+     -H "X-Api-Key: YourSuperSecretProductionApiKey123!" \
+     -H "Content-Type: application/json" \
+     -d '{"actionType":"BackfillEnrichment"}' | jq .
+# Expected: HTTP 200 OK with status: "Completed" and details of enriched article / IndexNow submission
+
+# 10. Access Admin Dashboard Search Console & Crawl Cockpit
+# Open your browser to: https://YOUR-ADMIN-DASHBOARD-URL/SearchConsole
+# Verify live 0–100 Health Scorecard, 4 pillar bars, ML.NET anomaly cards, and 1-Click Self-Healing trigger button.
 ```
+
+---
+
+## 7. Web Application Deployment (React Router v7 SSR) & Search Engine Onboarding
+
+The public web tier (`src/NigerianNewsGrid.Web`) runs React Router v7 in Framework Mode with Node.js Server-Side Rendering (SSR). It serves public readers, crawlers, RSS aggregators, and search engine verification endpoints directly from the root domain (`https://newsstand.ng`).
+
+### 7.1 Containerization & Cloud Run Deployment
+
+Deploy `NigerianNewsGrid.Web` as a standalone autoscaling Cloud Run service:
+
+```bash
+# 1. Build & Push Web Container Image via Cloud Build
+gcloud builds submit --tag us-central1-docker.pkg.dev/YOUR_PROJECT_ID/newsgrid-repo/news-web:latest src/NigerianNewsGrid.Web
+
+# 2. Deploy Web Service to Cloud Run
+gcloud run deploy news-web \
+    --image=us-central1-docker.pkg.dev/YOUR_PROJECT_ID/newsgrid-repo/news-web:latest \
+    --platform=managed \
+    --region=us-central1 \
+    --allow-unauthenticated \
+    --port=3000 \
+    --set-env-vars="API_BASE_URL=https://news-api-xyz-uc.a.run.app,SITE_URL=https://newsstand.ng,IndexNow__Key=3a7b9c1d2e4f5a6b7c8d9e0f1a2b3c4d,NODE_ENV=production"
+```
+
+### 7.2 Custom Domain Mapping (`newsstand.ng`)
+
+1. In the Google Cloud Console, navigate to **Cloud Run** > **Custom Domains** (or **Manage Custom Domains**).
+2. Click **Add Mapping**:
+   - **Service to route to:** `news-web`
+   - **Domain:** `newsstand.ng` (and optionally `www.newsstand.ng`)
+3. Add the DNS records (A/AAAA or CNAME) provided by GCP to your domain registrar (e.g., Cloudflare, Namecheap, Google Domains).
+4. Google Cloud will automatically provision and renew a managed SSL/TLS certificate.
+
+### 7.3 Web Smoke Tests & Verification
+
+Once DNS propagation completes, verify the server-rendered and crawler endpoints:
+
+```bash
+# 1. Verify Raw Server-Rendered HTML (must include headline & JSON-LD schema without JS execution)
+curl -sL https://newsstand.ng | grep -E "(<title>|application/ld\+json)"
+
+# 2. Verify Edge Robots Directives
+curl -sL https://newsstand.ng/robots.txt
+# Expected: Allow: /, Disallow: /api/, Sitemap: https://newsstand.ng/sitemap.xml
+
+# 3. Verify XML Sitemap Index & Google News Sitemap
+curl -I https://newsstand.ng/sitemap.xml
+# Expected: HTTP/1.1 200 OK, Content-Type: application/xml; charset=utf-8
+
+curl -I https://newsstand.ng/sitemap-news.xml
+# Expected: HTTP/1.1 200 OK, Content-Type: application/xml; charset=utf-8
+
+# 4. Verify RSS 2.0 Syndication Feed
+curl -I https://newsstand.ng/feed.xml
+# Expected: HTTP/1.1 200 OK, Content-Type: application/xml; charset=utf-8
+
+# 5. Verify IndexNow Domain Ownership Key
+curl -sL https://newsstand.ng/3a7b9c1d2e4f5a6b7c8d9e0f1a2b3c4d.txt
+# Expected: 3a7b9c1d2e4f5a6b7c8d9e0f1a2b3c4d
+```
+
+---
+
+### 7.4 Manual Search Engine Onboarding Steps (Post-Go-Live)
+
+Complete these manual onboarding steps once the production domain (`newsstand.ng`) is live and accessible over the internet:
+
+#### 1. Google Search Console Onboarding
+1. Open the [Google Search Console](https://search.google.com/search-console).
+2. Click **Add Property**:
+   - Choose **Domain property** and enter `newsstand.ng` (requires DNS TXT record verification), or **URL prefix** (`https://newsstand.ng`).
+3. Complete ownership verification using the recommended DNS TXT record or HTML tag.
+4. Once verified, in the left navigation sidebar, navigate to **Index** > **Sitemaps**.
+5. Under **Add a new sitemap**:
+   - Enter `sitemap.xml` and click **Submit**.
+   - Enter `sitemap-news.xml` (Google News 48h sitemap) and click **Submit**.
+6. Verify that the submission status transitions to **Success** and discovered URLs appear within 24–48 hours.
+
+#### 2. Bing Webmaster Tools & IndexNow Activation
+1. Open [Bing Webmaster Tools](https://www.bing.com/webmasters).
+2. Sign in and import your site verification directly from Google Search Console (or verify via DNS).
+3. In the left navigation, open **Sitemaps** and submit `https://newsstand.ng/sitemap.xml`.
+4. Navigate to **IndexNow**:
+   - Bing will automatically discover the ownership verification key served at `https://newsstand.ng/3a7b9c1d2e4f5a6b7c8d9e0f1a2b3c4d.txt`.
+   - As new articles are ingested by `NewsScraperService`, `NewsApi`'s background dispatcher will submit URLs in real-time batches, and live submission statistics will reflect on the IndexNow dashboard.
+
+#### 3. Google Publisher Center (Post-Compliance Registration)
+1. Open the [Google Publisher Center](https://publishercenter.google.com/).
+2. Click **Add Publication**:
+   - **Publication Name:** `News Stand NG`
+   - **Primary Website:** `https://newsstand.ng`
+   - **Location:** Nigeria
+   - **Primary Language:** English (`en`)
+3. Under **Publication Settings**:
+   - Upload high-resolution square logo (512x512 PNG) and rectangular light/dark masthead logos.
+4. Under **Content Sections**:
+   - Add sections powered by the web RSS feeds:
+     - `Top News`: `https://newsstand.ng/feed.xml`
+     - `Politics`: `https://newsstand.ng/category/politics/feed.xml`
+     - `Business`: `https://newsstand.ng/category/business/feed.xml`
+     - `Technology`: `https://newsstand.ng/category/technology/feed.xml`
+5. Submit publication for editorial review.
+

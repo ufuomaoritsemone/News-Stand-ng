@@ -18,12 +18,18 @@ public class FeedbackService : IFeedbackService
     private readonly NewsDbContext _db;
     private readonly IConfiguration _config;
     private readonly ILogger<FeedbackService> _logger;
+    private readonly ISystemSettingsService? _settingsService;
 
-    public FeedbackService(NewsDbContext db, IConfiguration config, ILogger<FeedbackService> logger)
+    public FeedbackService(
+        NewsDbContext db,
+        IConfiguration config,
+        ILogger<FeedbackService> logger,
+        ISystemSettingsService? settingsService = null)
     {
         _db = db;
         _config = config;
         _logger = logger;
+        _settingsService = settingsService;
     }
 
     public async Task<FeedbackResponseDto> SubmitFeedbackAsync(FeedbackRequestDto request, CancellationToken cancellationToken = default)
@@ -100,8 +106,8 @@ public class FeedbackService : IFeedbackService
 
     private async Task<bool> TrySendFeedbackEmailAsync(FeedbackItem feedback, CancellationToken cancellationToken)
     {
-        var recipientEmail = _config["Feedback:RecipientEmail"] ?? "feedback@nigeriannewsgrid.com";
-        var smtpHost = _config["Feedback:Smtp:Host"];
+        var recipientEmail = _settingsService != null ? await _settingsService.GetSettingAsync("Feedback:RecipientEmail", _config["Feedback:RecipientEmail"] ?? "feedback@nigeriannewsgrid.com", cancellationToken) : _config["Feedback:RecipientEmail"] ?? "feedback@nigeriannewsgrid.com";
+        var smtpHost = _settingsService != null ? await _settingsService.GetSettingAsync("Feedback:Smtp:Host", _config["Feedback:Smtp:Host"], cancellationToken) : _config["Feedback:Smtp:Host"];
 
         if (string.IsNullOrWhiteSpace(smtpHost))
         {
@@ -111,12 +117,13 @@ public class FeedbackService : IFeedbackService
 
         try
         {
-            var port = int.TryParse(_config["Feedback:Smtp:Port"], out var p) ? p : 587;
-            var enableSsl = !bool.TryParse(_config["Feedback:Smtp:EnableSsl"], out var ssl) || ssl;
-            var username = _config["Feedback:Smtp:UserName"];
-            var password = _config["Feedback:Smtp:Password"];
-            var fromEmail = _config["Feedback:Smtp:FromEmail"] ?? "no-reply@nigeriannewsgrid.com";
-            var fromName = _config["Feedback:Smtp:FromName"] ?? "News Stand NG";
+            var rawPort = _settingsService != null ? await _settingsService.GetSettingAsync("Feedback:Smtp:Port", _config["Feedback:Smtp:Port"] ?? "587", cancellationToken) : _config["Feedback:Smtp:Port"];
+            var port = int.TryParse(rawPort, out var p) ? p : 587;
+            var enableSsl = _settingsService != null ? await _settingsService.GetBoolSettingAsync("Feedback:Smtp:EnableSsl", true, cancellationToken) : (!bool.TryParse(_config["Feedback:Smtp:EnableSsl"], out var ssl) || ssl);
+            var username = _settingsService != null ? await _settingsService.GetSettingAsync("Feedback:Smtp:UserName", _config["Feedback:Smtp:UserName"], cancellationToken) : _config["Feedback:Smtp:UserName"];
+            var password = _settingsService != null ? await _settingsService.GetSettingAsync("Feedback:Smtp:Password", _config["Feedback:Smtp:Password"], cancellationToken) : _config["Feedback:Smtp:Password"];
+            var fromEmail = (_settingsService != null ? await _settingsService.GetSettingAsync("Feedback:Smtp:FromEmail", _config["Feedback:Smtp:FromEmail"] ?? "no-reply@nigeriannewsgrid.com", cancellationToken) : _config["Feedback:Smtp:FromEmail"]) ?? "no-reply@nigeriannewsgrid.com";
+            var fromName = (_settingsService != null ? await _settingsService.GetSettingAsync("Feedback:Smtp:FromName", _config["Feedback:Smtp:FromName"] ?? "News Stand NG", cancellationToken) : _config["Feedback:Smtp:FromName"]) ?? "News Stand NG";
 
             using var message = new MailMessage
             {

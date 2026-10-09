@@ -13,6 +13,7 @@ namespace NewsApi.Controllers;
 
 [ApiController]
 [Route("api/v1/[controller]")]
+[Route("api/[controller]")]
 public class ArticlesController : ControllerBase
 {
     private static CancellationTokenSource _briefingTokenSource = new();
@@ -21,8 +22,15 @@ public class ArticlesController : ControllerBase
     private readonly IRelatedContentService _relatedService; // Fix #19 — abstraction
     private readonly IArticleSearchService _searchService;
     private readonly ICategorizerTrainingService? _categorizerTrainingService;
+    private readonly ISlugService _slugService;
+    private readonly IArticleSeoBackfillService? _seoBackfillService;
+    private readonly IStoryClusteringService? _clusteringService;
+    private readonly IArticleEnrichmentService? _enrichmentService;
+    private readonly IIndexNowService? _indexNowService;
     private readonly IMemoryCache _cache;
     private readonly ILogger<ArticlesController> _logger;
+
+    private readonly IConfiguration? _config;
 
     private const string BriefingCacheTag = "briefings";
 
@@ -32,14 +40,43 @@ public class ArticlesController : ControllerBase
         IArticleSearchService searchService,
         IMemoryCache cache,
         ILogger<ArticlesController> logger,
-        ICategorizerTrainingService? categorizerTrainingService = null)
+        ISlugService slugService,
+        IArticleSeoBackfillService? seoBackfillService = null,
+        ICategorizerTrainingService? categorizerTrainingService = null,
+        IIndexNowService? indexNowService = null,
+        IConfiguration? config = null,
+        IStoryClusteringService? clusteringService = null,
+        IArticleEnrichmentService? enrichmentService = null)
     {
         _db                         = db;
         _relatedService             = relatedService;
         _searchService              = searchService;
         _cache                      = cache;
         _logger                     = logger;
+        _slugService                = slugService;
+        _seoBackfillService         = seoBackfillService;
         _categorizerTrainingService = categorizerTrainingService;
+        _indexNowService            = indexNowService;
+        _clusteringService          = clusteringService;
+        _enrichmentService          = enrichmentService;
+        _config                     = config;
+    }
+
+    private bool IsAuthorizedInternal()
+    {
+        if (_config == null) return false;
+        var configuredKey = _config["ApiKey"] ?? _config["ApiSecurity:ApiKey"];
+        if (string.IsNullOrWhiteSpace(configuredKey)) return false;
+
+        if (Request.Headers.TryGetValue("X-Api-Key", out var providedKey) &&
+            !string.IsNullOrEmpty(providedKey))
+        {
+            var providedBytes = System.Text.Encoding.UTF8.GetBytes(providedKey.ToString());
+            var configuredBytes = System.Text.Encoding.UTF8.GetBytes(configuredKey);
+            return System.Security.Cryptography.CryptographicOperations.FixedTimeEquals(providedBytes, configuredBytes);
+        }
+
+        return false;
     }
 
     /// <summary>
@@ -109,41 +146,82 @@ public class ArticlesController : ControllerBase
             return Ok(new List<BriefingCategoryDto>());
         }
 
-        var briefing = articles
+        var isInternal = IsAuthorizedInternal();
+        var topArticlesByCategory = articles
             .GroupBy(a => string.IsNullOrWhiteSpace(a.Category) ? "General" : a.Category)
-            .Select(g => new BriefingCategoryDto
+            .Select(g => new
             {
                 Category = g.Key,
-                Top = StoryDeduplicationHelper.DeduplicateStories(g, a => a.Title, a => a.Summary, a => a.Source)
+                Articles = StoryDeduplicationHelper.DeduplicateStories(g, a => a.Title, a => a.Summary, a => a.Source)
                     .Take(topPerCategory)
-                    .Select(a => new BriefingItemDto
+                    .ToList()
+            })
+            .ToList();
+
+        var topArticleIds = topArticlesByCategory
+            .SelectMany(g => g.Articles)
+            .Select(a => a.Id)
+            .Distinct()
+            .ToList();
+
+        var enrichmentMap = topArticleIds.Count > 0
+            ? await _db.ArticleEnrichments.AsNoTracking()
+                .Where(e => topArticleIds.Contains(e.ArticleId))
+                .ToDictionaryAsync(e => e.ArticleId, cancellationToken)
+            : new Dictionary<string, ArticleEnrichment>();
+
+        var commentCounts = topArticleIds.Count > 0
+            ? await _db.StoryComments.AsNoTracking()
+                .Where(c => topArticleIds.Contains(c.ArticleId) && c.Status != "Hidden")
+                .GroupBy(c => c.ArticleId)
+                .Select(g => new { ArticleId = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(x => x.ArticleId, x => x.Count, cancellationToken)
+            : new Dictionary<string, int>();
+
+        var briefing = topArticlesByCategory
+            .Select(g => new BriefingCategoryDto
+            {
+                Category = g.Category,
+                Top = g.Articles
+                    .Select(a =>
                     {
-                        Id          = a.Id,
-                        Title       = a.Title,
-                        Summary     = a.Summary,
-                        Content     = a.Content,
-                        Url         = a.Url,
-                        ImageUrl    = CategoryImageMap.Resolve(a.ImageUrl, a.Category), // Fix #23
-                        Source      = a.Source ?? "General News",
-                        Category    = a.Category ?? "General",
-                        PublishedAt = a.PublishedAt ?? DateTime.UtcNow,
-                        AudioUrl    = a.AudioUrl,
-                        Language    = preferredLanguage,
-                        VoiceName   = preferredLanguage switch
+                        var enr = enrichmentMap.GetValueOrDefault(a.Id);
+                        var aiSummary = enr?.FullSummary?.ExecutiveOverview ?? enr?.KeyTakeaways.FirstOrDefault();
+                        return new BriefingItemDto
                         {
-                            "Yoruba" => "Yoruba Female",
-                            "Igbo"   => "Igbo Female",
-                            "Hausa"  => "Hausa Female",
-                            _        => "English Female"
-                        },
-                        Author      = a.Author,
-                        ContentType = string.IsNullOrWhiteSpace(a.ContentType) ? "News" : a.ContentType,
-                        IsSponsored = a.IsSponsored && (a.CampaignExpiresAt == null || a.CampaignExpiresAt > DateTime.UtcNow),
-                        SponsorName = a.SponsorName,
-                        SponsorUrl  = a.SponsorUrl,
-                        IsPinned    = a.IsPinned,
-                        TargetPosition = a.TargetPosition,
-                        PriorityWeight = a.PriorityWeight
+                            Id          = a.Id,
+                            Title       = a.Title,
+                            Summary     = a.Summary,
+                            Content     = isInternal ? a.Content : null,
+                            Url         = a.Url,
+                            ImageUrl    = CategoryImageMap.Resolve(a.ImageUrl, a.Category), // Fix #23
+                            Source      = a.Source ?? "General News",
+                            Category    = a.Category ?? "General",
+                            PublishedAt = a.PublishedAt,
+                            AudioUrl    = a.AudioUrl,
+                            Language    = preferredLanguage,
+                            VoiceName   = preferredLanguage switch
+                            {
+                                "Yoruba" => "Yoruba Female",
+                                "Igbo"   => "Igbo Female",
+                                "Hausa"  => "Hausa Female",
+                                _        => "English Female"
+                            },
+                            Author      = a.Author,
+                            ContentType = string.IsNullOrWhiteSpace(a.ContentType) ? "News" : a.ContentType,
+                            Slug        = a.Slug,
+                            IsSponsored = a.IsSponsored && (a.CampaignExpiresAt == null || a.CampaignExpiresAt > DateTime.UtcNow),
+                            SponsorName = a.SponsorName,
+                            SponsorUrl  = a.SponsorUrl,
+                            IsPinned    = a.IsPinned,
+                            TargetPosition = a.TargetPosition,
+                            PriorityWeight = a.PriorityWeight,
+                            HasAiSummary = enr != null,
+                            AiSummary    = aiSummary,
+                            AiSummaryEngine = enr?.Engine,
+                            KeyTakeaways = enr?.KeyTakeaways ?? new List<string>(),
+                            CommentCount = commentCounts.GetValueOrDefault(a.Id, 0)
+                        };
                     }).ToList()
             })
             .ToList();
@@ -189,18 +267,31 @@ public class ArticlesController : ControllerBase
 
     [HttpGet]
     public async Task<IActionResult> GetArticles(
-        [FromQuery] string? source,
-        [FromQuery] string? category,
-        [FromQuery] string? search,
+        [FromQuery] string? source = null,
+        [FromQuery] string? category = null,
+        [FromQuery] string? search = null,
         [FromQuery] string? contentType = null,
         [FromQuery] bool    todayOnly  = false,
         [FromQuery] int?    days       = null,
+        [FromQuery] bool?   hasAiSummary = null,
         [FromQuery] int     limit      = 200,
         [FromQuery] int     page       = 1,
         [FromQuery] int     pageSize   = 50,
         CancellationToken   cancellationToken = default)
     {
         var query = _db.Articles.AsNoTracking();
+
+        if (hasAiSummary.HasValue)
+        {
+            if (hasAiSummary.Value)
+            {
+                query = query.Where(a => _db.ArticleEnrichments.Any(e => e.ArticleId == a.Id));
+            }
+            else
+            {
+                query = query.Where(a => !_db.ArticleEnrichments.Any(e => e.ArticleId == a.Id));
+            }
+        }
 
         if (todayOnly)
         {
@@ -267,27 +358,70 @@ public class ArticlesController : ControllerBase
                 .ToDictionary(g => g.Key, g => g.First().Url)
             : new Dictionary<string, string>();
 
-        var articleDtos = rawArticles.Select(a => new ArticleDto
+        var commentCounts = pageIds.Count > 0
+            ? await _db.StoryComments.AsNoTracking()
+                .Where(c => pageIds.Contains(c.ArticleId) && c.Status != "Hidden")
+                .GroupBy(c => c.ArticleId)
+                .Select(g => new { ArticleId = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(x => x.ArticleId, x => x.Count, cancellationToken)
+            : new Dictionary<string, int>();
+
+        var enrichmentMap = pageIds.Count > 0
+            ? await _db.ArticleEnrichments.AsNoTracking()
+                .Where(e => pageIds.Contains(e.ArticleId))
+                .ToDictionaryAsync(e => e.ArticleId, cancellationToken)
+            : new Dictionary<string, ArticleEnrichment>();
+
+        var isInternal = IsAuthorizedInternal();
+        var articleDtos = rawArticles.Select(a =>
         {
-            Id          = a.Id,
-            Title       = a.Title,
-            Summary     = a.Summary,
-            Content     = a.Content,
-            Url         = a.Url,
-            ImageUrl    = CategoryImageMap.Resolve(a.ImageUrl, a.Category), // Fix #23
-            Source      = string.IsNullOrWhiteSpace(a.Source)   ? "General News" : a.Source,
-            Category    = string.IsNullOrWhiteSpace(a.Category) ? "General"      : a.Category,
-            PublishedAt = a.PublishedAt ?? DateTime.UtcNow,
-            AudioUrl    = audioMap.GetValueOrDefault(a.Id) ?? a.AudioUrl,
-            Author      = a.Author,
-            ContentType = string.IsNullOrWhiteSpace(a.ContentType) ? "News" : a.ContentType,
-            IsSponsored = a.IsSponsored,
-            SponsorName = a.SponsorName,
-            SponsorUrl  = a.SponsorUrl,
-            CampaignExpiresAt = a.CampaignExpiresAt,
-            IsPinned    = a.IsPinned,
-            ImpressionCount = a.ImpressionCount,
-            ClickCount  = a.ClickCount
+            var enr = enrichmentMap.GetValueOrDefault(a.Id);
+            return new ArticleDto
+            {
+                Id          = a.Id,
+                Title       = a.Title,
+                Slug        = !string.IsNullOrEmpty(a.Slug) ? a.Slug : _slugService.GenerateArticleSlug(a.Title, a.Id),
+                Excerpt     = a.Excerpt ?? _slugService.GenerateExcerpt(a.Content, a.Summary, 300),
+                SeoTitle    = a.SeoTitle,
+                SeoDescription = a.SeoDescription,
+                Summary     = a.Summary,
+                Content     = isInternal ? a.Content : null,
+                Url         = a.Url,
+                ImageUrl    = CategoryImageMap.Resolve(a.ImageUrl, a.Category), // Fix #23
+                Source      = string.IsNullOrWhiteSpace(a.Source)   ? "General News" : a.Source,
+                Category    = string.IsNullOrWhiteSpace(a.Category) ? "General"      : a.Category,
+                PublishedAt = a.PublishedAt,
+                AudioUrl    = audioMap.GetValueOrDefault(a.Id) ?? a.AudioUrl,
+                Author      = a.Author,
+                ContentType = string.IsNullOrWhiteSpace(a.ContentType) ? "News" : a.ContentType,
+                CommentCount = commentCounts.GetValueOrDefault(a.Id, 0),
+                IsSponsored = a.IsSponsored,
+                SponsorName = a.SponsorName,
+                SponsorUrl  = a.SponsorUrl,
+                CampaignExpiresAt = a.CampaignExpiresAt,
+                IsPinned    = a.IsPinned,
+                ImpressionCount = a.ImpressionCount,
+                ClickCount  = a.ClickCount,
+                HasAiSummary = enr != null,
+                AiSummaryEngine = enr?.Engine,
+                AiSummary   = enr?.FullSummary?.ExecutiveOverview ?? enr?.KeyTakeaways.FirstOrDefault(),
+                Enrichment  = enr != null ? new ArticleEnrichmentDto
+                {
+                    KeyTakeaways = enr.KeyTakeaways,
+                    TimelineFacts = enr.TimelineFacts,
+                    Faqs = enr.Faqs,
+                    FullSummary = enr.FullSummary != null ? new FullSummaryDto
+                    {
+                        ExecutiveOverview = enr.FullSummary.ExecutiveOverview,
+                        ContextAndBackground = enr.FullSummary.ContextAndBackground,
+                        KeyFiguresAndEntities = enr.FullSummary.KeyFiguresAndEntities,
+                        OutlookOrNextSteps = enr.FullSummary.OutlookOrNextSteps,
+                        ReadingTimeSeconds = enr.FullSummary.ReadingTimeSeconds
+                    } : null,
+                    Engine = enr.Engine,
+                    UpdatedAt = enr.UpdatedAt ?? enr.CreatedAt
+                } : null
+            };
         }).ToList();
 
         return Ok(articleDtos);
@@ -318,30 +452,596 @@ public class ArticlesController : ControllerBase
             .Select(x => x.Url)
             .FirstOrDefaultAsync(cancellationToken);
 
+        var commentCount = await _db.StoryComments.AsNoTracking()
+            .CountAsync(c => c.ArticleId == a.Id && c.Status != "Hidden", cancellationToken);
+
+        var enr = await _db.ArticleEnrichments.AsNoTracking()
+            .FirstOrDefaultAsync(x => x.ArticleId == a.Id, cancellationToken);
+
         var dto = new ArticleDto
         {
             Id          = a.Id,
             Title       = a.Title,
+            Slug        = !string.IsNullOrEmpty(a.Slug) ? a.Slug : _slugService.GenerateArticleSlug(a.Title, a.Id),
+            Excerpt     = a.Excerpt ?? _slugService.GenerateExcerpt(a.Content, a.Summary, 300),
+            SeoTitle    = a.SeoTitle,
+            SeoDescription = a.SeoDescription,
             Summary     = a.Summary,
             Content     = a.Content,
             Url         = a.Url,
             ImageUrl    = CategoryImageMap.Resolve(a.ImageUrl, a.Category),
             Source      = string.IsNullOrWhiteSpace(a.Source)   ? "General News" : a.Source,
             Category    = string.IsNullOrWhiteSpace(a.Category) ? "General"      : a.Category,
-            PublishedAt = a.PublishedAt ?? DateTime.UtcNow,
+            PublishedAt = a.PublishedAt,
             AudioUrl    = audio ?? a.AudioUrl,
             Author      = a.Author,
             ContentType = string.IsNullOrWhiteSpace(a.ContentType) ? "News" : a.ContentType,
+            CommentCount = commentCount,
             IsSponsored = a.IsSponsored,
             SponsorName = a.SponsorName,
             SponsorUrl  = a.SponsorUrl,
             CampaignExpiresAt = a.CampaignExpiresAt,
             IsPinned    = a.IsPinned,
             ImpressionCount = a.ImpressionCount,
-            ClickCount  = a.ClickCount
+            ClickCount  = a.ClickCount,
+            HasAiSummary = enr != null,
+            AiSummaryEngine = enr?.Engine,
+            AiSummary   = enr?.FullSummary?.ExecutiveOverview ?? enr?.KeyTakeaways.FirstOrDefault(),
+            Enrichment  = enr != null ? new ArticleEnrichmentDto
+            {
+                KeyTakeaways = enr.KeyTakeaways,
+                TimelineFacts = enr.TimelineFacts,
+                Faqs = enr.Faqs,
+                FullSummary = enr.FullSummary != null ? new FullSummaryDto
+                {
+                    ExecutiveOverview = enr.FullSummary.ExecutiveOverview,
+                    ContextAndBackground = enr.FullSummary.ContextAndBackground,
+                    KeyFiguresAndEntities = enr.FullSummary.KeyFiguresAndEntities,
+                    OutlookOrNextSteps = enr.FullSummary.OutlookOrNextSteps,
+                    ReadingTimeSeconds = enr.FullSummary.ReadingTimeSeconds
+                } : null,
+                Engine = enr.Engine,
+                UpdatedAt = enr.UpdatedAt ?? enr.CreatedAt
+            } : null
         };
 
         return Ok(dto);
+    }
+
+    /// <summary>
+    /// Public SEO endpoint for retrieving a single article by canonical slug.
+    /// Never returns full raw scraped content to adhere to aggregator copyright compliance.
+    /// Sets Cache-Control: public, max-age=60 with ETag validation.
+    /// </summary>
+    [HttpGet("by-slug/{slug}")]
+    [ProducesResponseType(typeof(ArticleDetailDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status304NotModified)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetBySlug(string slug, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(slug))
+        {
+            return NotFound(new ErrorResponseDto
+            {
+                Error = new ErrorPayload
+                {
+                    Code = "NOT_FOUND",
+                    Message = "Article slug is required.",
+                    TraceId = HttpContext.TraceIdentifier
+                }
+            });
+        }
+
+        var normalizedSlug = slug.Trim().ToLowerInvariant();
+
+        // 1. Exact match on slug
+        var article = await _db.Articles
+            .AsNoTracking()
+            .Include(a => a.ArticleTopics)
+                .ThenInclude(at => at.Topic)
+            .Include(a => a.Enrichment)
+            .FirstOrDefaultAsync(a => a.Slug == normalizedSlug, cancellationToken);
+
+        string? redirectSlug = null;
+
+        // 2. Fallback prefix/suffix match if slug has a unique 6-char hash
+        if (article == null)
+        {
+            var parts = normalizedSlug.Split('-');
+            if (parts.Length > 1 && parts[^1].Length >= 4)
+            {
+                var suffix = parts[^1];
+                article = await _db.Articles
+                    .AsNoTracking()
+                    .Include(a => a.ArticleTopics)
+                        .ThenInclude(at => at.Topic)
+                    .Include(a => a.Enrichment)
+                    .FirstOrDefaultAsync(a => a.Slug.EndsWith(suffix) || a.Id.StartsWith(suffix), cancellationToken);
+
+                if (article != null && !string.Equals(article.Slug, normalizedSlug, StringComparison.OrdinalIgnoreCase))
+                {
+                    redirectSlug = article.Slug;
+                }
+            }
+        }
+
+        // 3. Fallback match by exact article ID (e.g. if shared using article ID)
+        if (article == null)
+        {
+            article = await _db.Articles
+                .AsNoTracking()
+                .Include(a => a.ArticleTopics)
+                    .ThenInclude(at => at.Topic)
+                .Include(a => a.Enrichment)
+                .FirstOrDefaultAsync(a => a.Id == slug.Trim() || a.Id.ToLower() == normalizedSlug, cancellationToken);
+
+            if (article != null && !string.IsNullOrWhiteSpace(article.Slug))
+            {
+                redirectSlug = article.Slug;
+            }
+        }
+
+        if (article == null)
+        {
+            return NotFound(new ErrorResponseDto
+            {
+                Error = new ErrorPayload
+                {
+                    Code = "NOT_FOUND",
+                    Message = $"No article found matching slug '{slug}'.",
+                    TraceId = HttpContext.TraceIdentifier
+                }
+            });
+        }
+
+        // Generate ETag from article metadata
+        var lastModified = article.UpdatedAt ?? article.PublishedAt ?? DateTime.UtcNow;
+        var eTag = $"\"{article.Id}_{lastModified.Ticks}_{article.Slug}\"";
+
+        if (Request.Headers.TryGetValue("If-None-Match", out var clientETag) && clientETag == eTag)
+        {
+            return StatusCode(StatusCodes.Status304NotModified);
+        }
+
+        Response.Headers.Append("ETag", eTag);
+        Response.Headers.Append("Cache-Control", "public, max-age=60");
+
+        // Load up to 6 related stories using vector embedding similarity (or topic/category fallback)
+        List<ArticleDto> relatedArticles;
+        if (_clusteringService != null)
+        {
+            var relatedEntities = await _clusteringService.FindRelatedArticlesAsync(article.Id, 6, cancellationToken);
+            relatedArticles = relatedEntities.Select(a => new ArticleDto
+            {
+                Id = a.Id,
+                Title = a.Title,
+                Slug = !string.IsNullOrEmpty(a.Slug) ? a.Slug : _slugService.GenerateArticleSlug(a.Title, a.Id),
+                Excerpt = a.Excerpt ?? _slugService.GenerateExcerpt(a.Content, a.Summary, 300),
+                Summary = a.Summary,
+                Url = a.Url,
+                ImageUrl = CategoryImageMap.Resolve(a.ImageUrl, a.Category),
+                Source = a.Source ?? "News Stand NG",
+                Category = a.Category ?? "General",
+                PublishedAt = a.PublishedAt,
+                AudioUrl = a.AudioUrl,
+                Author = a.Author,
+                ContentType = a.ContentType,
+                IsSponsored = a.IsSponsored,
+                SponsorName = a.SponsorName,
+                SponsorUrl = a.SponsorUrl
+            }).ToList();
+        }
+        else
+        {
+            var relatedQuery = _db.Articles
+                .AsNoTracking()
+                .Where(a => a.Id != article.Id && a.Category == article.Category)
+                .OrderByDescending(a => a.PublishedAt)
+                .Take(6);
+
+            relatedArticles = await relatedQuery
+                .Select(a => new ArticleDto
+                {
+                    Id = a.Id,
+                    Title = a.Title,
+                    Slug = !string.IsNullOrEmpty(a.Slug) ? a.Slug : _slugService.GenerateArticleSlug(a.Title, a.Id),
+                    Excerpt = a.Excerpt ?? _slugService.GenerateExcerpt(a.Content, a.Summary, 300),
+                    Summary = a.Summary,
+                    Url = a.Url,
+                    ImageUrl = CategoryImageMap.Resolve(a.ImageUrl, a.Category),
+                    Source = a.Source ?? "News Stand NG",
+                    Category = a.Category ?? "General",
+                    PublishedAt = a.PublishedAt,
+                    AudioUrl = a.AudioUrl,
+                    Author = a.Author,
+                    ContentType = a.ContentType,
+                    IsSponsored = a.IsSponsored,
+                    SponsorName = a.SponsorName,
+                    SponsorUrl = a.SponsorUrl
+                })
+                .ToListAsync(cancellationToken);
+        }
+
+        var detailDto = new ArticleDetailDto
+        {
+            Id = article.Id,
+            Title = article.Title,
+            Slug = article.Slug,
+            Excerpt = article.Excerpt ?? _slugService.GenerateExcerpt(article.Content, article.Summary, 300),
+            Source = article.Source,
+            SourceUrl = article.Url,
+            ImageUrl = CategoryImageMap.Resolve(article.ImageUrl, article.Category),
+            PublishedAt = article.PublishedAt,
+            UpdatedAt = article.UpdatedAt,
+            Author = article.Author,
+            Category = article.Category,
+            ContentType = article.ContentType,
+            AudioUrl = article.AudioUrl,
+            SeoTitle = article.SeoTitle,
+            SeoDescription = article.SeoDescription,
+            IsSponsored = article.IsSponsored,
+            SponsorName = article.SponsorName,
+            SponsorUrl = article.SponsorUrl,
+            RedirectSlug = redirectSlug,
+            Topics = article.ArticleTopics
+                .Where(at => at.Topic != null)
+                .Select(at => new TopicDto
+                {
+                    Id = at.Topic!.Id,
+                    Slug = at.Topic.Slug,
+                    Name = at.Topic.Name,
+                    Type = at.Topic.Type.ToString(),
+                    Description = at.Topic.Description,
+                    CreatedAt = at.Topic.CreatedAt
+                })
+                .ToList(),
+            RelatedArticles = relatedArticles,
+            Enrichment = article.Enrichment != null
+                ? new ArticleEnrichmentDto
+                {
+                    KeyTakeaways = article.Enrichment.KeyTakeaways,
+                    TimelineFacts = article.Enrichment.TimelineFacts,
+                    Faqs = article.Enrichment.Faqs,
+                    FullSummary = article.Enrichment.FullSummary != null
+                        ? new FullSummaryDto
+                        {
+                            ExecutiveOverview = article.Enrichment.FullSummary.ExecutiveOverview,
+                            ContextAndBackground = article.Enrichment.FullSummary.ContextAndBackground,
+                            KeyFiguresAndEntities = article.Enrichment.FullSummary.KeyFiguresAndEntities,
+                            OutlookOrNextSteps = article.Enrichment.FullSummary.OutlookOrNextSteps,
+                            ReadingTimeSeconds = article.Enrichment.FullSummary.ReadingTimeSeconds
+                        }
+                        : null,
+                    Engine = article.Enrichment.Engine,
+                    UpdatedAt = article.Enrichment.UpdatedAt ?? article.Enrichment.CreatedAt
+                }
+                : null
+        };
+
+        return Ok(detailDto);
+    }
+
+    /// <summary>
+    /// Returns or generates the AI Executive Briefing summary of the full news article body.
+    /// Can be requested by article ID or article slug.
+    /// </summary>
+    [HttpGet("{id}/ai-summary")]
+    [HttpPost("{id}/ai-summary")]
+    [ProducesResponseType(typeof(FullSummaryDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetOrGenerateAiSummary(string id, CancellationToken cancellationToken = default)
+    {
+        if (_enrichmentService == null)
+        {
+            return StatusCode(StatusCodes.Status503ServiceUnavailable, new ErrorResponseDto
+            {
+                Error = new ErrorPayload
+                {
+                    Code = "SERVICE_UNAVAILABLE",
+                    Message = "Article enrichment service is not registered.",
+                    TraceId = HttpContext.TraceIdentifier
+                }
+            });
+        }
+
+        var article = await _db.Articles
+            .Include(a => a.Enrichment)
+            .FirstOrDefaultAsync(a => a.Id == id || a.Slug == id, cancellationToken);
+
+        if (article == null)
+        {
+            return NotFound(new ErrorResponseDto
+            {
+                Error = new ErrorPayload
+                {
+                    Code = "NOT_FOUND",
+                    Message = $"Article '{id}' was not found.",
+                    TraceId = HttpContext.TraceIdentifier
+                }
+            });
+        }
+
+        if (article.Enrichment?.FullSummary != null)
+        {
+            var cached = article.Enrichment.FullSummary;
+            return Ok(new FullSummaryDto
+            {
+                ExecutiveOverview = cached.ExecutiveOverview,
+                ContextAndBackground = cached.ContextAndBackground,
+                KeyFiguresAndEntities = cached.KeyFiguresAndEntities,
+                OutlookOrNextSteps = cached.OutlookOrNextSteps,
+                ReadingTimeSeconds = cached.ReadingTimeSeconds
+            });
+        }
+
+        var enriched = await _enrichmentService.EnrichArticleAsync(article.Id, cancellationToken);
+        if (enriched?.FullSummary != null)
+        {
+            var generated = enriched.FullSummary;
+            return Ok(new FullSummaryDto
+            {
+                ExecutiveOverview = generated.ExecutiveOverview,
+                ContextAndBackground = generated.ContextAndBackground,
+                KeyFiguresAndEntities = generated.KeyFiguresAndEntities,
+                OutlookOrNextSteps = generated.OutlookOrNextSteps,
+                ReadingTimeSeconds = generated.ReadingTimeSeconds
+            });
+        }
+
+        return StatusCode(StatusCodes.Status500InternalServerError, new ErrorResponseDto
+        {
+            Error = new ErrorPayload
+            {
+                Code = "GENERATION_FAILED",
+                Message = "Failed to generate AI executive summary.",
+                TraceId = HttpContext.TraceIdentifier
+            }
+        });
+    }
+
+    /// <summary>
+    /// Enriches an article by ID with 3-bullet Key Takeaways, Timeline Facts, and FAQ pairs.
+    /// Internal / administrative operation.
+    /// </summary>
+    [HttpPost("{id}/enrich")]
+    [ProducesResponseType(typeof(ArticleEnrichmentDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> EnrichArticle(string id, CancellationToken cancellationToken = default)
+    {
+        if (_enrichmentService == null)
+        {
+            return StatusCode(StatusCodes.Status503ServiceUnavailable, new ErrorResponseDto
+            {
+                Error = new ErrorPayload
+                {
+                    Code = "SERVICE_UNAVAILABLE",
+                    Message = "Article enrichment service is not registered.",
+                    TraceId = HttpContext.TraceIdentifier
+                }
+            });
+        }
+
+        var result = await _enrichmentService.EnrichArticleAsync(id, cancellationToken);
+        if (result == null)
+        {
+            return NotFound(new ErrorResponseDto
+            {
+                Error = new ErrorPayload
+                {
+                    Code = "NOT_FOUND",
+                    Message = $"Article with id '{id}' was not found.",
+                    TraceId = HttpContext.TraceIdentifier
+                }
+            });
+        }
+
+        return Ok(new ArticleEnrichmentDto
+        {
+            KeyTakeaways = result.KeyTakeaways,
+            TimelineFacts = result.TimelineFacts,
+            Faqs = result.Faqs,
+            FullSummary = result.FullSummary != null
+                ? new FullSummaryDto
+                {
+                    ExecutiveOverview = result.FullSummary.ExecutiveOverview,
+                    ContextAndBackground = result.FullSummary.ContextAndBackground,
+                    KeyFiguresAndEntities = result.FullSummary.KeyFiguresAndEntities,
+                    OutlookOrNextSteps = result.FullSummary.OutlookOrNextSteps,
+                    ReadingTimeSeconds = result.FullSummary.ReadingTimeSeconds
+                }
+                : null,
+            Engine = result.Engine,
+            UpdatedAt = result.UpdatedAt ?? result.CreatedAt
+        });
+    }
+
+    /// <summary>
+    /// Gets the existing AI/ML enrichment data for an article by ID.
+    /// </summary>
+    [HttpGet("{id}/enrichment")]
+    [ProducesResponseType(typeof(ArticleEnrichmentDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetArticleEnrichment(string id, CancellationToken cancellationToken = default)
+    {
+        var enrichment = await _db.ArticleEnrichments
+            .AsNoTracking()
+            .FirstOrDefaultAsync(e => e.ArticleId == id, cancellationToken);
+
+        if (enrichment == null)
+        {
+            var art = await _db.Articles.AsNoTracking()
+                .FirstOrDefaultAsync(a => a.Slug == id || a.Id == id, cancellationToken);
+            if (art != null)
+            {
+                enrichment = await _db.ArticleEnrichments
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(e => e.ArticleId == art.Id, cancellationToken);
+            }
+        }
+
+        if (enrichment == null)
+        {
+            return NotFound(new ErrorResponseDto
+            {
+                Error = new ErrorPayload
+                {
+                    Code = "NOT_FOUND",
+                    Message = $"No enrichment found for article '{id}'.",
+                    TraceId = HttpContext.TraceIdentifier
+                }
+            });
+        }
+
+        return Ok(new ArticleEnrichmentDto
+        {
+            KeyTakeaways = enrichment.KeyTakeaways,
+            TimelineFacts = enrichment.TimelineFacts,
+            Faqs = enrichment.Faqs,
+            FullSummary = enrichment.FullSummary != null
+                ? new FullSummaryDto
+                {
+                    ExecutiveOverview = enrichment.FullSummary.ExecutiveOverview,
+                    ContextAndBackground = enrichment.FullSummary.ContextAndBackground,
+                    KeyFiguresAndEntities = enrichment.FullSummary.KeyFiguresAndEntities,
+                    OutlookOrNextSteps = enrichment.FullSummary.OutlookOrNextSteps,
+                    ReadingTimeSeconds = enrichment.FullSummary.ReadingTimeSeconds
+                }
+                : null,
+            Engine = enrichment.Engine,
+            UpdatedAt = enrichment.UpdatedAt ?? enrichment.CreatedAt
+        });
+    }
+
+    /// <summary>
+    /// Runs a batch cycle enriching up to limit unenriched articles.
+    /// </summary>
+    [HttpPost("enrich-batch")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> ProcessEnrichmentBatch([FromQuery] int limit = 20, CancellationToken cancellationToken = default)
+    {
+        if (_enrichmentService == null)
+        {
+            return StatusCode(StatusCodes.Status503ServiceUnavailable, "Enrichment service not registered.");
+        }
+
+        int processed = await _enrichmentService.ProcessUnenrichedBatchAsync(limit, cancellationToken);
+        return Ok(new { Processed = processed, Timestamp = DateTime.UtcNow });
+    }
+
+    /// <summary>
+    /// Serves a rich preview HTML page containing Twitter Card (summary_large_image) and Open Graph metadata
+    /// for social sharing on 𝕏 (Twitter), WhatsApp, and other platforms, with image preview, deep-linking, and app store CTA.
+    /// Accessible via:
+    ///   - GET /api/v1/articles/share/{id}
+    ///   - GET /share/{id}
+    /// </summary>
+    [HttpGet("share/{id}")]
+    [HttpGet("/share/{id}")]
+    [ResponseCache(Duration = 300, Location = ResponseCacheLocation.Any)]
+    public async Task<IActionResult> GetArticleShareCard(
+        string id,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(id))
+            return BadRequest(new { message = "Article ID cannot be empty." });
+
+        var a = await _db.Articles
+            .AsNoTracking()
+            .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+
+        if (a == null)
+            return NotFound(new { message = $"Article with ID '{id}' was not found." });
+
+        var imageUrl = CategoryImageMap.Resolve(a.ImageUrl, a.Category);
+        var title = System.Net.WebUtility.HtmlEncode(a.Title ?? "News Stand NG Story");
+        var source = System.Net.WebUtility.HtmlEncode(string.IsNullOrWhiteSpace(a.Source) ? "News Stand NG" : a.Source);
+        var summary = System.Net.WebUtility.HtmlEncode(string.IsNullOrWhiteSpace(a.Summary) ? $"Read the latest breaking story from {source} on News Stand NG." : a.Summary);
+        var targetUrl = a.Url ?? "https://play.google.com/store/apps/details?id=com.nigeriannewsgrid.app";
+        var appStoreUrl = "https://play.google.com/store/apps/details?id=com.nigeriannewsgrid.app";
+        var deepLinkUri = $"nigeriannewsgrid://article/{id}";
+
+        var html = $@"<!DOCTYPE html>
+<html lang=""en"">
+<head>
+    <meta charset=""utf-8"">
+    <meta name=""viewport"" content=""width=device-width, initial-scale=1"">
+    <title>{title} — News Stand NG</title>
+
+    <!-- 𝕏 (Twitter) Card Metadata -->
+    <meta name=""twitter:card"" content=""summary_large_image"">
+    <meta name=""twitter:site"" content=""@NewsStandNG"">
+    <meta name=""twitter:creator"" content=""@NewsStandNG"">
+    <meta name=""twitter:title"" content=""{title}"">
+    <meta name=""twitter:description"" content=""Via {source} • {summary}"">
+    <meta name=""twitter:image"" content=""{imageUrl}"">
+    <meta name=""twitter:image:alt"" content=""{title}"">
+
+    <!-- Open Graph Metadata -->
+    <meta property=""og:type"" content=""article"">
+    <meta property=""og:site_name"" content=""News Stand NG"">
+    <meta property=""og:title"" content=""{title}"">
+    <meta property=""og:description"" content=""Via {source} • {summary}"">
+    <meta property=""og:image"" content=""{imageUrl}"">
+    <meta property=""og:url"" content=""{targetUrl}"">
+
+    <style>
+        :root {{
+            --bg: #F8FAFC;
+            --card-bg: #FFFFFF;
+            --text-primary: #0F172A;
+            --text-secondary: #64748B;
+            --accent: #2563EB;
+            --accent-hover: #1D4ED8;
+            --border: #E2E8F0;
+        }}
+        @media (prefers-color-scheme: dark) {{
+            :root {{
+                --bg: #090D16;
+                --card-bg: #131B2E;
+                --text-primary: #F8FAFC;
+                --text-secondary: #94A3B8;
+                --border: #1E293B;
+            }}
+        }}
+        * {{ box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }}
+        body {{ background-color: var(--bg); color: var(--text-primary); display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 20px; }}
+        .card {{ background: var(--card-bg); border: 1px solid var(--border); border-radius: 20px; max-width: 600px; width: 100%; overflow: hidden; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1); }}
+        .image-container {{ position: relative; width: 100%; height: 280px; background: #E2E8F0; }}
+        .image-container img {{ width: 100%; height: 100%; object-fit: cover; }}
+        .source-badge {{ position: absolute; top: 16px; left: 16px; background: rgba(15, 23, 42, 0.85); color: #FFF; padding: 6px 12px; border-radius: 999px; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; backdrop-filter: blur(8px); }}
+        .content {{ padding: 24px; }}
+        .headline {{ font-size: 20px; line-height: 1.4; font-weight: 700; margin-bottom: 12px; }}
+        .summary {{ font-size: 14px; line-height: 1.6; color: var(--text-secondary); margin-bottom: 24px; }}
+        .actions {{ display: flex; flex-direction: column; gap: 12px; }}
+        .btn {{ display: flex; align-items: center; justify-content: center; gap: 8px; padding: 14px 20px; border-radius: 12px; font-size: 15px; font-weight: 600; text-decoration: none; transition: transform 0.15s ease, background 0.15s ease; cursor: pointer; text-align: center; }}
+        .btn:active {{ transform: scale(0.98); }}
+        .btn-primary {{ background: var(--accent); color: #FFF; }}
+        .btn-primary:hover {{ background: var(--accent-hover); }}
+        .btn-secondary {{ background: transparent; border: 1.5px solid var(--border); color: var(--text-primary); }}
+        .footer-note {{ text-align: center; margin-top: 18px; font-size: 12px; color: var(--text-secondary); }}
+    </style>
+</head>
+<body>
+    <div class=""card"">
+        <div class=""image-container"">
+            <img src=""{imageUrl}"" alt=""{title}"" onerror=""this.style.display='none'"">
+            <span class=""source-badge"">{source}</span>
+        </div>
+        <div class=""content"">
+            <h1 class=""headline"">{title}</h1>
+            <p class=""summary"">{summary}</p>
+            <div class=""actions"">
+                <a href=""{deepLinkUri}"" class=""btn btn-primary"">📲 Open in News Stand NG</a>
+                <a href=""{appStoreUrl}"" class=""btn btn-secondary"">⭐ Download App on Google Play</a>
+                <a href=""{targetUrl}"" target=""_blank"" rel=""noopener noreferrer"" class=""btn btn-secondary"">🌐 Read Full Story at {source}</a>
+            </div>
+            <p class=""footer-note"">Powered by News Stand NG — Nigeria's Premier Smart News Aggregator</p>
+        </div>
+    </div>
+</body>
+</html>";
+
+        return Content(html, "text/html; charset=utf-8");
     }
 
     [HttpPost("ingest")]
@@ -398,6 +1098,7 @@ public class ArticlesController : ControllerBase
             : new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         int ingested = 0, skipped = 0;
+        var ingestedSlugs = new List<string>();
 
         foreach (var item in incomingList)
         {
@@ -409,10 +1110,17 @@ public class ArticlesController : ControllerBase
 
             if (isDuplicate) { skipped++; continue; }
 
+            var articleId = Guid.NewGuid().ToString("N");
+            var title = item.Title.Trim();
+            var slug = _slugService.GenerateArticleSlug(title, articleId);
+            var excerpt = _slugService.GenerateExcerpt(item.Content, item.Summary, 300);
+
             _db.Articles.Add(new Article
             {
-                Id          = Guid.NewGuid().ToString("N"),
-                Title       = item.Title.Trim(),
+                Id          = articleId,
+                Title       = title,
+                Slug        = slug,
+                Excerpt     = excerpt,
                 Summary     = item.Summary,
                 Content     = item.Content,
                 Url         = item.Url,
@@ -425,8 +1133,41 @@ public class ArticlesController : ControllerBase
                 ContentType = string.IsNullOrWhiteSpace(item.ContentType) ? "News" : item.ContentType
             });
 
+            if (item.Topics != null && item.Topics.Count > 0)
+            {
+                foreach (var t in item.Topics)
+                {
+                    if (string.IsNullOrWhiteSpace(t.Slug)) continue;
+                    var topicSlug = t.Slug.Trim().ToLowerInvariant();
+
+                    var existingTopic = await _db.Topics.FirstOrDefaultAsync(x => x.Slug == topicSlug, cancellationToken);
+                    if (existingTopic == null)
+                    {
+                        Enum.TryParse<TopicType>(t.Type, true, out var parsedType);
+                        existingTopic = new Topic
+                        {
+                            Id = Guid.NewGuid().ToString("N"),
+                            Name = t.Name,
+                            Slug = topicSlug,
+                            Type = parsedType,
+                            Description = t.Description,
+                            CreatedAt = DateTime.UtcNow
+                        };
+                        _db.Topics.Add(existingTopic);
+                    }
+
+                    _db.ArticleTopics.Add(new ArticleTopic
+                    {
+                        ArticleId = articleId,
+                        TopicId = existingTopic.Id,
+                        Confidence = t.Confidence
+                    });
+                }
+            }
+
             if (!string.IsNullOrEmpty(urlNorm)) existingUrls.Add(urlNorm);
             existingTitles.Add(titleNorm);
+            ingestedSlugs.Add(slug);
             ingested++;
         }
 
@@ -434,6 +1175,13 @@ public class ArticlesController : ControllerBase
         {
             await _db.SaveChangesAsync(cancellationToken);
             InvalidateBriefingCache(); // Fix #31
+
+            if (_indexNowService != null && ingestedSlugs.Count > 0)
+            {
+                var host = _indexNowService.GetConfiguration().Host;
+                var urls = ingestedSlugs.Select(s => $"https://{host}/news/{s}");
+                _ = _indexNowService.EnqueueUrlsAsync(urls, CancellationToken.None);
+            }
         }
 
         _logger.LogInformation(
@@ -569,7 +1317,7 @@ public class ArticlesController : ControllerBase
                 ImageUrl    = CategoryImageMap.Resolve(a.ImageUrl, a.Category),
                 Source      = string.IsNullOrWhiteSpace(a.Source) ? $"{a.SponsorName} Press Release" : a.Source,
                 Category    = string.IsNullOrWhiteSpace(a.Category) ? "Business" : a.Category,
-                PublishedAt = a.PublishedAt ?? DateTime.UtcNow,
+                PublishedAt = a.PublishedAt,
                 IsSponsored = a.IsSponsored,
                 SponsorName = a.SponsorName,
                 SponsorUrl  = a.SponsorUrl,
@@ -607,10 +1355,17 @@ public class ArticlesController : ControllerBase
             }
         }
 
+        var articleId = Guid.NewGuid().ToString("N");
+        var title = request.Title.Trim();
+        var slug = _slugService.GenerateArticleSlug(title, articleId);
+        var excerpt = _slugService.GenerateExcerpt(request.Content, request.Summary, 300);
+
         var article = new Article
         {
-            Id                = Guid.NewGuid().ToString("N"),
-            Title             = request.Title.Trim(),
+            Id                = articleId,
+            Title             = title,
+            Slug              = slug,
+            Excerpt           = excerpt,
             Summary           = request.Summary?.Trim(),
             Content           = request.Content?.Trim(),
             Url               = !string.IsNullOrWhiteSpace(request.Url) ? request.Url.Trim() : (!string.IsNullOrWhiteSpace(request.SponsorUrl) ? request.SponsorUrl.Trim() : null),
@@ -740,6 +1495,24 @@ public class ArticlesController : ControllerBase
         }
 
         return NoContent();
+    }
+
+    /// <summary>
+    /// Admin endpoint for idempotent backfilling of SEO slugs and excerpts.
+    /// Protected by ApiKey middleware.
+    /// </summary>
+    [HttpPost("seo/backfill")]
+    public async Task<IActionResult> BackfillSeo(
+        [FromQuery] int batchSize = 500,
+        CancellationToken cancellationToken = default)
+    {
+        if (_seoBackfillService == null)
+        {
+            return StatusCode(500, new { message = "ArticleSeoBackfillService is not registered." });
+        }
+
+        var result = await _seoBackfillService.BackfillArticleSeoAsync(batchSize, cancellationToken);
+        return Ok(result);
     }
 }
 

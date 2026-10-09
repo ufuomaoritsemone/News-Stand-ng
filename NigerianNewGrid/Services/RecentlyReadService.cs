@@ -5,7 +5,7 @@ using NigerianNewsGrid.Client.Models;
 namespace NigerianNewGrid.Services;
 
 public class RecentlyReadService(
-    INewsPersistenceService? persistenceService = null) : IRecentlyReadService
+    IReadHistoryRepository? persistenceService = null) : IRecentlyReadService
 {
     private const string RecentlyReadKey = "recently_read_articles";
     private const int MaxRecentlyRead = 50;
@@ -16,11 +16,7 @@ public class RecentlyReadService(
 
     public event EventHandler? RecentlyReadChanged;
 
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        PropertyNamingPolicy        = JsonNamingPolicy.CamelCase,
-        PropertyNameCaseInsensitive = true
-    };
+    private static JsonSerializerOptions JsonOptions => SharedJsonOptions.Default;
 
     public IReadOnlyList<BriefingItem> GetRecentlyRead()
     {

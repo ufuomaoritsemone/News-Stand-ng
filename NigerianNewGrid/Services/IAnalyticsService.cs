@@ -22,3 +22,10 @@ public interface IAnalyticsService
     /// </summary>
     Task FlushAsync();
 }
+
+public class NullAnalyticsService : IAnalyticsService
+{
+    public static readonly NullAnalyticsService Instance = new();
+    public Task TrackAsync(string eventType, string? articleId = null, string? articleTitle = null, string? category = null) => Task.CompletedTask;
+    public Task FlushAsync() => Task.CompletedTask;
+}

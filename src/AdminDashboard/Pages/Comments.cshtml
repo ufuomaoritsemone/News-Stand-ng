@@ -1,0 +1,176 @@
+@page
+@model AdminDashboard.Pages.CommentsModel
+@{
+    ViewData["Title"] = "Community Comments & Moderation";
+}
+
+<div class="container-fluid py-4 px-md-5">
+    <!-- Header Row -->
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+        <div>
+            <div class="d-flex align-items-center gap-2">
+                <a href="/" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> Feed</a>
+                <h1 class="h3 mb-0 fw-bold"><i class="bi bi-chat-square-text text-primary me-2"></i> Community Comments & Moderation</h1>
+            </div>
+            <p class="text-muted mb-0 mt-1">Review live story debates, moderate flagged reader posts, and preserve constructive discourse</p>
+        </div>
+
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+            <a href="/Videos" class="btn btn-outline-danger btn-sm"><i class="bi bi-youtube me-1"></i> Videos</a>
+            <a href="/Socials" class="btn btn-outline-info btn-sm"><i class="bi bi-twitter-x me-1"></i> Socials</a>
+            <a href="/Analytics" class="btn btn-outline-success btn-sm"><i class="bi bi-bar-chart-fill me-1"></i> Analytics</a>
+            <a href="/Sponsors" class="btn btn-outline-warning btn-sm"><i class="bi bi-megaphone me-1"></i> Sponsored</a>
+            <a href="/Feedback" class="btn btn-outline-primary btn-sm"><i class="bi bi-chat-heart me-1"></i> Feedback</a>
+            <a href="/Categorizer" class="btn btn-outline-purple btn-sm"><i class="bi bi-cpu-fill me-1"></i> ML Categorizer</a>
+            <button type="button" class="theme-toggle-btn" onclick="toggleAdminTheme()" title="Toggle Light / Dark Theme">
+                <i class="bi bi-moon-stars-fill theme-icon-dark"></i>
+                <i class="bi bi-sun-fill theme-icon-light"></i>
+                <span class="theme-toggle-label">Dark</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Alert Messages -->
+    @if (TempData["Message"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show glass-card border-success text-white mb-4" role="alert">
+            <i class="bi bi-check-circle-fill me-2"></i> @TempData["Message"]
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show glass-card border-danger text-white mb-4" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i> @TempData["Error"]
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    <!-- Stat Metrics Row -->
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-md-4">
+            <div class="glass-card stat-card p-3">
+                <div class="text-muted small text-uppercase fw-bold">Moderation Queue</div>
+                <div class="stat-value display-6 fw-bold">@Model.TotalCommentsCount</div>
+                <div class="small text-info mt-1"><i class="bi bi-chat-left-dots me-1"></i> In Moderation View</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-4">
+            <div class="glass-card stat-card p-3">
+                <div class="text-muted small text-uppercase fw-bold">Flagged by Readers</div>
+                <div class="stat-value display-6 fw-bold text-danger">@Model.FlaggedCount</div>
+                <div class="small text-danger mt-1"><i class="bi bi-flag-fill me-1"></i> Requires Action</div>
+            </div>
+        </div>
+        <div class="col-12 col-md-4">
+            <div class="glass-card stat-card p-3">
+                <div class="text-muted small text-uppercase fw-bold">Approved / Published</div>
+                <div class="stat-value display-6 fw-bold text-success">@Model.PublishedCount</div>
+                <div class="small text-success mt-1"><i class="bi bi-check-circle-fill me-1"></i> Live on Site</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filter & Search Bar -->
+    <div class="glass-card p-3 mb-4">
+        <form method="get" class="row g-2 align-items-center">
+            <div class="col-md-3">
+                <select name="FilterStatus" class="form-select form-select-sm form-control-glass" onchange="this.form.submit()">
+                    <option value="All" selected="@(Model.FilterStatus == "All")">All Queue Comments</option>
+                    <option value="Flagged" selected="@(Model.FilterStatus == "Flagged")">⚠️ Flagged Only</option>
+                    <option value="Published" selected="@(Model.FilterStatus == "Published")">✓ Published Only</option>
+                </select>
+            </div>
+            <div class="col-md-7">
+                <input type="text" name="SearchQuery" value="@Model.SearchQuery" placeholder="Search by author name, comment content, or article title..." class="form-control form-control-sm form-control-glass" />
+            </div>
+            <div class="col-md-2 d-flex gap-2">
+                <button type="submit" class="btn btn-outline-light btn-sm w-100"><i class="bi bi-search me-1"></i> Filter</button>
+                <a href="/Comments" class="btn btn-outline-secondary btn-sm" title="Clear Filters"><i class="bi bi-x-circle"></i></a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Comments Table -->
+    <div class="glass-card p-0 overflow-hidden">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-dark">
+                    <tr>
+                        <th style="width: 140px;">Author</th>
+                        <th>Comment Content</th>
+                        <th style="width: 220px;">Story / Headline</th>
+                        <th style="width: 110px;" class="text-center">Engagement</th>
+                        <th style="width: 110px;" class="text-center">Status</th>
+                        <th style="width: 110px;" class="text-center">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Comments.Count == 0)
+                    {
+                        <tr>
+                            <td colspan="6" class="text-center py-5 text-muted">
+                                <i class="bi bi-chat-heart display-4 d-block mb-3 opacity-50"></i>
+                                <h5>No comments currently match the filter</h5>
+                                <p class="small mb-0">When readers post or report comments across stories, they will be indexed here for review.</p>
+                            </td>
+                        </tr>
+                    }
+                    else
+                    {
+                        @foreach (var c in Model.Comments)
+                        {
+                            var isFlagged = c.Status == "Flagged" || c.ReportCount > 0;
+                            <tr class="@(isFlagged ? "table-danger bg-opacity-10" : "")">
+                                <td>
+                                    <div class="fw-bold text-truncate" style="max-width: 130px;">@c.AuthorName</div>
+                                    <small class="text-muted d-block" style="font-size: 0.72rem;">@c.CreatedAt.ToString("MMM dd, HH:mm")</small>
+                                </td>
+                                <td>
+                                    <div class="text-break" style="max-width: 500px; font-size: 0.9rem;">@c.Content</div>
+                                </td>
+                                <td>
+                                    <div class="text-truncate small text-info fw-semibold" style="max-width: 210px;" title="@c.ArticleTitle">
+                                        @(string.IsNullOrWhiteSpace(c.ArticleTitle) ? c.ArticleId : c.ArticleTitle)
+                                    </div>
+                                    <a href="/api/v1/articles/@c.ArticleId/comments" target="_blank" class="small text-muted text-decoration-none">
+                                        <i class="bi bi-box-arrow-up-right me-1"></i> Thread API
+                                    </a>
+                                </td>
+                                <td class="text-center">
+                                    <span class="badge bg-success-subtle text-success border border-success me-1" title="Upvotes">
+                                        <i class="bi bi-hand-thumbs-up-fill me-1"></i>@c.Upvotes
+                                    </span>
+                                    <span class="badge bg-secondary-subtle text-muted border" title="Downvotes">
+                                        <i class="bi bi-hand-thumbs-down me-1"></i>@c.Downvotes
+                                    </span>
+                                </td>
+                                <td class="text-center">
+                                    @if (isFlagged)
+                                    {
+                                        <span class="badge bg-danger rounded-pill px-2 py-1">
+                                            <i class="bi bi-flag-fill me-1"></i> @c.ReportCount Reports
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-success rounded-pill px-2 py-1">
+                                            <i class="bi bi-check-lg me-1"></i> Live
+                                        </span>
+                                    }
+                                </td>
+                                <td class="text-center">
+                                    <form method="post" asp-page-handler="Delete" asp-route-id="@c.Id" onsubmit="return confirm('Are you sure you want to remove this comment from public display?');">
+                                        <button type="submit" class="btn btn-outline-danger btn-sm" title="Remove comment">
+                                            <i class="bi bi-trash-fill"></i> Hide
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

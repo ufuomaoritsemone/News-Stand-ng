@@ -15,20 +15,20 @@ namespace NigerianNewGrid.ViewModels;
 /// ViewModel for the Discover tab (search, category filter, trending videos, keyword alerts, and pagination).
 /// Extracted from DiscoverPage.xaml.cs to satisfy clean MVVM separation and SRP (Fix #13 / Fix #33).
 /// </summary>
-public partial class DiscoverViewModel : ObservableObject
+public partial class DiscoverViewModel : ObservableObject, IDisposable
 {
     private readonly NewsApiClient _apiClient;
     private readonly IKeywordMatchingService _keywordMatchingService;
     private readonly IRecentlyReadService _recentlyReadService;
     private readonly IBookmarkService _bookmarkService;
-    private readonly INewsPersistenceService _persistenceService;
+    private readonly IStoryRepository _storyRepository;
+    private readonly IUserPreferencesService _userPreferences;
+    private readonly IArticleInteractionService _interactionService;
     private readonly ILogger<DiscoverViewModel> _logger;
 
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        PropertyNamingPolicy        = JsonNamingPolicy.CamelCase,
-        PropertyNameCaseInsensitive = true
-    };
+    private CancellationTokenSource? _searchCts;
+
+    private static JsonSerializerOptions JsonOptions => SharedJsonOptions.Default;
 
     private List<BriefingItem>      _allItems             = [];
     private List<BriefingItem>      _categoryArticles     = [];
@@ -63,14 +63,18 @@ public partial class DiscoverViewModel : ObservableObject
         IKeywordMatchingService keywordMatchingService,
         IRecentlyReadService recentlyReadService,
         IBookmarkService bookmarkService,
-        INewsPersistenceService persistenceService,
+        IStoryRepository storyRepository,
+        IUserPreferencesService userPreferences,
+        IArticleInteractionService interactionService,
         ILogger<DiscoverViewModel> logger)
     {
         _apiClient              = apiClient;
         _keywordMatchingService = keywordMatchingService;
         _recentlyReadService    = recentlyReadService;
         _bookmarkService        = bookmarkService;
-        _persistenceService     = persistenceService;
+        _storyRepository        = storyRepository;
+        _userPreferences        = userPreferences;
+        _interactionService     = interactionService;
         _logger                 = logger;
     }
 
@@ -115,7 +119,7 @@ public partial class DiscoverViewModel : ObservableObject
 
         if (string.Equals(category, "KeywordAlerts", StringComparison.OrdinalIgnoreCase))
         {
-            var keywords = NotificationPreferences.MonitoredKeywords;
+            var keywords = _userPreferences.MonitoredKeywords;
             if (keywords.Count > 0)
             {
                 var pool = _categoryArticles.Count > 0 ? _categoryArticles : _allItems;
@@ -142,8 +146,7 @@ public partial class DiscoverViewModel : ObservableObject
         {
             try
             {
-                var baseUrl = Preferences.Get(AppPreferenceKeys.ApiBaseUrl, "http://localhost:56193");
-                _apiClient.BaseUrl = baseUrl;
+                EnsureApiBaseUrl();
 
                 var articles = await _apiClient.GetOpinionsAsync(days: 14, page: 1, pageSize: 30);
                 if (articles.Count > 0)
@@ -175,8 +178,7 @@ public partial class DiscoverViewModel : ObservableObject
 
         try
         {
-            var baseUrl = Preferences.Get(AppPreferenceKeys.ApiBaseUrl, "http://localhost:56193");
-            _apiClient.BaseUrl = baseUrl;
+            EnsureApiBaseUrl();
 
             var catParam = string.Equals(category, "All", StringComparison.OrdinalIgnoreCase) ? null : category;
             var articles = await _apiClient.GetArticlesAsync(category: catParam, days: 7, page: 1, pageSize: 30);
@@ -284,8 +286,7 @@ public partial class DiscoverViewModel : ObservableObject
                 LoadMoreText = "Loading more stories...";
                 _categoryPage++;
 
-                var baseUrl = Preferences.Get(AppPreferenceKeys.ApiBaseUrl, "http://localhost:56193");
-                _apiClient.BaseUrl = baseUrl;
+                EnsureApiBaseUrl();
 
                 var catParam = string.Equals(SelectedCategory, "All", StringComparison.OrdinalIgnoreCase) ? null : SelectedCategory;
                 List<BriefingItem> newArticles;
@@ -346,9 +347,40 @@ public partial class DiscoverViewModel : ObservableObject
         }
     }
 
-    public void ToggleBookmark(BriefingItem item)
+    [RelayCommand]
+    public async Task OpenArticleAsync(BriefingItem? item)
     {
-        _bookmarkService.ToggleBookmark(item);
+        await _interactionService.OpenArticleAsync(item);
+    }
+
+    [RelayCommand]
+    public async Task OpenVideoAsync(VideoStoryItem? video)
+    {
+        await _interactionService.OpenVideoAsync(video);
+    }
+
+    [RelayCommand]
+    public void ToggleBookmark(BriefingItem? item)
+    {
+        _interactionService.ToggleBookmark(item);
+    }
+
+    [RelayCommand]
+    public async Task ShareArticleAsync(BriefingItem? item)
+    {
+        await _interactionService.ShareArticleAsync(item);
+    }
+
+    [RelayCommand]
+    public async Task ShareArticleOnXAsync(BriefingItem? item)
+    {
+        await _interactionService.ShareArticleOnXAsync(item);
+    }
+
+    [RelayCommand]
+    public async Task ShareArticleOnWhatsAppAsync(BriefingItem? item)
+    {
+        await _interactionService.ShareArticleOnWhatsAppAsync(item);
     }
 
     // ── Internal Helpers ──────────────────────────────────────────
@@ -357,7 +389,7 @@ public partial class DiscoverViewModel : ObservableObject
     {
         try
         {
-            var categories = await _persistenceService.GetCachedBriefingAsync(days: 14);
+            var categories = await _storyRepository.GetCachedBriefingAsync(days: 14);
             if (categories.Count > 0)
             {
                 _allItems = categories.SelectMany(c => c.Top).ToList();
@@ -395,7 +427,12 @@ public partial class DiscoverViewModel : ObservableObject
         if (_trendingVideos.Count == 0)
         {
             _trendingVideos = MainViewModel.GetFallbackVideoStories();
-            TrendingVideos = new ObservableCollection<VideoStoryItem>(_trendingVideos);
+        }
+
+        TrendingVideos.Clear();
+        foreach (var v in _trendingVideos)
+        {
+            TrendingVideos.Add(v);
         }
 
         IsTrendingSectionVisible = _trendingVideos.Count > 0 && SelectedCategory == "All" && !IsSearchMode;
@@ -405,14 +442,17 @@ public partial class DiscoverViewModel : ObservableObject
     {
         try
         {
-            var baseUrl = Preferences.Get(AppPreferenceKeys.ApiBaseUrl, "http://localhost:56193");
-            _apiClient.BaseUrl = baseUrl;
+            EnsureApiBaseUrl();
 
             var videos = await _apiClient.GetTrendingVideoStoriesAsync(15);
             if (videos.Count > 0)
             {
                 _trendingVideos = videos;
-                TrendingVideos  = new ObservableCollection<VideoStoryItem>(_trendingVideos);
+                TrendingVideos.Clear();
+                foreach (var v in videos)
+                {
+                    TrendingVideos.Add(v);
+                }
                 Preferences.Set(AppPreferenceKeys.LastTrendingVideos, JsonSerializer.Serialize(videos, JsonOptions));
             }
         }
@@ -430,8 +470,7 @@ public partial class DiscoverViewModel : ObservableObject
     {
         try
         {
-            var baseUrl = Preferences.Get(AppPreferenceKeys.ApiBaseUrl, "http://localhost:56193");
-            _apiClient.BaseUrl = baseUrl;
+            EnsureApiBaseUrl();
 
             string? catParam = null;
             if (!string.Equals(SelectedCategory, "All", StringComparison.OrdinalIgnoreCase) &&
@@ -473,11 +512,16 @@ public partial class DiscoverViewModel : ObservableObject
         }
     }
 
+    private void EnsureApiBaseUrl()
+    {
+        _apiClient.BaseUrl = AppNetworkConstants.GetConfiguredApiBaseUrl();
+    }
+
     private void UpdateFeedDisplay(List<BriefingItem> items, string headerText)
     {
         if (items.Count == 0)
         {
-            FilteredItems = [];
+            FilteredItems.Clear();
             IsEmptyStateVisible     = true;
             IsResultsHeaderVisible = false;
             IsLoadMoreVisible        = false;
@@ -490,15 +534,30 @@ public partial class DiscoverViewModel : ObservableObject
 
         if (IsSearchMode)
         {
-            FilteredItems = new ObservableCollection<BriefingItem>(items);
+            FilteredItems.Clear();
+            foreach (var item in items)
+            {
+                FilteredItems.Add(item);
+            }
             return;
         }
 
         _displayedCategoryCount = Math.Min(CategoryBatchSize, items.Count);
         var initialBatch = items.Take(_displayedCategoryCount).ToList();
-        FilteredItems = new ObservableCollection<BriefingItem>(initialBatch);
+        FilteredItems.Clear();
+        foreach (var item in initialBatch)
+        {
+            FilteredItems.Add(item);
+        }
 
         IsLoadMoreVisible = _displayedCategoryCount < items.Count || _hasMoreCategoryPages;
         LoadMoreText = "Load More Stories...";
+    }
+
+    public void Dispose()
+    {
+        _searchCts?.Cancel();
+        _searchCts?.Dispose();
+        _searchCts = null;
     }
 }
