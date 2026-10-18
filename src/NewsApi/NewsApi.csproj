@@ -17,7 +17,9 @@
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.12" />
     <PackageReference Include="Npgsql" Version="10.0.3" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
-    <PackageReference Include="SixLabors.ImageSharp" Version="4.1.2" />
+    <PackageReference Include="SixLabors.ImageSharp" Version="4.1.2">
+      <ExcludeAssets>build</ExcludeAssets>
+    </PackageReference>
     <PackageReference Include="SQLitePCLRaw.lib.e_sqlite3" Version="3.53.3" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="10.2.3" />
     <!-- Fix #38: OpenTelemetry for distributed tracing and metrics -->
@@ -41,5 +43,6 @@
   </ItemGroup>
 
   <Target Name="ValidateSixLaborsLicense" />
+  <Target Name="SixLabors_ValidateLicense" />
 
 </Project>

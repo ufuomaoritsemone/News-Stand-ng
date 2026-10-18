@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLoaderData, Link } from 'react-router';
 import { api } from '../../src/services/api';
 import { formatTimeAgo } from '../../src/services/timeUtils';
@@ -14,8 +14,247 @@ import {
   ShieldCheck,
   Building2,
   Calendar,
-  Flame
+  Flame,
+  ArrowLeftRight,
+  Coins
 } from 'lucide-react';
+
+const DEFAULT_CURRENCIES = {
+  USD: {
+    currencyCode: 'USD',
+    currencyName: 'US Dollar',
+    flag: '🇺🇸',
+    symbol: '$',
+    buyRate: 0.0,
+    sellRate: 0.0,
+    officialBuyRate: 0.0,
+    officialSellRate: 0.0,
+    change24h: '0.00%',
+  },
+  EUR: {
+    currencyCode: 'EUR',
+    currencyName: 'Euro',
+    flag: '🇪🇺',
+    symbol: '€',
+    buyRate: 0.0,
+    sellRate: 0.0,
+    officialBuyRate: 0.0,
+    officialSellRate: 0.0,
+    change24h: '0.00%',
+  },
+  GBP: {
+    currencyCode: 'GBP',
+    currencyName: 'British Pound',
+    flag: '🇬🇧',
+    symbol: '£',
+    buyRate: 0.0,
+    sellRate: 0.0,
+    officialBuyRate: 0.0,
+    officialSellRate: 0.0,
+    change24h: '0.00%',
+  },
+  JPY: {
+    currencyCode: 'JPY',
+    currencyName: 'Japanese Yen',
+    flag: '🇯🇵',
+    symbol: '¥',
+    buyRate: 0.0,
+    sellRate: 0.0,
+    officialBuyRate: 0.0,
+    officialSellRate: 0.0,
+    change24h: '0.00%',
+  },
+};
+
+const OFFLINE_FALLBACK_METRIC = {
+  title: 'Naira Exchange Rate (USD/NGN)',
+  primaryValue: '₦0.00 / $1',
+  secondaryValue: '₦0.00 Official NAFEM',
+  change24h: '0.00%',
+  sourceAttribution: 'AbokiForex & Central Bank of Nigeria (CBN)',
+  lastUpdated: null,
+  historicalPoints: [],
+  faqs: [],
+  currencies: DEFAULT_CURRENCIES,
+};
+
+function CurrencyCalculatorCard({ currency, rateMode, isPidgin }) {
+  const isOfficial = rateMode === 'official';
+  const effectiveBuyRate = isOfficial
+    ? (currency.officialBuyRate ?? currency.officialBuy ?? currency.officialRate ?? currency.officialSellRate ?? 0)
+    : (currency.buyRate ?? currency.parallelBuy ?? currency.sellRate ?? 0);
+  const effectiveSellRate = isOfficial
+    ? (currency.officialSellRate ?? currency.officialSell ?? currency.officialRate ?? currency.officialBuyRate ?? 0)
+    : (currency.sellRate ?? currency.parallelSell ?? currency.buyRate ?? 0);
+
+  const currCode = currency.currencyCode || currency.code || 'FX';
+  const currName = currency.currencyName || currency.name || currCode;
+  const currSymbol = currency.symbol || '$';
+  const currFlag = currency.flag || '🌐';
+
+  const defaultAmt = currCode === 'JPY' ? 10000 : 100;
+  const [foreignAmount, setForeignAmount] = useState(defaultAmt.toString());
+  const [ngnAmount, setNgnAmount] = useState((defaultAmt * effectiveBuyRate).toFixed(2));
+  const [lastEdited, setLastEdited] = useState('foreign'); // 'foreign' | 'ngn'
+
+  // Recalculate whenever rateMode or effective rates change
+  useEffect(() => {
+    if (lastEdited === 'foreign') {
+      const fNum = parseFloat(foreignAmount.toString().replace(/,/g, ''));
+      if (!isNaN(fNum) && fNum >= 0) {
+        setNgnAmount((fNum * effectiveBuyRate).toFixed(2));
+      }
+    } else {
+      const nNum = parseFloat(ngnAmount.toString().replace(/,/g, ''));
+      if (!isNaN(nNum) && nNum >= 0) {
+        setForeignAmount(effectiveSellRate > 0 ? (nNum / effectiveSellRate).toFixed(2) : '0.00');
+      }
+    }
+  }, [rateMode, effectiveBuyRate, effectiveSellRate]);
+
+  const handleForeignChange = (e) => {
+    const rawVal = e.target.value;
+    setForeignAmount(rawVal);
+    setLastEdited('foreign');
+    const sanitized = rawVal.replace(/,/g, '');
+    const num = parseFloat(sanitized);
+    if (!isNaN(num) && num >= 0) {
+      setNgnAmount((num * effectiveBuyRate).toFixed(2));
+    } else if (rawVal === '') {
+      setNgnAmount('');
+    }
+  };
+
+  const handleNgnChange = (e) => {
+    const rawVal = e.target.value;
+    setNgnAmount(rawVal);
+    setLastEdited('ngn');
+    const sanitized = rawVal.replace(/,/g, '');
+    const num = parseFloat(sanitized);
+    if (!isNaN(num) && num >= 0 && effectiveSellRate > 0) {
+      setForeignAmount((num / effectiveSellRate).toFixed(2));
+    } else if (rawVal === '') {
+      setForeignAmount('');
+    }
+  };
+
+  const handlePresetClick = (amount) => {
+    setForeignAmount(amount.toString());
+    setLastEdited('foreign');
+    setNgnAmount((amount * effectiveBuyRate).toFixed(2));
+  };
+
+  const presets = currCode === 'JPY'
+    ? [1000, 5000, 10000, 50000]
+    : [50, 100, 500, 1000];
+
+  const spread = Math.abs(effectiveSellRate - effectiveBuyRate);
+
+  return (
+    <div className="currency-calc-card">
+      <div className="calc-card-header">
+        <div className="calc-currency-identity">
+          <span className="calc-flag" aria-hidden="true">{currFlag}</span>
+          <div className="calc-title-group">
+            <div className="calc-currency-title">
+              <span className="calc-code">{currCode}</span>
+              <span className="calc-name">{currName}</span>
+            </div>
+            <div className="calc-rate-badge-row">
+              <span className="calc-rate-stat">
+                Buy: <strong>₦{effectiveBuyRate.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
+              </span>
+              <span className="calc-stat-divider">·</span>
+              <span className="calc-rate-stat">
+                Sell: <strong>₦{effectiveSellRate.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
+              </span>
+              {spread > 0 && (
+                <span className="calc-spread-tag">Spread ₦{spread.toFixed(2)}</span>
+              )}
+            </div>
+          </div>
+        </div>
+        {currency.change24h && (
+          <span className={`calc-change-badge ${currency.change24h.startsWith('-') ? 'negative' : 'positive'}`}>
+            {currency.change24h}
+          </span>
+        )}
+      </div>
+
+      <div className="calc-dual-converter">
+        <div className="calc-input-block">
+          <label className="calc-input-label" htmlFor={`input-${currCode}`}>
+            <span>{currName} ({currSymbol})</span>
+            {lastEdited === 'foreign' && <span className="active-flow-indicator">Source</span>}
+          </label>
+          <div className="calc-input-wrap">
+            <span className="calc-input-symbol">{currSymbol}</span>
+            <input
+              id={`input-${currCode}`}
+              type="number"
+              step="any"
+              min="0"
+              className="calc-input-field"
+              value={foreignAmount}
+              onChange={handleForeignChange}
+              placeholder="0.00"
+            />
+          </div>
+        </div>
+
+        <div className="calc-exchange-arrow" title="Two-way conversion">
+          <ArrowLeftRight size={18} />
+        </div>
+
+        <div className="calc-input-block">
+          <label className="calc-input-label" htmlFor={`input-ngn-${currCode}`}>
+            <span>Nigerian Naira (₦)</span>
+            {lastEdited === 'ngn' && <span className="active-flow-indicator">Source</span>}
+          </label>
+          <div className="calc-input-wrap">
+            <span className="calc-input-symbol">₦</span>
+            <input
+              id={`input-ngn-${currCode}`}
+              type="text"
+              className="calc-input-field"
+              value={ngnAmount}
+              onChange={handleNgnChange}
+              placeholder="0.00"
+            />
+          </div>
+        </div>
+      </div>
+
+      <div className="calc-meta-footer">
+        <div className="calc-formula-caption">
+          {lastEdited === 'foreign' ? (
+            <span>
+              Converting to Naira via <strong>Buy Rate</strong> (1 {currCode} = ₦{effectiveBuyRate.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })})
+            </span>
+          ) : (
+            <span>
+              Buying {currCode} via <strong>Sell Rate</strong> (₦{effectiveSellRate.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} = 1 {currCode})
+            </span>
+          )}
+        </div>
+
+        <div className="calc-presets-pills">
+          <span className="presets-label">Quick:</span>
+          {presets.map((p) => (
+            <button
+              key={`${currCode}-preset-${p}`}
+              type="button"
+              className="calc-preset-btn"
+              onClick={() => handlePresetClick(p)}
+            >
+              {currSymbol}{p.toLocaleString()}
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export function meta({ data, location }) {
   const isPidgin = location?.pathname?.startsWith('/pcm');
@@ -56,32 +295,14 @@ export async function loader({ request }) {
     ]);
 
     return {
-      metric: metric || {
-        title: 'Naira Exchange Rate (USD/NGN)',
-        primaryValue: '₦1,645.00 / $1',
-        secondaryValue: '₦1,482.50 Official NAFEM',
-        change24h: '+0.35%',
-        sourceAttribution: 'Central Bank of Nigeria (NAFEM) & Lagos Parallel Market Desk',
-        lastUpdated: new Date().toISOString(),
-        historicalPoints: [],
-        faqs: [],
-      },
+      metric: metric || OFFLINE_FALLBACK_METRIC,
       articles: Array.isArray(relatedNews) ? relatedNews : (relatedNews?.articles || []),
       isPidgin,
     };
   } catch (err) {
-    console.warn('[Naira Loader] Fallback engaged:', err.message);
+    console.warn('[Naira Loader] Offline fallback (0) engaged:', err.message);
     return {
-      metric: {
-        title: 'Naira Exchange Rate (USD/NGN)',
-        primaryValue: '₦1,645.00 / $1',
-        secondaryValue: '₦1,482.50 Official NAFEM',
-        change24h: '+0.35%',
-        sourceAttribution: 'Central Bank of Nigeria (NAFEM) & Lagos Parallel Market Desk',
-        lastUpdated: new Date().toISOString(),
-        historicalPoints: [],
-        faqs: [],
-      },
+      metric: OFFLINE_FALLBACK_METRIC,
       articles: [],
       isPidgin,
     };
@@ -89,7 +310,70 @@ export async function loader({ request }) {
 }
 
 export default function NairaExchangeRatePage() {
-  const { metric, articles, isPidgin } = useLoaderData();
+  const { metric: initialMetric, articles, isPidgin } = useLoaderData();
+  const [rateMode, setRateMode] = useState('parallel'); // 'parallel' | 'official'
+  const [isOnline, setIsOnline] = useState(() => (typeof navigator !== 'undefined' ? navigator.onLine : true));
+  const [liveMetric, setLiveMetric] = useState(initialMetric);
+
+  useEffect(() => {
+    setLiveMetric(initialMetric);
+  }, [initialMetric]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+
+    const refreshLiveFx = async () => {
+      try {
+        const fresh = await api.getMarketMetric('naira-fx');
+        if (fresh) {
+          setLiveMetric(fresh);
+        }
+      } catch {
+        setLiveMetric(OFFLINE_FALLBACK_METRIC);
+      }
+    };
+
+    const handleOnline = () => {
+      setIsOnline(true);
+      refreshLiveFx();
+    };
+
+    const handleOffline = () => {
+      setIsOnline(false);
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    if (navigator.onLine && (!initialMetric?.lastUpdated || initialMetric?.primaryValue === '₦0.00 / $1')) {
+      refreshLiveFx();
+    }
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, [initialMetric]);
+
+  const metric = isOnline ? (liveMetric || OFFLINE_FALLBACK_METRIC) : OFFLINE_FALLBACK_METRIC;
+
+  const currencyCodes = ['USD', 'EUR', 'GBP', 'JPY'];
+  const currencyList = currencyCodes.map((code) => {
+    const def = DEFAULT_CURRENCIES[code] || {};
+    const fromApi = isOnline ? (metric?.currencies?.[code] || metric?.currencies?.[code.toLowerCase()] || {}) : {};
+    return {
+      currencyCode: code,
+      code,
+      currencyName: fromApi.name || fromApi.currencyName || def.currencyName || code,
+      flag: def.flag || '🌐',
+      symbol: fromApi.symbol || def.symbol || '$',
+      buyRate: fromApi.parallelBuy ?? fromApi.buyRate ?? def.buyRate ?? 0,
+      sellRate: fromApi.parallelSell ?? fromApi.sellRate ?? def.sellRate ?? 0,
+      officialBuyRate: fromApi.officialBuy ?? fromApi.officialBuyRate ?? fromApi.officialRate ?? def.officialBuyRate ?? 0,
+      officialSellRate: fromApi.officialSell ?? fromApi.officialSellRate ?? fromApi.officialRate ?? def.officialSellRate ?? 0,
+      change24h: fromApi.change24h || def.change24h || '0.00%',
+    };
+  });
 
   const datasetJsonLd = {
     '@context': 'https://schema.org',
@@ -133,8 +417,8 @@ export default function NairaExchangeRatePage() {
 
   // Render SVG Sparkline / Trend Chart
   const points = metric.historicalPoints || [];
-  const minVal = points.length > 0 ? Math.min(...points.map(p => p.secondaryValue || p.primaryValue)) - 30 : 1400;
-  const maxVal = points.length > 0 ? Math.max(...points.map(p => p.primaryValue)) + 30 : 1700;
+  const minVal = points.length > 0 ? Math.min(...points.map(p => p.secondaryValue || p.primaryValue)) - 30 : 1300;
+  const maxVal = points.length > 0 ? Math.max(...points.map(p => p.primaryValue)) + 30 : 1450;
   const range = maxVal - minVal || 1;
 
   const chartHeight = 220;
@@ -236,9 +520,9 @@ export default function NairaExchangeRatePage() {
             <div className="rate-card parallel-rate-card">
               <div className="rate-card-label">
                 <span>Parallel Market (Street / BDC)</span>
-                <span className="rate-pill-change">{metric.change24h || '+0.35%'}</span>
+                <span className="rate-pill-change">{metric.change24h || '0.00%'}</span>
               </div>
-              <div className="rate-card-value">{metric.primaryValue}</div>
+              <div className="rate-card-value">{metric.primaryValue || '₦0.00 / $1'}</div>
               <div className="rate-card-sub">Cash rate across Lagos, Abuja, & Kano Bureau de Change hubs</div>
             </div>
 
@@ -247,8 +531,59 @@ export default function NairaExchangeRatePage() {
                 <span>Official Window (NAFEM / CBN)</span>
                 <span className="rate-pill-official">CBN Model</span>
               </div>
-              <div className="rate-card-value">{metric.secondaryValue || '₦1,482.50 / $1'}</div>
+              <div className="rate-card-value">{metric.secondaryValue || '₦0.00 Official NAFEM'}</div>
               <div className="rate-card-sub">Willing-buyer, willing-seller order-book rate via commercial banks</div>
+            </div>
+          </div>
+
+          {/* Interactive Currency Calculators Section */}
+          <div className="fx-calculators-section">
+            <div className="fx-calculators-toolbar">
+              <div className="fx-toolbar-text">
+                <div className="fx-toolbar-heading-row">
+                  <Coins size={20} className="fx-heading-icon" />
+                  <h2 className="fx-toolbar-title">
+                    {isPidgin ? 'Major Currency Two-Way Calculators' : 'Live Currency Calculators (USD, EUR, GBP, JPY)'}
+                  </h2>
+                </div>
+                <p className="fx-toolbar-desc">
+                  {isPidgin
+                    ? 'Put amount inside any side to calculate quick-quick. Change between parallel street rate and CBN official rate below.'
+                    : 'Interactive two-way FX calculators. Enter an amount in either currency to convert instantly using verified exchange rates.'}
+                </p>
+              </div>
+
+              <div className="fx-rate-mode-toggle" role="group" aria-label="Select Exchange Rate Source">
+                <button
+                  type="button"
+                  className={`fx-mode-btn ${rateMode === 'parallel' ? 'active parallel' : ''}`}
+                  onClick={() => setRateMode('parallel')}
+                  aria-pressed={rateMode === 'parallel'}
+                >
+                  <span className="fx-mode-dot parallel-dot" />
+                  <span>Parallel Market (Street / BDC)</span>
+                </button>
+                <button
+                  type="button"
+                  className={`fx-mode-btn ${rateMode === 'official' ? 'active official' : ''}`}
+                  onClick={() => setRateMode('official')}
+                  aria-pressed={rateMode === 'official'}
+                >
+                  <span className="fx-mode-dot official-dot" />
+                  <span>Official CBN (NAFEM)</span>
+                </button>
+              </div>
+            </div>
+
+            <div className="currency-calculators-grid">
+              {currencyList.map((curr, idx) => (
+                <CurrencyCalculatorCard
+                  key={curr.currencyCode || curr.code || `currency-${idx}`}
+                  currency={curr}
+                  rateMode={rateMode}
+                  isPidgin={isPidgin}
+                />
+              ))}
             </div>
           </div>
 
@@ -324,7 +659,7 @@ export default function NairaExchangeRatePage() {
             </h2>
             <div className="faq-accordion-group">
               {metric.faqs.map((faq, idx) => (
-                <details key={idx} className="story-faq-item" open={idx === 0}>
+                <details key={faq.id || faq.question || `faq-${idx}`} className="story-faq-item" open={idx === 0}>
                   <summary className="story-faq-question">
                     <span className="faq-q-text">{faq.question}</span>
                     <ChevronDown size={16} className="faq-chevron" />
@@ -346,8 +681,8 @@ export default function NairaExchangeRatePage() {
               <span>Latest Economic & Currency News</span>
             </h2>
             <div className="related-stories-grid">
-              {articles.map((art) => (
-                <Link key={art.id} to={`/news/${art.slug || art.id}`} className="related-story-card">
+              {articles.map((art, idx) => (
+                <Link key={art.id || art.slug || `related-art-${idx}`} to={`/news/${art.slug || art.id}`} className="related-story-card">
                   {art.imageUrl && (
                     <div className="related-thumb-container">
                       <img src={art.imageUrl} alt="" className="related-thumb-img" loading="lazy" />

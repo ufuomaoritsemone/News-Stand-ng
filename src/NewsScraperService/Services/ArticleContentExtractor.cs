@@ -151,6 +151,15 @@ public class ArticleContentExtractor
 
         // --- 4. Final Sanitization and Fallbacks ---
         model.Title = SanitizeText(model.Title);
+        if (string.IsNullOrWhiteSpace(model.Title) || 
+            model.Title.Length < 5 || 
+            model.Title.Equals("Before you continue", StringComparison.OrdinalIgnoreCase) ||
+            url.Contains("consent.google.com", StringComparison.OrdinalIgnoreCase))
+        {
+            _logger.LogDebug("Skipping invalid or consent-walled article: {Title} at {Url}", model.Title, url);
+            return null;
+        }
+
         model.Summary = SanitizeText(model.Summary ?? string.Empty);
         model.Content = SanitizeContentBody(model.Content);
         if (!string.IsNullOrWhiteSpace(model.Author))

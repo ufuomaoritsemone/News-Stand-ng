@@ -70,17 +70,18 @@ public class FeedbackService : IFeedbackService
     {
         var effectiveLimit = Math.Clamp(limit, 1, 200);
 
-        // SQLite does not support native DateTimeOffset in ORDER BY clauses in EF Core
         if (_db.Database.ProviderName == "Microsoft.EntityFrameworkCore.Sqlite")
         {
-            var items = await _db.Feedbacks
+            return await _db.Feedbacks
+                .FromSqlRaw(
+                    """
+                    SELECT * FROM "Feedbacks"
+                    ORDER BY datetime("CreatedAt") DESC
+                    LIMIT {0}
+                    """,
+                    effectiveLimit)
                 .AsNoTracking()
                 .ToListAsync(cancellationToken);
-
-            return items
-                .OrderByDescending(f => f.CreatedAt)
-                .Take(effectiveLimit)
-                .ToList();
         }
 
         return await _db.Feedbacks

@@ -5,14 +5,15 @@
               xmlns:views="clr-namespace:NigerianNewGrid.Views"
               x:Class="NigerianNewGrid.BookmarksPage"
               Title="Bookmarks"
-              Background="{StaticResource SecondaryLightBrush}">
+              SafeAreaEdges="Container"
+              Background="{AppThemeBinding Light={StaticResource SecondaryLightBrush}, Dark={StaticResource DarkSurfaceBg}}">
 
     <Grid RowDefinitions="Auto,*" Padding="0" RowSpacing="0">
 
         <!-- Header -->
         <Grid Grid.Row="0"
               Padding="20,16,20,12"
-              Background="{StaticResource WhiteBrush}"
+              Background="{AppThemeBinding Light={StaticResource WhiteBrush}, Dark={StaticResource DarkSurfaceCard}}"
               ColumnDefinitions="*,Auto">
             <VerticalStackLayout Grid.Column="0" Spacing="2">
                 <Label Text="Bookmarks"

@@ -96,6 +96,14 @@ public partial class ArticleViewModel : ObservableObject
     [ObservableProperty] public partial int VideosRelatedCount { get; set; }
     [ObservableProperty] public partial string RelatedCollapsedText { get; set; } = string.Empty;
 
+    // In-Article Sponsorship Placements
+    [ObservableProperty] public partial BriefingItem? HeaderSponsor { get; set; }
+    [ObservableProperty] public partial bool HasHeaderSponsor { get; set; }
+    [ObservableProperty] public partial BriefingItem? MidContentSponsor { get; set; }
+    [ObservableProperty] public partial bool HasMidContentSponsor { get; set; }
+    [ObservableProperty] public partial BriefingItem? FooterSponsor { get; set; }
+    [ObservableProperty] public partial bool HasFooterSponsor { get; set; }
+
     public List<RelatedStoryDisplayItem> AllRelatedItems { get; private set; } = [];
 
     public event Action? StoryDataApplied;
@@ -207,6 +215,7 @@ public partial class ArticleViewModel : ObservableObject
         }
 
         LoadRelatedStoriesAsync().SafeFireAndForget(_logger, "LoadRelatedStories");
+        LoadInArticleSponsorsAsync().SafeFireAndForget(_logger, "LoadInArticleSponsors");
     }
 
     public async Task HydrateContentIfMissingAsync(string? articleId)
@@ -596,6 +605,72 @@ public partial class ArticleViewModel : ObservableObject
             _logger.LogWarning(ex, "Failed to load remote related stories, attempting fallback.");
             AllRelatedItems = await GetLocalFallbackRelatedStoriesAsync(Title, Category);
             UpdateRelatedSummary();
+        }
+    }
+
+    public async Task LoadInArticleSponsorsAsync(CancellationToken ct = default)
+    {
+        try
+        {
+            var sponsored = await _apiClient.GetSponsoredArticlesAsync(platform: "Mobile", cancellationToken: ct);
+
+            var header = sponsored.FirstOrDefault(s => string.Equals(s.PlacementZone, "InArticle_Header", StringComparison.OrdinalIgnoreCase));
+            var mid = sponsored.FirstOrDefault(s => string.Equals(s.PlacementZone, "InArticle_MidContent", StringComparison.OrdinalIgnoreCase));
+            var footer = sponsored.FirstOrDefault(s => string.Equals(s.PlacementZone, "InArticle_Footer", StringComparison.OrdinalIgnoreCase));
+
+            MainThread.BeginInvokeOnMainThread(() =>
+            {
+                HeaderSponsor = header;
+                HasHeaderSponsor = header != null;
+
+                MidContentSponsor = mid;
+                HasMidContentSponsor = mid != null;
+
+                FooterSponsor = footer;
+                HasFooterSponsor = footer != null;
+            });
+
+            if (header != null && !string.IsNullOrWhiteSpace(header.Id))
+            {
+                _apiClient.TrackArticleImpressionAsync(header.Id).SafeFireAndForget(_logger, "TrackHeaderSponsorImpression");
+            }
+            if (mid != null && !string.IsNullOrWhiteSpace(mid.Id))
+            {
+                _apiClient.TrackArticleImpressionAsync(mid.Id).SafeFireAndForget(_logger, "TrackMidSponsorImpression");
+            }
+            if (footer != null && !string.IsNullOrWhiteSpace(footer.Id))
+            {
+                _apiClient.TrackArticleImpressionAsync(footer.Id).SafeFireAndForget(_logger, "TrackFooterSponsorImpression");
+            }
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _logger.LogWarning(ex, "Failed to load in-article sponsors.");
+        }
+    }
+
+    [RelayCommand]
+    public async Task OpenInArticleSponsorAsync(BriefingItem? sponsor)
+    {
+        if (sponsor == null) return;
+        if (!string.IsNullOrWhiteSpace(sponsor.Id))
+        {
+            _apiClient.TrackArticleClickAsync(sponsor.Id).SafeFireAndForget(_logger, "TrackInArticleSponsorClick");
+        }
+
+        var targetUrl = !string.IsNullOrWhiteSpace(sponsor.SponsorUrl) ? sponsor.SponsorUrl.Trim() : sponsor.Url?.Trim();
+        if (string.IsNullOrWhiteSpace(targetUrl)) return;
+
+        if (Uri.TryCreate(targetUrl, UriKind.Absolute, out var uri))
+        {
+            try
+            {
+                await Launcher.Default.OpenAsync(uri);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to open sponsor URL {Url}", targetUrl);
+            }
         }
     }
 

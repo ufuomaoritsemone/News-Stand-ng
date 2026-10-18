@@ -19,6 +19,9 @@ export default function ReaderDrawer({
   currentUser,
   onOpenAuth,
   featuredSponsoredStory,
+  headerSponsor = null,
+  midContentSponsor = null,
+  footerSponsor = null,
   onSelectStory,
   initialScrollToComments = false,
 }) {
@@ -136,9 +139,15 @@ export default function ReaderDrawer({
       // Track sponsored impression only if viewing an actual sponsored article
       if (article.isSponsored) {
         api.trackSponsoredImpression(article.id);
+      } else {
+        if (headerSponsor?.id) api.trackSponsoredImpression(headerSponsor.id);
+        if (midContentSponsor?.id) api.trackSponsoredImpression(midContentSponsor.id);
+        if ((footerSponsor || featuredSponsoredStory)?.id) {
+          api.trackSponsoredImpression((footerSponsor || featuredSponsoredStory).id);
+        }
       }
     }
-  }, [article, isOpen]);
+  }, [article, isOpen, headerSponsor, midContentSponsor, footerSponsor, featuredSponsoredStory]);
 
   // Synchronize enrichment or fetch on article change
   useEffect(() => {
@@ -426,6 +435,33 @@ export default function ReaderDrawer({
             </div>
           )}
 
+          {/* In-Article Placement 1: Top Header Sponsor Bar ("Presented by") */}
+          {!article.isSponsored && headerSponsor && (
+            <div className="in-article-header-sponsor-bar">
+              <div className="header-sponsor-left">
+                <span className="header-sponsor-badge">PRESENTED BY</span>
+                <span className="header-sponsor-name">{headerSponsor.sponsorName || 'Partner'}</span>
+              </div>
+              <div className="header-sponsor-right">
+                {headerSponsor.title && (
+                  <span className="header-sponsor-title-snippet">{headerSponsor.title}</span>
+                )}
+                {headerSponsor.sponsorUrl && (
+                  <a
+                    href={headerSponsor.sponsorUrl}
+                    target="_blank"
+                    rel="sponsored noopener noreferrer"
+                    className="header-sponsor-cta-btn"
+                    onClick={() => api.trackSponsoredClick(headerSponsor.id)}
+                  >
+                    <span>Visit Partner</span>
+                    <ExternalLink size={12} />
+                  </a>
+                )}
+              </div>
+            </div>
+          )}
+
           <h1 className="reader-title">{article.title}</h1>
 
           <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10, fontSize: '0.82rem', color: 'var(--text-muted)', marginBottom: 20 }}>
@@ -633,6 +669,70 @@ export default function ReaderDrawer({
             </p>
           </div>
 
+          {/* In-Article Placement 2: Mid-Article Inline Breakout Box */}
+          {!article.isSponsored && midContentSponsor && (
+            <div
+              className="in-article-mid-sponsor-card"
+              onClick={() => {
+                api.trackSponsoredClick(midContentSponsor.id);
+                if (onSelectStory) onSelectStory(midContentSponsor);
+              }}
+              role="button"
+              tabIndex={0}
+            >
+              <div className="mid-sponsor-header">
+                <span className="mid-sponsor-badge">
+                  <Megaphone size={12} />
+                  <span>SPONSORED INSIGHT</span>
+                </span>
+                <span className="mid-sponsor-by">presented by <strong>{midContentSponsor.sponsorName}</strong></span>
+              </div>
+              <div className="mid-sponsor-body">
+                {midContentSponsor.imageUrl && (
+                  <img
+                    src={midContentSponsor.imageUrl}
+                    alt={midContentSponsor.title}
+                    className="mid-sponsor-img"
+                    onError={(e) => { e.target.style.display = 'none'; }}
+                  />
+                )}
+                <div className="mid-sponsor-text">
+                  <h4 className="mid-sponsor-title">{midContentSponsor.title}</h4>
+                  <p className="mid-sponsor-snippet">{midContentSponsor.summary || midContentSponsor.excerpt}</p>
+                </div>
+              </div>
+              <div className="mid-sponsor-actions">
+                <button
+                  type="button"
+                  className="mid-sponsor-read-btn"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    api.trackSponsoredClick(midContentSponsor.id);
+                    if (onSelectStory) onSelectStory(midContentSponsor);
+                  }}
+                >
+                  <span>Read Sponsored Story</span>
+                  <ArrowRight size={13} />
+                </button>
+                {midContentSponsor.sponsorUrl && (
+                  <a
+                    href={midContentSponsor.sponsorUrl}
+                    target="_blank"
+                    rel="sponsored noopener noreferrer"
+                    className="mid-sponsor-link-btn"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      api.trackSponsoredClick(midContentSponsor.id);
+                    }}
+                  >
+                    <span>Visit Partner</span>
+                    <ExternalLink size={12} />
+                  </a>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Actions & Attribution */}
           <div className="reader-actions-bar" style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center' }}>
             {article.isSponsored && article.sponsorUrl && (
@@ -783,56 +883,59 @@ export default function ReaderDrawer({
             </section>
           )}
 
-          {/* Placement 3: Sponsored Story Callout Box (Bottom Editorial Climax) */}
-          {!article.isSponsored && featuredSponsoredStory && (
-            <div className="sponsored-perspective-callout">
-              <div className="callout-header">
-                <span className="callout-badge">
-                  <Megaphone size={13} />
-                  PARTNER PERSPECTIVE
-                </span>
-                <span className="callout-sponsor">{featuredSponsoredStory.sponsorName || 'Corporate Partner'}</span>
-              </div>
-              <div className="callout-content">
-                {featuredSponsoredStory.imageUrl && (
-                  <img
-                    src={featuredSponsoredStory.imageUrl}
-                    alt={featuredSponsoredStory.title}
-                    className="callout-image"
-                    onError={(e) => { e.target.style.display = 'none'; }}
-                  />
-                )}
-                <div className="callout-text">
-                  <h4 className="callout-title">{featuredSponsoredStory.title}</h4>
-                  <p className="callout-summary">{featuredSponsoredStory.excerpt || featuredSponsoredStory.summary}</p>
+          {/* In-Article Placement 3: Sponsored Story Callout Box (Bottom Editorial Climax) */}
+          {!article.isSponsored && (footerSponsor || featuredSponsoredStory) && (() => {
+            const activeFoot = footerSponsor || featuredSponsoredStory;
+            return (
+              <div className="sponsored-perspective-callout">
+                <div className="callout-header">
+                  <span className="callout-badge">
+                    <Megaphone size={13} />
+                    PARTNER PERSPECTIVE
+                  </span>
+                  <span className="callout-sponsor">{activeFoot.sponsorName || 'Corporate Partner'}</span>
+                </div>
+                <div className="callout-content">
+                  {activeFoot.imageUrl && (
+                    <img
+                      src={activeFoot.imageUrl}
+                      alt={activeFoot.title}
+                      className="callout-image"
+                      onError={(e) => { e.target.style.display = 'none'; }}
+                    />
+                  )}
+                  <div className="callout-text">
+                    <h4 className="callout-title">{activeFoot.title}</h4>
+                    <p className="callout-summary">{activeFoot.excerpt || activeFoot.summary}</p>
+                  </div>
+                </div>
+                <div className="callout-actions">
+                  <button
+                    type="button"
+                    className="callout-read-btn"
+                    onClick={() => {
+                      if (onSelectStory) onSelectStory(activeFoot);
+                    }}
+                  >
+                    <span>Read Partner Story</span>
+                    <ArrowRight size={14} />
+                  </button>
+                  {activeFoot.sponsorUrl && (
+                    <a
+                      href={activeFoot.sponsorUrl}
+                      target="_blank"
+                      rel="sponsored nofollow noopener"
+                      className="callout-visit-link"
+                      onClick={() => api.trackSponsoredClick(activeFoot.id)}
+                    >
+                      <span>Visit Official Portal</span>
+                      <ExternalLink size={13} />
+                    </a>
+                  )}
                 </div>
               </div>
-              <div className="callout-actions">
-                <button
-                  type="button"
-                  className="callout-read-btn"
-                  onClick={() => {
-                    if (onSelectStory) onSelectStory(featuredSponsoredStory);
-                  }}
-                >
-                  <span>Read Partner Story</span>
-                  <ArrowRight size={14} />
-                </button>
-                {featuredSponsoredStory.sponsorUrl && (
-                  <a
-                    href={featuredSponsoredStory.sponsorUrl}
-                    target="_blank"
-                    rel="sponsored nofollow noopener"
-                    className="callout-visit-link"
-                    onClick={() => api.trackSponsoredClick(featuredSponsoredStory.id)}
-                  >
-                    <span>Visit Official Portal</span>
-                    <ExternalLink size={13} />
-                  </a>
-                )}
-              </div>
-            </div>
-          )}
+            );
+          })()}
 
           {/* Interactive Community Comments & Discussion */}
           <Suspense fallback={<div className="skeleton" style={{ minHeight: 180, borderRadius: 12, margin: '2rem 0' }} />}>

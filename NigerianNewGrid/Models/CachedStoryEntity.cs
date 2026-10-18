@@ -40,6 +40,8 @@ public class CachedStoryEntity
     public int? TargetPosition { get; set; }
     public int PriorityWeight { get; set; } = 1;
     public bool IsAdMobPlaceholder { get; set; }
+    public string PlacementZone { get; set; } = "MainPage_InFeed";
+    public string TargetPlatform { get; set; } = "All";
 
     // AI Summary & Enrichment fields
     public bool HasAiSummary { get; set; }
@@ -83,6 +85,8 @@ public class CachedStoryEntity
         TargetPosition = TargetPosition,
         PriorityWeight = PriorityWeight,
         IsAdMobPlaceholder = IsAdMobPlaceholder,
+        PlacementZone = PlacementZone,
+        TargetPlatform = TargetPlatform,
         HasAiSummary = HasAiSummary,
         AiSummary = AiSummary,
         AiSummaryEngine = AiSummaryEngine,
@@ -118,6 +122,8 @@ public class CachedStoryEntity
         TargetPosition = item.TargetPosition,
         PriorityWeight = item.PriorityWeight,
         IsAdMobPlaceholder = item.IsAdMobPlaceholder,
+        PlacementZone = item.PlacementZone,
+        TargetPlatform = item.TargetPlatform,
         HasAiSummary = item.HasAiSummary,
         AiSummary = item.AiSummary,
         AiSummaryEngine = item.AiSummaryEngine,

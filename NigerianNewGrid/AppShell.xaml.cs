@@ -14,6 +14,7 @@ public partial class AppShell : Shell
             Android.Util.Log.Info("APP_DEBUG", "AppShell InitializeComponent DONE");
 #endif
             Routing.RegisterRoute("article", typeof(ArticleWebPage));
+            Routing.RegisterRoute("storycluster", typeof(StoryClusterPage));
 #if DEBUG && ANDROID
             Android.Util.Log.Info("APP_DEBUG", "AppShell RegisterRoute DONE");
 #endif

@@ -1,0 +1,268 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:NigerianNewGrid.ViewModels"
+             xmlns:models="clr-namespace:NigerianNewsGrid.Client.Models;assembly=NigerianNewsGrid.Client"
+             x:Class="NigerianNewGrid.StoryClusterPage"
+             x:DataType="vm:StoryClusterViewModel"
+             Title="Full Coverage"
+             Shell.NavBarIsVisible="False"
+             SafeAreaEdges="All"
+             BackgroundColor="{AppThemeBinding Light={StaticResource PageBgLight}, Dark={StaticResource PageBgDark}}">
+
+    <Grid RowDefinitions="Auto,*">
+
+        <!-- Top Navigation Bar -->
+        <Border Grid.Row="0"
+                BackgroundColor="{AppThemeBinding Light={StaticResource CardBgLight}, Dark={StaticResource CardBgDark}}"
+                Stroke="{AppThemeBinding Light={StaticResource CardBorderLight}, Dark={StaticResource CardBorderDark}}"
+                StrokeThickness="1"
+                Padding="12,10">
+            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
+                <Button Grid.Column="0"
+                        Text="Back"
+                        ImageSource="ic_back.png"
+                        ContentLayout="Left,6"
+                        Clicked="OnBackClicked"
+                        FontSize="13"
+                        FontAttributes="Bold"
+                        CornerRadius="10"
+                        Padding="12,6"
+                        MinimumHeightRequest="40"
+                        BackgroundColor="{AppThemeBinding Light={StaticResource ButtonBgLight}, Dark={StaticResource ButtonSecondaryBgDark}}"
+                        TextColor="{AppThemeBinding Light={StaticResource ButtonTextLight}, Dark={StaticResource ButtonTextDark}}"
+                        BorderColor="{AppThemeBinding Light={StaticResource ButtonBorderLight}, Dark={StaticResource ButtonBorderDark}}"
+                        BorderWidth="1"
+                        SemanticProperties.Description="Back to feed" />
+
+                <VerticalStackLayout Grid.Column="1" VerticalOptions="Center" Spacing="1">
+                    <Label Text="FULL STORY COVERAGE"
+                           FontSize="10"
+                           FontAttributes="Bold"
+                           CharacterSpacing="0.8"
+                           TextColor="{StaticResource AccentOrange}" />
+                    <Label Text="{Binding CoverageSummaryText}"
+                           FontSize="12"
+                           LineBreakMode="TailTruncation"
+                           TextColor="{AppThemeBinding Light={StaticResource TextSecondaryLight}, Dark={StaticResource TextSecondaryDark}}" />
+                </VerticalStackLayout>
+
+                <Button Grid.Column="2"
+                        ImageSource="ic_search.png"
+                        Command="{Binding SearchMoreCoverageCommand}"
+                        WidthRequest="40"
+                        HeightRequest="40"
+                        CornerRadius="10"
+                        Padding="0"
+                        BackgroundColor="{AppThemeBinding Light={StaticResource ButtonBgLight}, Dark={StaticResource ButtonSecondaryBgDark}}"
+                        BorderColor="{AppThemeBinding Light={StaticResource ButtonBorderLight}, Dark={StaticResource ButtonBorderDark}}"
+                        BorderWidth="1"
+                        SemanticProperties.Description="Search more coverage in Discover" />
+            </Grid>
+        </Border>
+
+        <!-- Main Story Cluster Content & Perspectives List -->
+        <RefreshView Grid.Row="1"
+                     IsRefreshing="{Binding IsBusy}"
+                     Command="{Binding LoadClusterDetailsCommand}"
+                     RefreshColor="{StaticResource AccentOrange}">
+            <CollectionView ItemsSource="{Binding Articles}"
+                            SelectionMode="None"
+                            Margin="0">
+                <CollectionView.Header>
+                    <VerticalStackLayout Spacing="14" Padding="16,16,16,10">
+
+                        <!-- Cluster Hero Card -->
+                        <Border StrokeShape="RoundRectangle 16"
+                                Stroke="{AppThemeBinding Light={StaticResource CardBorderLight}, Dark={StaticResource CardBorderDark}}"
+                                StrokeThickness="1"
+                                BackgroundColor="{AppThemeBinding Light={StaticResource CardBgLight}, Dark={StaticResource CardBgDark}}"
+                                Padding="0">
+                            <VerticalStackLayout Spacing="0">
+                                <Grid HeightRequest="190" IsVisible="{Binding HasImage}">
+                                    <Image Source="{Binding ImageUrl}"
+                                           Aspect="AspectFill"
+                                           HeightRequest="190" />
+                                    <BoxView>
+                                        <BoxView.Background>
+                                            <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                                <GradientStop Color="#10000000" Offset="0.0" />
+                                                <GradientStop Color="#B8000000" Offset="1.0" />
+                                            </LinearGradientBrush>
+                                        </BoxView.Background>
+                                    </BoxView>
+                                    <Border HorizontalOptions="Start"
+                                            VerticalOptions="Top"
+                                            Margin="12"
+                                            Padding="10,4"
+                                            StrokeShape="RoundRectangle 8"
+                                            StrokeThickness="0"
+                                            BackgroundColor="{StaticResource AccentOrange}">
+                                        <Label Text="{Binding Category}"
+                                               FontSize="11"
+                                               FontAttributes="Bold"
+                                               TextColor="White" />
+                                    </Border>
+                                </Grid>
+
+                                <VerticalStackLayout Padding="16" Spacing="10">
+                                    <Label Text="{Binding Title}"
+                                           FontFamily="NewsSerifBold"
+                                           FontSize="20"
+                                           FontAttributes="Bold"
+                                           LineHeight="1.2"
+                                           TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}"
+                                           SemanticProperties.HeadingLevel="Level1" />
+
+                                    <Border IsVisible="{Binding HasSummary}"
+                                            StrokeShape="RoundRectangle 10"
+                                            Stroke="{StaticResource AccentOrange}"
+                                            StrokeThickness="1"
+                                            BackgroundColor="{AppThemeBinding Light=#FFF7ED, Dark=#1E293B}"
+                                            Padding="12,10">
+                                        <VerticalStackLayout Spacing="4">
+                                            <Label Text="SYNTHESIZED BRIEFING"
+                                                   FontSize="10"
+                                                   FontAttributes="Bold"
+                                                   CharacterSpacing="0.7"
+                                                   TextColor="{StaticResource AccentOrange}" />
+                                            <Label Text="{Binding Summary}"
+                                                   FontSize="14"
+                                                   LineHeight="1.35"
+                                                   TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
+                                        </VerticalStackLayout>
+                                    </Border>
+
+                                    <!-- Active Sources Row -->
+                                    <FlexLayout BindableLayout.ItemsSource="{Binding Sources}"
+                                                Wrap="Wrap"
+                                                JustifyContent="Start"
+                                                AlignItems="Center">
+                                        <BindableLayout.ItemTemplate>
+                                            <DataTemplate x:DataType="x:String">
+                                                <Border Margin="0,4,6,0"
+                                                        Padding="8,4"
+                                                        StrokeShape="RoundRectangle 6"
+                                                        Stroke="{AppThemeBinding Light={StaticResource CardBorderLight}, Dark={StaticResource CardBorderDark}}"
+                                                        StrokeThickness="1"
+                                                        BackgroundColor="{AppThemeBinding Light={StaticResource ChipBgLight}, Dark={StaticResource ChipBgDark}}">
+                                                    <Label Text="{Binding .}"
+                                                           FontSize="11"
+                                                           FontAttributes="Bold"
+                                                           TextColor="{AppThemeBinding Light={StaticResource TextSecondaryLight}, Dark={StaticResource TextSecondaryDark}}" />
+                                                </Border>
+                                            </DataTemplate>
+                                        </BindableLayout.ItemTemplate>
+                                    </FlexLayout>
+                                </VerticalStackLayout>
+                            </VerticalStackLayout>
+                        </Border>
+
+                        <!-- Section Header for Competing Publisher Perspectives -->
+                        <Grid ColumnDefinitions="*,Auto" Padding="2,4,2,0">
+                            <Label Grid.Column="0"
+                                   Text="Publisher Perspectives"
+                                   FontFamily="NewsSerifBold"
+                                   FontSize="17"
+                                   FontAttributes="Bold"
+                                   TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}"
+                                   SemanticProperties.HeadingLevel="Level2" />
+                            <Label Grid.Column="1"
+                                   Text="Tap any report to read"
+                                   FontSize="12"
+                                   VerticalOptions="Center"
+                                   TextColor="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}" />
+                        </Grid>
+
+                        <!-- Error Banner -->
+                        <Border IsVisible="{Binding HasError}"
+                                StrokeShape="RoundRectangle 12"
+                                Stroke="#FCA5A5"
+                                StrokeThickness="1"
+                                BackgroundColor="{AppThemeBinding Light=#FEF2F2, Dark=#3B1818}"
+                                Padding="14">
+                            <VerticalStackLayout Spacing="8">
+                                <Label Text="{Binding ErrorMessage}"
+                                       FontSize="13"
+                                       TextColor="{AppThemeBinding Light=#991B1B, Dark=#FCA5A5}" />
+                                <Button Text="Retry"
+                                        Command="{Binding LoadClusterDetailsCommand}"
+                                        HorizontalOptions="Start"
+                                        FontSize="12"
+                                        FontAttributes="Bold"
+                                        Padding="14,6"
+                                        CornerRadius="8"
+                                        BackgroundColor="{StaticResource AccentOrange}"
+                                        TextColor="White" />
+                            </VerticalStackLayout>
+                        </Border>
+                    </VerticalStackLayout>
+                </CollectionView.Header>
+
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="models:StoryClusterArticleItemDto">
+                        <Border Margin="16,0,16,10"
+                                Padding="14"
+                                StrokeShape="RoundRectangle 14"
+                                Stroke="{AppThemeBinding Light={StaticResource CardBorderLight}, Dark={StaticResource CardBorderDark}}"
+                                StrokeThickness="1"
+                                BackgroundColor="{AppThemeBinding Light={StaticResource CardBgLight}, Dark={StaticResource CardBgDark}}">
+                            <Border.GestureRecognizers>
+                                <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type vm:StoryClusterViewModel}}, Path=OpenPerspectiveArticleCommand}"
+                                                      CommandParameter="{Binding .}" />
+                            </Border.GestureRecognizers>
+
+                            <Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="*,Auto" RowSpacing="6" ColumnSpacing="12">
+                                <!-- Source Pill + Timestamp -->
+                                <HorizontalStackLayout Grid.Row="0" Grid.Column="0" Spacing="8" VerticalOptions="Center">
+                                    <Border Padding="8,3"
+                                            StrokeShape="RoundRectangle 6"
+                                            StrokeThickness="0"
+                                            BackgroundColor="{StaticResource AccentOrange}">
+                                        <Label Text="{Binding Source}"
+                                               FontSize="11"
+                                               FontAttributes="Bold"
+                                               TextColor="White" />
+                                    </Border>
+                                    <Label Text="{Binding TimeAgoText}"
+                                           FontSize="12"
+                                           VerticalOptions="Center"
+                                           TextColor="{AppThemeBinding Light={StaticResource TextMutedLight}, Dark={StaticResource TextMutedDark}}" />
+                                </HorizontalStackLayout>
+
+                                <Label Grid.Row="0"
+                                       Grid.Column="1"
+                                       Text="Read →"
+                                       FontSize="12"
+                                       FontAttributes="Bold"
+                                       VerticalOptions="Center"
+                                       TextColor="{StaticResource AccentOrange}" />
+
+                                <!-- Article Headline -->
+                                <Label Grid.Row="1"
+                                       Grid.ColumnSpan="2"
+                                       Text="{Binding Title}"
+                                       FontFamily="NewsSerifBold"
+                                       FontSize="16"
+                                       FontAttributes="Bold"
+                                       LineHeight="1.22"
+                                       MaxLines="3"
+                                       LineBreakMode="TailTruncation"
+                                       TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
+
+                                <!-- Excerpt -->
+                                <Label Grid.Row="2"
+                                       Grid.ColumnSpan="2"
+                                       Text="{Binding Excerpt}"
+                                       FontSize="13"
+                                       MaxLines="2"
+                                       LineBreakMode="TailTruncation"
+                                       TextColor="{AppThemeBinding Light={StaticResource TextSecondaryLight}, Dark={StaticResource TextSecondaryDark}}" />
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+        </RefreshView>
+    </Grid>
+</ContentPage>

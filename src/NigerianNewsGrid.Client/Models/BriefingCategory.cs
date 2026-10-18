@@ -35,6 +35,8 @@ public sealed record BriefingItem
     public bool IsPinned { get; init; } = false;
     public int? TargetPosition { get; init; }
     public int PriorityWeight { get; init; } = 1;
+    public string PlacementZone { get; init; } = "MainPage_InFeed";
+    public string TargetPlatform { get; init; } = "All";
     public bool IsAdMobPlaceholder { get; init; } = false;
     public bool IsSpecialPlacement => TargetPosition is >= 1 and <= 3;
 

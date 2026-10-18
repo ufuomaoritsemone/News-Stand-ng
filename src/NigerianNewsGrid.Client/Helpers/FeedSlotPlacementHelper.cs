@@ -82,7 +82,9 @@ public static class FeedSlotPlacementHelper
 
         // Sort candidates: pinned first, then higher priority weight, then newest published
         var candidates = sponsoredStories
-            .Where(s => s.IsSponsored)
+            .Where(s => s.IsSponsored &&
+                        (string.IsNullOrEmpty(s.TargetPlatform) || s.TargetPlatform == "All" || s.TargetPlatform.Equals("Mobile", StringComparison.OrdinalIgnoreCase)) &&
+                        (string.IsNullOrEmpty(s.PlacementZone) || s.PlacementZone.Equals("MainPage_InFeed", StringComparison.OrdinalIgnoreCase)))
             .OrderByDescending(s => s.IsPinned)
             .ThenByDescending(s => s.PriorityWeight)
             .ThenByDescending(s => s.PublishedAt ?? DateTime.MinValue)

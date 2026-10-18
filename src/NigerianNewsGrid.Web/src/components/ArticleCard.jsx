@@ -5,7 +5,7 @@ import { XIcon, WhatsAppIcon } from './SocialIcons';
 import { shareOnX, shareOnWhatsApp, shareGeneric } from '../services/share';
 import { getRecencyTag, isHotStory } from '../services/articleMetadata';
 import { formatTimeAgo, cleanEditorialSummary } from '../services/timeUtils';
-import { api, getOptimizedImageUrl } from '../services/api';
+import { api, getOptimizedImageUrl, DEFAULT_EDITORIAL_IMAGE } from '../services/api';
 
 export default function ArticleCard({
   article,
@@ -91,7 +91,7 @@ export default function ArticleCard({
             onError={(e) => {
               e.target.onerror = null;
               e.target.srcset = '';
-              e.target.src = 'https://images.unsplash.com/photo-1585829365295-ab7cd400c167?auto=format&fit=crop&w=600&q=80';
+              e.target.src = DEFAULT_EDITORIAL_IMAGE;
             }}
           />
         </Link>

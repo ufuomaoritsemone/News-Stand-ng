@@ -1,3 +1,20 @@
+@{
+    var currentPath = ViewContext.HttpContext.Request.Path.Value ?? "/";
+    var isAuthenticated = User.Identity?.IsAuthenticated == true;
+    var rawTitle = (ViewData["Title"] as string) ?? "Admin Dashboard";
+    var cleanTitle = rawTitle.Split('|')[0].Trim();
+    var sectionName = currentPath switch {
+        var p when p.StartsWith("/Videos", StringComparison.OrdinalIgnoreCase) ||
+                   p.StartsWith("/Socials", StringComparison.OrdinalIgnoreCase) ||
+                   p.StartsWith("/Comments", StringComparison.OrdinalIgnoreCase) ||
+                   p.StartsWith("/Feedback", StringComparison.OrdinalIgnoreCase) => "Editorial",
+        var p when p.StartsWith("/Categorizer", StringComparison.OrdinalIgnoreCase) ||
+                   p.StartsWith("/Sponsors", StringComparison.OrdinalIgnoreCase) => "Intelligence",
+        var p when p.StartsWith("/SystemHealth", StringComparison.OrdinalIgnoreCase) ||
+                   p.StartsWith("/Settings", StringComparison.OrdinalIgnoreCase) => "Operations",
+        _ => "Overview"
+    };
+}
 <!DOCTYPE html>
 <html lang="en" data-bs-theme="dark">
 <head>
@@ -21,24 +38,293 @@
     <link rel="stylesheet" href="~/site.css" />
 </head>
 <body>
+@if (isAuthenticated)
+{
+    <div class="app-layout">
+        <!-- Mobile Sidebar Backdrop -->
+        <div id="sidebarBackdrop" class="sidebar-backdrop" onclick="toggleMobileSidebar()"></div>
+
+        <!-- Persistent / Responsive SaaS Sidebar -->
+        <aside id="appSidebar" class="app-sidebar">
+            <!-- Brand / Header -->
+            <div class="sidebar-brand">
+                <a href="/" class="brand-link">
+                    <span class="brand-icon"><i class="bi bi-newspaper"></i></span>
+                    <div class="brand-text">
+                        <span class="brand-title">News Stand NG</span>
+                        <span class="brand-subtitle">Central Command</span>
+                    </div>
+                </a>
+                <button class="sidebar-close-btn d-lg-none" onclick="toggleMobileSidebar()" aria-label="Close menu">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+
+            <!-- Navigation Scrollable Area -->
+            <nav class="sidebar-nav">
+                <!-- Section 1: Overview -->
+                <div class="nav-section-title">Overview</div>
+                <a href="/" class="nav-link-saas @(currentPath == "/" || currentPath.Equals("/Index", StringComparison.OrdinalIgnoreCase) ? "active" : "")">
+                    <i class="bi bi-grid-1x2-fill"></i>
+                    <span>Stories &amp; Feeds</span>
+                </a>
+                <a href="/Analytics" class="nav-link-saas @(currentPath.StartsWith("/Analytics", StringComparison.OrdinalIgnoreCase) ? "active" : "")">
+                    <i class="bi bi-bar-chart-fill"></i>
+                    <span>User Analytics</span>
+                </a>
+                <a href="/SearchConsole" class="nav-link-saas @(currentPath.StartsWith("/SearchConsole", StringComparison.OrdinalIgnoreCase) ? "active" : "")">
+                    <i class="bi bi-google"></i>
+                    <span>Search Console</span>
+                </a>
+
+                <!-- Section 2: Editorial & Content -->
+                <div class="nav-section-title">Editorial &amp; Media</div>
+                <a href="/Videos" class="nav-link-saas @(currentPath.StartsWith("/Videos", StringComparison.OrdinalIgnoreCase) ? "active" : "")">
+                    <i class="bi bi-youtube"></i>
+                    <span>Video Feeds</span>
+                </a>
+                <a href="/Socials" class="nav-link-saas @(currentPath.StartsWith("/Socials", StringComparison.OrdinalIgnoreCase) ? "active" : "")">
+                    <i class="bi bi-twitter-x"></i>
+                    <span>Social Media</span>
+                </a>
+                <a href="/Comments" class="nav-link-saas @(currentPath.StartsWith("/Comments", StringComparison.OrdinalIgnoreCase) ? "active" : "")">
+                    <i class="bi bi-chat-square-text-fill"></i>
+                    <span>Comments</span>
+                </a>
+                <a href="/Feedback" class="nav-link-saas @(currentPath.StartsWith("/Feedback", StringComparison.OrdinalIgnoreCase) ? "active" : "")">
+                    <i class="bi bi-chat-heart-fill"></i>
+                    <span>Reader Feedback</span>
+                </a>
+
+                <!-- Section 3: Intelligence & Growth -->
+                <div class="nav-section-title">Intelligence &amp; Ads</div>
+                <a href="/Categorizer" class="nav-link-saas @(currentPath.StartsWith("/Categorizer", StringComparison.OrdinalIgnoreCase) ? "active" : "")">
+                    <i class="bi bi-cpu-fill"></i>
+                    <span>ML Categorizer</span>
+                </a>
+                <a href="/Sponsors" class="nav-link-saas @(currentPath.StartsWith("/Sponsors", StringComparison.OrdinalIgnoreCase) ? "active" : "")">
+                    <i class="bi bi-megaphone-fill"></i>
+                    <span>Sponsored Campaigns</span>
+                </a>
+
+                <!-- Section 4: Platform & Operations -->
+                <div class="nav-section-title">Platform &amp; Ops</div>
+                <a href="/SystemHealth" class="nav-link-saas @(currentPath.StartsWith("/SystemHealth", StringComparison.OrdinalIgnoreCase) ? "active" : "")">
+                    <i class="bi bi-heart-pulse-fill"></i>
+                    <span>System Health</span>
+                </a>
+                <a href="/Settings" class="nav-link-saas @(currentPath.StartsWith("/Settings", StringComparison.OrdinalIgnoreCase) ? "active" : "")">
+                    <i class="bi bi-gear-fill"></i>
+                    <span>System Settings</span>
+                </a>
+            </nav>
+
+            <!-- Sidebar Footer / User Profile -->
+            <div class="sidebar-footer">
+                <div class="user-profile-badge">
+                    <div class="user-avatar">
+                        <span>@(User.Identity?.Name != null && User.Identity.Name.Length > 0 ? User.Identity.Name.Substring(0, 1).ToUpper() : "A")</span>
+                        <span class="user-online-dot"></span>
+                    </div>
+                    <div class="user-details">
+                        <div class="user-name">@(User.Identity?.Name ?? "Administrator")</div>
+                        <div class="user-role">Super Admin</div>
+                    </div>
+                    <a href="/Logout" class="user-signout-btn" title="Sign Out">
+                        <i class="bi bi-box-arrow-right"></i>
+                    </a>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content Wrapper -->
+        <div class="app-main-wrap">
+            <!-- Modern Sticky Topbar -->
+            <header class="app-topbar">
+                <div class="topbar-left">
+                    <button class="topbar-toggle-btn d-lg-none" onclick="toggleMobileSidebar()" aria-label="Open menu">
+                        <i class="bi bi-list"></i>
+                    </button>
+                    <div class="topbar-breadcrumb">
+                        <span class="crumb-root">News Stand NG</span>
+                        <i class="bi bi-chevron-right crumb-separator"></i>
+                        <span class="crumb-section text-muted d-none d-sm-inline">@sectionName</span>
+                        <i class="bi bi-chevron-right crumb-separator d-none d-sm-inline"></i>
+                        <span class="crumb-current">@cleanTitle</span>
+                    </div>
+                </div>
+
+                <!-- Global Quick-Nav Trigger (Ctrl+K / ⌘K) -->
+                <div class="topbar-center d-none d-md-flex align-items-center">
+                    <button type="button" class="topbar-search-trigger" onclick="openCommandPalette()" title="Quick Navigation (Ctrl+K / ⌘K)">
+                        <i class="bi bi-search me-2 text-muted"></i>
+                        <span class="search-trigger-text text-muted">Quick navigate or search...</span>
+                        <kbd class="cmd-kbd ms-3">Ctrl K</kbd>
+                    </button>
+                </div>
+
+                <div class="topbar-right">
+                    <!-- Live API Sync indicator badge -->
+                    <div class="topbar-status-beacon" title="API Status: Online">
+                        <span class="beacon-pulse"></span>
+                        <span class="beacon-text d-none d-sm-inline">API Live</span>
+                    </div>
+
+                    <!-- Quick Theme Toggle -->
+                    <button type="button" class="theme-toggle-btn" onclick="toggleAdminTheme()" title="Toggle Theme (Alt+T)">
+                        <i class="bi bi-moon-stars-fill theme-icon-dark"></i>
+                        <i class="bi bi-sun-fill theme-icon-light"></i>
+                        <span class="theme-toggle-label d-none d-md-inline">Dark</span>
+                    </button>
+                </div>
+            </header>
+
+            <!-- Page Body -->
+            <main role="main" class="app-content-body">
+                @RenderBody()
+            </main>
+        </div>
+    </div>
+
+    <!-- Global Command Palette Modal (Ctrl+K / ⌘K) -->
+    <div class="modal fade" id="commandPaletteModal" tabindex="-1" aria-labelledby="commandPaletteModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content glass-card command-palette-content border-0 p-0 overflow-hidden shadow-lg">
+                <div class="command-palette-header p-3 border-bottom border-glass d-flex align-items-center gap-2">
+                    <i class="bi bi-search text-info fs-5"></i>
+                    <input type="text" id="cmdPaletteInput" class="form-control form-control-glass border-0 shadow-none ps-2" placeholder="Type a section name, page, or command (e.g. Analytics, System Health, Sponsors, Theme)..." autocomplete="off" />
+                    <kbd class="cmd-kbd text-muted" onclick="closeCommandPalette()" style="cursor: pointer;">ESC</kbd>
+                </div>
+                <div class="command-palette-body p-2" id="cmdPaletteList" style="max-height: 400px; overflow-y: auto;">
+                    <div class="cmd-section-label">Overview</div>
+                    <a href="/" class="cmd-item" data-keywords="overview stories feeds articles archive rss home news">
+                        <div class="cmd-item-icon"><i class="bi bi-grid-1x2-fill text-info"></i></div>
+                        <div class="cmd-item-info">
+                            <div class="cmd-item-title">Stories &amp; Feeds</div>
+                            <div class="cmd-item-desc">Browse aggregated Nigerian news archive, live RSS feeds &amp; briefings</div>
+                        </div>
+                        <span class="badge bg-secondary bg-opacity-25 text-muted small">Jump</span>
+                    </a>
+                    <a href="/Analytics" class="cmd-item" data-keywords="analytics telemetry metrics users devices opens charts stats reader audio">
+                        <div class="cmd-item-icon"><i class="bi bi-bar-chart-fill text-success"></i></div>
+                        <div class="cmd-item-info">
+                            <div class="cmd-item-title">User Analytics</div>
+                            <div class="cmd-item-desc">Live user engagement telemetry, device metrics, &amp; audio adoption</div>
+                        </div>
+                        <span class="badge bg-secondary bg-opacity-25 text-muted small">Jump</span>
+                    </a>
+                    <a href="/SearchConsole" class="cmd-item" data-keywords="search console google seo indexation sitemaps impressions clicks ctr inspection">
+                        <div class="cmd-item-icon"><i class="bi bi-google text-success"></i></div>
+                        <div class="cmd-item-info">
+                            <div class="cmd-item-title">Search Console &amp; Crawl Cockpit</div>
+                            <div class="cmd-item-desc">Google SEO performance, URL inspection, and indexation rates</div>
+                        </div>
+                        <span class="badge bg-secondary bg-opacity-25 text-muted small">Jump</span>
+                    </a>
+
+                    <div class="cmd-section-label">Editorial &amp; Media</div>
+                    <a href="/Videos" class="cmd-item" data-keywords="videos youtube syndication broadcasts media television tv trending broadcasts">
+                        <div class="cmd-item-icon"><i class="bi bi-youtube text-danger"></i></div>
+                        <div class="cmd-item-info">
+                            <div class="cmd-item-title">Video News Stories</div>
+                            <div class="cmd-item-desc">Monitored YouTube channels, live Nigerian news broadcasts &amp; trends</div>
+                        </div>
+                        <span class="badge bg-secondary bg-opacity-25 text-muted small">Jump</span>
+                    </a>
+                    <a href="/Socials" class="cmd-item" data-keywords="socials twitter x tweets breaking commentators handles media journalists">
+                        <div class="cmd-item-icon"><i class="bi bi-twitter-x text-info"></i></div>
+                        <div class="cmd-item-info">
+                            <div class="cmd-item-title">Social Stories &amp; Tweets</div>
+                            <div class="cmd-item-desc">Monitored commentators, journalists &amp; verified news handle feeds</div>
+                        </div>
+                        <span class="badge bg-secondary bg-opacity-25 text-muted small">Jump</span>
+                    </a>
+                    <a href="/Comments" class="cmd-item" data-keywords="comments moderation queue community flags debate discussion approval">
+                        <div class="cmd-item-icon"><i class="bi bi-chat-square-text-fill text-info"></i></div>
+                        <div class="cmd-item-info">
+                            <div class="cmd-item-title">Comments &amp; Moderation</div>
+                            <div class="cmd-item-desc">Review reader comments, flagged submissions, and discourse moderation</div>
+                        </div>
+                        <span class="badge bg-secondary bg-opacity-25 text-muted small">Jump</span>
+                    </a>
+                    <a href="/Feedback" class="cmd-item" data-keywords="feedback reports ratings stars bugs issues suggestions sentiment devices">
+                        <div class="cmd-item-info"><i class="bi bi-chat-heart-fill text-primary"></i></div>
+                        <div class="cmd-item-info">
+                            <div class="cmd-item-title">User Feedback &amp; Reports</div>
+                            <div class="cmd-item-desc">Audience star ratings, bug reports, and app diagnostics</div>
+                        </div>
+                        <span class="badge bg-secondary bg-opacity-25 text-muted small">Jump</span>
+                    </a>
+
+                    <div class="cmd-section-label">Intelligence &amp; Growth</div>
+                    <a href="/Categorizer" class="cmd-item" data-keywords="categorizer ml machine learning classification model ai training lbfgs dataset">
+                        <div class="cmd-item-icon"><i class="bi bi-cpu-fill text-purple"></i></div>
+                        <div class="cmd-item-info">
+                            <div class="cmd-item-title">ML Categorizer Hub</div>
+                            <div class="cmd-item-desc">ML.NET classification workbench, hot-reload &amp; retraining triggers</div>
+                        </div>
+                        <span class="badge bg-secondary bg-opacity-25 text-muted small">Jump</span>
+                    </a>
+                    <a href="/Sponsors" class="cmd-item" data-keywords="sponsors advertising campaigns pr press release monetization ctr impressions ads">
+                        <div class="cmd-item-icon"><i class="bi bi-megaphone-fill text-warning"></i></div>
+                        <div class="cmd-item-info">
+                            <div class="cmd-item-title">Sponsored Campaigns &amp; PR</div>
+                            <div class="cmd-item-desc">Direct corporate press releases, impression/click tracking &amp; schedules</div>
+                        </div>
+                        <span class="badge bg-secondary bg-opacity-25 text-muted small">Jump</span>
+                    </a>
+
+                    <div class="cmd-section-label">Platform &amp; Operations</div>
+                    <a href="/SystemHealth" class="cmd-item" data-keywords="system health telemetry heartbeats probes database cache redis uptime status docker memory">
+                        <div class="cmd-item-icon"><i class="bi bi-heart-pulse-fill text-danger"></i></div>
+                        <div class="cmd-item-info">
+                            <div class="cmd-item-title">System Health &amp; Telemetry</div>
+                            <div class="cmd-item-desc">Container probes, database health, background workers &amp; storage checks</div>
+                        </div>
+                        <span class="badge bg-secondary bg-opacity-25 text-muted small">Jump</span>
+                    </a>
+                    <a href="/Settings" class="cmd-item" data-keywords="settings configuration api keys hot reload credentials secrets intervals diagnostics knobs">
+                        <div class="cmd-item-icon"><i class="bi bi-gear-fill text-secondary"></i></div>
+                        <div class="cmd-item-info">
+                            <div class="cmd-item-title">System Settings &amp; Configuration</div>
+                            <div class="cmd-item-desc">API keys, service polling intervals, AI parameters &amp; probe diagnostics</div>
+                        </div>
+                        <span class="badge bg-secondary bg-opacity-25 text-muted small">Jump</span>
+                    </a>
+
+                    <div class="cmd-section-label">Actions &amp; Session</div>
+                    <button type="button" class="cmd-item w-100 text-start border-0 bg-transparent" onclick="toggleAdminTheme(); closeCommandPalette();" data-keywords="toggle switch dark light theme appearance mode color">
+                        <div class="cmd-item-icon"><i class="bi bi-circle-half text-warning"></i></div>
+                        <div class="cmd-item-info">
+                            <div class="cmd-item-title">Toggle Dark / Light Theme</div>
+                            <div class="cmd-item-desc">Switch interface contrast mode instantly (Alt+T)</div>
+                        </div>
+                        <kbd class="cmd-kbd text-muted">Alt T</kbd>
+                    </button>
+                    <a href="/Logout" class="cmd-item" data-keywords="logout sign out exit session disconnect end">
+                        <div class="cmd-item-icon"><i class="bi bi-box-arrow-right text-danger"></i></div>
+                        <div class="cmd-item-info">
+                            <div class="cmd-item-title text-danger">Sign Out</div>
+                            <div class="cmd-item-desc">Securely terminate administrative session cookie</div>
+                        </div>
+                        <span class="badge bg-danger bg-opacity-25 text-danger small">Exit</span>
+                    </a>
+                </div>
+                <div class="command-palette-footer p-2 px-3 border-top border-glass d-flex align-items-center justify-content-between text-muted small">
+                    <span>Navigate: <kbd class="cmd-kbd me-1">↑</kbd><kbd class="cmd-kbd me-2">↓</kbd> Select: <kbd class="cmd-kbd">Enter</kbd></span>
+                    <span>Press <kbd class="cmd-kbd">Ctrl</kbd> + <kbd class="cmd-kbd">K</kbd> anywhere</span>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+else
+{
     <main role="main">
         @RenderBody()
     </main>
 
-    <!-- Authenticated Administrator Status Pill -->
-    @if (User.Identity?.IsAuthenticated == true)
-    {
-        <div class="admin-user-pill d-flex align-items-center gap-2 position-fixed top-0 end-0 m-3 px-3 py-1 rounded-pill glass-card shadow-sm border" style="z-index: 1050; font-size: 0.85rem;">
-            <span class="text-success"><i class="bi bi-circle-fill" style="font-size: 0.55rem;"></i></span>
-            <span class="text-white fw-semibold"><i class="bi bi-person-badge me-1"></i>@(User.Identity.Name ?? "Admin")</span>
-            <span class="text-muted">|</span>
-            <a href="/Logout" class="text-danger text-decoration-none fw-semibold d-flex align-items-center gap-1" title="Sign Out">
-                <i class="bi bi-box-arrow-right"></i> <span class="d-none d-sm-inline">Sign Out</span>
-            </a>
-        </div>
-    }
-
-    <!-- Floating Theme Switcher Pill -->
+    <!-- Floating Theme Switcher Pill for Unauthenticated / Login Page -->
     <button id="themeToggleFloatingBtn"
             type="button"
             class="theme-toggle-floating-btn"
@@ -49,22 +335,85 @@
         <i class="bi bi-sun-fill theme-icon-light"></i>
         <span id="themeToggleFloatingText" class="theme-toggle-label">Dark Mode</span>
     </button>
+}
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 
-    <!-- Theme Controller Script -->
+    <!-- Theme & App Controller Scripts -->
     <script>
+        let cmdModalInstance = null;
+
+        function toggleMobileSidebar() {
+            document.body.classList.toggle('sidebar-open');
+        }
+
+        function openCommandPalette() {
+            const modalEl = document.getElementById('commandPaletteModal');
+            if (!modalEl) return;
+            if (!cmdModalInstance) {
+                cmdModalInstance = new bootstrap.Modal(modalEl);
+            }
+            cmdModalInstance.show();
+            setTimeout(() => {
+                const input = document.getElementById('cmdPaletteInput');
+                if (input) {
+                    input.value = '';
+                    filterCommandPalette('');
+                    input.focus();
+                }
+            }, 150);
+        }
+
+        function closeCommandPalette() {
+            if (cmdModalInstance) {
+                cmdModalInstance.hide();
+            }
+        }
+
+        function filterCommandPalette(term) {
+            const q = (term || '').trim().toLowerCase();
+            const items = document.querySelectorAll('#cmdPaletteList .cmd-item');
+            const sections = document.querySelectorAll('#cmdPaletteList .cmd-section-label');
+
+            items.forEach(item => {
+                const kw = (item.getAttribute('data-keywords') || '') + ' ' + (item.innerText || '');
+                const matches = !q || kw.toLowerCase().includes(q);
+                item.style.display = matches ? 'flex' : 'none';
+                item.classList.remove('active');
+            });
+
+            // Auto-hide section labels that have no visible items
+            sections.forEach(sec => {
+                let next = sec.nextElementSibling;
+                let hasVisible = false;
+                while (next && !next.classList.contains('cmd-section-label')) {
+                    if (next.classList.contains('cmd-item') && next.style.display !== 'none') {
+                        hasVisible = true;
+                        break;
+                    }
+                    next = next.nextElementSibling;
+                }
+                sec.style.display = hasVisible ? 'block' : 'none';
+            });
+
+            // Mark first visible item active
+            const firstVisible = Array.from(items).find(i => i.style.display !== 'none');
+            if (firstVisible) {
+                firstVisible.classList.add('active');
+            }
+        }
+
         function updateThemeUI(theme) {
             const isDark = theme === 'dark';
             document.documentElement.setAttribute('data-bs-theme', theme);
 
-            // Update floating button
+            // Update floating button if present
             const floatingLabel = document.getElementById('themeToggleFloatingText');
             if (floatingLabel) {
                 floatingLabel.textContent = isDark ? 'Dark Mode' : 'Light Mode';
             }
 
-            // Update all in-page toggle buttons
+            // Update all in-page and topbar toggle buttons
             document.querySelectorAll('.theme-toggle-btn').forEach(btn => {
                 const label = btn.querySelector('.theme-toggle-label');
                 if (label) {
@@ -91,11 +440,53 @@
             const current = document.documentElement.getAttribute('data-bs-theme') || 'dark';
             updateThemeUI(current);
 
-            // Alt+T shortcut for quick toggling
+            // Command Palette Input Filtering
+            const cmdInput = document.getElementById('cmdPaletteInput');
+            if (cmdInput) {
+                cmdInput.addEventListener('input', (e) => {
+                    filterCommandPalette(e.target.value);
+                });
+
+                cmdInput.addEventListener('keydown', (e) => {
+                    const visibleItems = Array.from(document.querySelectorAll('#cmdPaletteList .cmd-item')).filter(i => i.style.display !== 'none');
+                    if (!visibleItems.length) return;
+                    let currentIndex = visibleItems.findIndex(i => i.classList.contains('active'));
+
+                    if (e.key === 'ArrowDown') {
+                        e.preventDefault();
+                        if (currentIndex >= 0) visibleItems[currentIndex].classList.remove('active');
+                        const nextIndex = (currentIndex + 1) % visibleItems.length;
+                        visibleItems[nextIndex].classList.add('active');
+                        visibleItems[nextIndex].scrollIntoView({ block: 'nearest' });
+                    } else if (e.key === 'ArrowUp') {
+                        e.preventDefault();
+                        if (currentIndex >= 0) visibleItems[currentIndex].classList.remove('active');
+                        const prevIndex = (currentIndex - 1 + visibleItems.length) % visibleItems.length;
+                        visibleItems[prevIndex].classList.add('active');
+                        visibleItems[prevIndex].scrollIntoView({ block: 'nearest' });
+                    } else if (e.key === 'Enter') {
+                        e.preventDefault();
+                        const activeItem = visibleItems[currentIndex] || visibleItems[0];
+                        if (activeItem) {
+                            activeItem.click();
+                        }
+                    }
+                });
+            }
+
+            // Keyboard Shortcuts: Alt+T (Theme) & Ctrl+K / Cmd+K (Command Palette)
             window.addEventListener('keydown', (e) => {
                 if (e.altKey && (e.key === 't' || e.key === 'T')) {
                     e.preventDefault();
                     toggleAdminTheme();
+                } else if ((e.ctrlKey || e.metaKey) && (e.key === 'k' || e.key === 'K')) {
+                    e.preventDefault();
+                    const modalEl = document.getElementById('commandPaletteModal');
+                    if (modalEl && modalEl.classList.contains('show')) {
+                        closeCommandPalette();
+                    } else {
+                        openCommandPalette();
+                    }
                 }
             });
 
@@ -112,3 +503,4 @@
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>
+

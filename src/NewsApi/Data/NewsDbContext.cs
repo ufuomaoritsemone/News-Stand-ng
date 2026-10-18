@@ -166,6 +166,7 @@ public class NewsDbContext : DbContext
             entity.HasIndex(e => e.OccurredAt);
             entity.HasIndex(e => e.EventType);
             entity.HasIndex(e => e.DeviceId);
+            entity.HasIndex(e => e.ArticleId);
         });
 
         modelBuilder.Entity<StoryComment>(entity =>

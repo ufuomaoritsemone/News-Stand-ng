@@ -4,7 +4,7 @@ import { XIcon, WhatsAppIcon } from './SocialIcons';
 import { shareOnX, shareOnWhatsApp, shareGeneric } from '../services/share';
 import { getRecencyTag, isHotStory } from '../services/articleMetadata';
 import { formatTimeAgo, cleanEditorialSummary } from '../services/timeUtils';
-import { getOptimizedImageUrl } from '../services/api';
+import { getOptimizedImageUrl, DEFAULT_EDITORIAL_IMAGE } from '../services/api';
 
 export default function HeroCarousel({
   stories = [],
@@ -116,7 +116,7 @@ export default function HeroCarousel({
                 onError={(e) => {
                   e.target.onerror = null;
                   e.target.srcset = '';
-                  e.target.src = 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?auto=format&fit=crop&w=1000&q=80';
+                  e.target.src = DEFAULT_EDITORIAL_IMAGE;
                 }}
               />
               {/* Hot Story Badge on Hero Image */}

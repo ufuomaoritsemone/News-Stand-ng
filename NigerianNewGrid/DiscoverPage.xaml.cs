@@ -9,7 +9,7 @@ namespace NigerianNewGrid;
 /// Discover tab — search + category filter over 7-day articles and trending YouTube video stories,
 /// with full MVVM data binding, compiled XAML data templates, and infinite scroll (Fix #13).
 /// </summary>
-public partial class DiscoverPage : ContentPage
+public partial class DiscoverPage : ContentPage, IQueryAttributable
 {
     private readonly DiscoverViewModel _vm;
     private bool _isInitialized;
@@ -34,6 +34,11 @@ public partial class DiscoverPage : ContentPage
                 await _vm.ApplyCategoryFilterAsync("RecentlyRead");
             }
         };
+    }
+
+    public void ApplyQueryAttributes(IDictionary<string, object> query)
+    {
+        _vm.ApplyQueryAttributes(query);
     }
 
     private async void OnSearchClicked(object? sender, EventArgs e)

@@ -15,6 +15,7 @@ public class AudioBriefingCoordinator : IAudioBriefingCoordinator
     public bool IsSpeaking { get; private set; }
     public bool IsPaused { get; private set; }
     public string AudioButtonText { get; private set; } = "🎧";
+    public string AudioButtonIcon { get; private set; } = "ic_headphones.png";
     public string AudioButtonHint { get; private set; } = "Play daily audio briefing";
 
     public event EventHandler? StateChanged;
@@ -117,16 +118,19 @@ public class AudioBriefingCoordinator : IAudioBriefingCoordinator
         if (IsSpeaking)
         {
             AudioButtonText = "⏸";
+            AudioButtonIcon = "ic_pause.png";
             AudioButtonHint = "Pause daily audio briefing";
         }
         else if (IsPaused)
         {
             AudioButtonText = "▶";
+            AudioButtonIcon = "ic_play.png";
             AudioButtonHint = "Resume daily audio briefing";
         }
         else
         {
             AudioButtonText = "🎧";
+            AudioButtonIcon = "ic_headphones.png";
             AudioButtonHint = "Play daily audio briefing";
         }
     }

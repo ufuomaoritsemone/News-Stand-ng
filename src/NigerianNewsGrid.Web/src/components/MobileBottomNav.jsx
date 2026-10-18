@@ -12,10 +12,17 @@ import {
 export default function MobileBottomNav({ onOpenSearch }) {
   const [showTrackersSheet, setShowTrackersSheet] = useState(false);
   const [currentPath, setCurrentPath] = useState('');
+  const [currentSearch, setCurrentSearch] = useState('');
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      setCurrentPath(window.location.pathname);
+      const syncUrl = () => {
+        setCurrentPath(window.location.pathname);
+        setCurrentSearch(window.location.search);
+      };
+      syncUrl();
+      window.addEventListener('popstate', syncUrl);
+      return () => window.removeEventListener('popstate', syncUrl);
     }
   }, []);
 
@@ -44,7 +51,9 @@ export default function MobileBottomNav({ onOpenSearch }) {
     }
   };
 
-  const isHome = currentPath === '/' || currentPath === '';
+  const isForumTab = new URLSearchParams(currentSearch).get('tab')?.toLowerCase() === 'forum';
+  const isHome =
+    (currentPath === '/' || currentPath === '' || currentPath.startsWith('/category/')) && !isForumTab;
   const isStates = currentPath.startsWith('/state');
   const isTracker = [
     '/naira-exchange-rate',
@@ -87,7 +96,7 @@ export default function MobileBottomNav({ onOpenSearch }) {
 
         <a
           href="/?tab=forum"
-          className="mobile-bottom-tab"
+          className={`mobile-bottom-tab ${isForumTab && !showTrackersSheet ? 'active' : ''}`}
           aria-label="Town Hall & Debates"
         >
           <MessageSquare size={20} />
@@ -149,31 +158,7 @@ export default function MobileBottomNav({ onOpenSearch }) {
             <ArrowRight size={16} className="sheet-tracker-arrow" />
           </a>
 
-          <a
-            href="/fuel-price-nigeria"
-            className={`mobile-sheet-tracker-card ${currentPath === '/fuel-price-nigeria' ? 'active' : ''}`}
-            onClick={() => setShowTrackersSheet(false)}
-          >
-            <span className="tracker-icon-badge fuel">⛽</span>
-            <div className="sheet-tracker-info">
-              <div className="sheet-tracker-title">Fuel Price Tracker</div>
-              <div className="sheet-tracker-desc">PMS Petrol Pump Prices Across 36 States</div>
-            </div>
-            <ArrowRight size={16} className="sheet-tracker-arrow" />
-          </a>
 
-          <a
-            href="/jamb-waec-news"
-            className={`mobile-sheet-tracker-card ${currentPath === '/jamb-waec-news' ? 'active' : ''}`}
-            onClick={() => setShowTrackersSheet(false)}
-          >
-            <span className="tracker-icon-badge exam">🎓</span>
-            <div className="sheet-tracker-info">
-              <div className="sheet-tracker-title">JAMB & WAEC Tracker</div>
-              <div className="sheet-tracker-desc">2026 Examination Calendars & Timetables</div>
-            </div>
-            <ArrowRight size={16} className="sheet-tracker-arrow" />
-          </a>
 
           <a
             href="/elections"

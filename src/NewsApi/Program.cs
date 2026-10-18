@@ -12,7 +12,7 @@ builder.Services
     .AddInfrastructureServices(builder.Configuration)
     .AddConfiguredCors(builder.Configuration)   // Fix #2 — named origin allowlist
     .AddApiRateLimiting(builder.Configuration)  // Fix #4 — sliding window rate limiter
-    .AddObservability();                         // Fix #38 — OpenTelemetry tracing + metrics
+    .AddObservability(builder.Configuration, builder.Environment); // Fix #38 — OpenTelemetry tracing + metrics
 
 // Authorization Services (Hardening Step 3)
 builder.Services.AddAuthorization();
@@ -29,8 +29,8 @@ app.UseMiddleware<GlobalExceptionMiddleware>();
 if (!app.Environment.IsDevelopment())
 {
     app.UseHsts();
+    app.UseHttpsRedirection();
 }
-app.UseHttpsRedirection();
 
 // Security Headers Injection (Hardening Step 2)
 app.Use(async (context, next) =>

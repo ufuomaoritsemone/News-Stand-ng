@@ -75,11 +75,30 @@ public class MarketDataController : ControllerBase
     private static MarketDataDto MapToDto(MarketDataRecord record)
     {
         List<MarketDataPointDto> points = [];
+        Dictionary<string, FxCurrencyRateDto>? currencies = null;
         try
         {
             if (!string.IsNullOrWhiteSpace(record.HistoricalDataJson))
             {
-                points = JsonSerializer.Deserialize<List<MarketDataPointDto>>(record.HistoricalDataJson) ?? [];
+                var trimmed = record.HistoricalDataJson.TrimStart();
+                if (trimmed.StartsWith('{'))
+                {
+                    using var doc = JsonDocument.Parse(record.HistoricalDataJson);
+                    if (doc.RootElement.TryGetProperty("points", out var pointsEl))
+                    {
+                        points = JsonSerializer.Deserialize<List<MarketDataPointDto>>(pointsEl.GetRawText()) ?? [];
+                    }
+                    if (doc.RootElement.TryGetProperty("currencies", out var currEl))
+                    {
+                        currencies = JsonSerializer.Deserialize<Dictionary<string, FxCurrencyRateDto>>(
+                            currEl.GetRawText(),
+                            new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                    }
+                }
+                else
+                {
+                    points = JsonSerializer.Deserialize<List<MarketDataPointDto>>(record.HistoricalDataJson) ?? [];
+                }
             }
         }
         catch { }
@@ -106,7 +125,8 @@ public class MarketDataController : ControllerBase
             SummaryMarkdown = record.SummaryMarkdown,
             LastUpdated = record.LastUpdated,
             HistoricalPoints = points,
-            Faqs = faqs
+            Faqs = faqs,
+            Currencies = currencies
         };
     }
 }

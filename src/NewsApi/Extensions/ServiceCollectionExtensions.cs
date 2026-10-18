@@ -44,7 +44,23 @@ public static class ServiceCollectionExtensions
             }
         });
 
+        services.AddHttpClient("FxScraperClient", client =>
+        {
+            client.Timeout = TimeSpan.FromSeconds(15);
+            client.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36 (compatible; NewsStandNG-FX/1.0)");
+            client.DefaultRequestHeaders.Accept.ParseAdd("text/html,application/xhtml+xml,application/xml;q=0.9,application/json,*/*;q=0.8");
+        })
+        .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
+        {
+            AutomaticDecompression = System.Net.DecompressionMethods.All,
+            SslOptions = new System.Net.Security.SslClientAuthenticationOptions
+            {
+                EnabledSslProtocols = System.Security.Authentication.SslProtocols.Tls12 | System.Security.Authentication.SslProtocols.Tls13
+            }
+        });
+
         // Core application services with interfaces (DIP, Fixes #19, #20, #21)
+        services.AddScoped<IFxRatesScraperService, FxRatesScraperService>();
         services.AddScoped<IRelatedContentService, RelatedContentService>();
         services.AddScoped<IYouTubeFeedService,    YouTubeFeedService>();
         services.AddScoped<ISocialFeedService,     SocialFeedService>();
@@ -53,6 +69,8 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<ICategorizerTrainingService, CategorizerTrainingService>();
         services.AddSingleton<ISlugService,         SlugService>();
         services.AddScoped<IArticleSeoBackfillService, ArticleSeoBackfillService>();
+        services.AddScoped<IBriefingService,        BriefingService>();
+        services.AddScoped<IArticleIngestionService, ArticleIngestionService>();
         services.AddSingleton<IndexNowBackgroundService>();
         services.AddSingleton<IIndexNowService>(sp => sp.GetRequiredService<IndexNowBackgroundService>());
         services.AddScoped<ISystemSettingsService, SystemSettingsService>();
@@ -89,7 +107,8 @@ public static class ServiceCollectionExtensions
         this IServiceCollection services,
         IConfiguration configuration)
     {
-        // DB initializer (Fix #13)
+        // DB initializer & data seeder (Fix #13, Priority 2.3)
+        services.AddScoped<IDataSeeder, DataSeeder>();
         services.AddScoped<IDbInitializer, DbInitializer>();
 
         // Database context — provider auto-detection via config key or connection string signature
@@ -215,22 +234,42 @@ public static class ServiceCollectionExtensions
 
     /// <summary>
     /// Adds OpenTelemetry tracing and metrics (Fix #38).
-    /// Console exporter used by default — swap for .AddOtlpExporter() for GCP/Grafana in production.
+    /// Console exporter is gated to Development or explicit opt-in to avoid synchronous stdout overhead in production.
     /// </summary>
-    public static IServiceCollection AddObservability(this IServiceCollection services)
+    public static IServiceCollection AddObservability(
+        this IServiceCollection services,
+        IConfiguration? configuration = null,
+        IHostEnvironment? environment = null)
     {
+        var enableConsoleExporter = (environment?.IsDevelopment() ?? false)
+            || (configuration?.GetValue<bool>("Observability:EnableConsoleExporter") ?? false);
+
         services.AddOpenTelemetry()
             .ConfigureResource(r => r.AddService(
                 serviceName:    "news-api",
                 serviceVersion: "1.0.0"))
-            .WithTracing(tracer => tracer
-                .AddAspNetCoreInstrumentation(opts => { opts.RecordException = true; })
-                .AddHttpClientInstrumentation()
-                .AddConsoleExporter())
-            .WithMetrics(metrics => metrics
-                .AddAspNetCoreInstrumentation()
-                .AddHttpClientInstrumentation()
-                .AddConsoleExporter());
+            .WithTracing(tracer =>
+            {
+                tracer
+                    .AddAspNetCoreInstrumentation(opts => { opts.RecordException = true; })
+                    .AddHttpClientInstrumentation();
+
+                if (enableConsoleExporter)
+                {
+                    tracer.AddConsoleExporter();
+                }
+            })
+            .WithMetrics(metrics =>
+            {
+                metrics
+                    .AddAspNetCoreInstrumentation()
+                    .AddHttpClientInstrumentation();
+
+                if (enableConsoleExporter)
+                {
+                    metrics.AddConsoleExporter();
+                }
+            });
 
         return services;
     }

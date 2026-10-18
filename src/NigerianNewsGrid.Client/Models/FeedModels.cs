@@ -143,3 +143,113 @@ public sealed record ArticleDeltaDto
     public DateTime UpdatedAt { get; init; } = DateTime.UtcNow;
 }
 
+/// <summary>
+/// Represents a multi-source trending story cluster for the MAUI feed.
+/// </summary>
+public sealed record TrendingStoryItem
+{
+    public string Id { get; init; } = string.Empty;
+    public string Slug { get; init; } = string.Empty;
+    public string Title { get; init; } = string.Empty;
+    public string? Summary { get; init; }
+    public string? ImageUrl { get; init; }
+    public string Category { get; init; } = "General";
+    public int ArticleCount { get; init; }
+    public int SourceCount { get; init; }
+    public List<string> Sources { get; init; } = [];
+    public double TrendingScore { get; init; }
+    public DateTime CreatedAt { get; init; }
+    public DateTime UpdatedAt { get; init; }
+    public List<string> Topics { get; init; } = [];
+
+    [JsonIgnore]
+    public string SourceCountText => $"{SourceCount} sources";
+
+    [JsonIgnore]
+    public string TopSourcesPreview => Sources.Count > 0 ? string.Join(", ", Sources.Take(3)) : "Multiple sources";
+}
+
+public sealed record TrendingStoryResponse
+{
+    public int TotalCount { get; init; }
+    public List<TrendingStoryItem> Stories { get; init; } = [];
+}
+
+/// <summary>
+/// Represents a single article perspective within a multi-source story cluster.
+/// </summary>
+public sealed record StoryClusterArticleItemDto
+{
+    public string ArticleId { get; init; } = string.Empty;
+    public string Title { get; init; } = string.Empty;
+    public string? Slug { get; init; }
+    public string? Excerpt { get; init; }
+    public string Url { get; init; } = string.Empty;
+    public string? ImageUrl { get; init; }
+    public string Source { get; init; } = string.Empty;
+    public DateTimeOffset PublishedAt { get; init; }
+    public double SimilarityScore { get; init; }
+
+    [JsonIgnore]
+    public string TimeAgoText
+    {
+        get
+        {
+            var span = DateTimeOffset.UtcNow - PublishedAt;
+            if (span.TotalMinutes < 1) return "Just now";
+            if (span.TotalMinutes < 60) return $"{(int)span.TotalMinutes}m ago";
+            if (span.TotalHours < 24) return $"{(int)span.TotalHours}h ago";
+            return PublishedAt.ToLocalTime().ToString("MMM d");
+        }
+    }
+}
+
+/// <summary>
+/// Full detail payload for a multi-source story cluster returned by GET /api/v1/stories/{slug}.
+/// </summary>
+public sealed record StoryClusterDetailDto
+{
+    public string Id { get; init; } = string.Empty;
+    public string Slug { get; init; } = string.Empty;
+    public string Title { get; init; } = string.Empty;
+    public string? Summary { get; init; }
+    public string? ImageUrl { get; init; }
+    public DateTimeOffset CreatedAt { get; init; }
+    public DateTimeOffset UpdatedAt { get; init; }
+    public int ArticleCount { get; init; }
+    public int SourceCount { get; init; }
+    public List<string> Sources { get; init; } = [];
+    public List<StoryClusterArticleItemDto> Articles { get; init; } = [];
+}
+
+/// <summary>
+/// Individual currency rate breakdown (Parallel & Official CBN NAFEM) for the Naira FX market widget.
+/// </summary>
+public sealed record FxCurrencyRateItemDto
+{
+    public string Code { get; init; } = string.Empty;
+    public string Name { get; init; } = string.Empty;
+    public string Symbol { get; init; } = string.Empty;
+    public decimal ParallelBuy { get; init; }
+    public decimal ParallelSell { get; init; }
+    public decimal OfficialBuy { get; init; }
+    public decimal OfficialSell { get; init; }
+}
+
+/// <summary>
+/// Live Nigerian macroeconomic indicator payload returned by GET /api/v1/data/{key} (e.g. naira-fx).
+/// </summary>
+public sealed record MarketMetricDto
+{
+    public string MetricKey { get; init; } = string.Empty;
+    public string Title { get; init; } = string.Empty;
+    public string PrimaryValue { get; init; } = string.Empty;
+    public string? SecondaryValue { get; init; }
+    public string? Change24h { get; init; }
+    public string? Unit { get; init; }
+    public string SourceAttribution { get; init; } = string.Empty;
+    public DateTimeOffset LastUpdated { get; init; }
+    public Dictionary<string, FxCurrencyRateItemDto>? Currencies { get; init; }
+}
+
+

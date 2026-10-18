@@ -171,4 +171,53 @@ public class DataPagesTests
         var notFound = await controller.GetStateBySlug("atlantis");
         Assert.IsType<NotFoundObjectResult>(notFound.Result);
     }
+
+    [Fact]
+    public async Task MarketDataController_ReturnsMultiCurrencyFxData_WhenPresent()
+    {
+        var db = CreateInMemoryDb(Guid.NewGuid().ToString());
+        var sampleJson = """
+        {
+          "points": [
+            { "date": "2026-10-10", "label": "Oct 10", "primaryValue": 1380.0, "secondaryValue": 1331.19 }
+          ],
+          "currencies": {
+            "USD": { "code": "USD", "name": "US Dollar", "symbol": "$", "parallelBuy": 1370.0, "parallelSell": 1380.0, "officialRate": 1331.19, "officialBuy": 1330.19, "officialSell": 1331.19, "change24h": "+0.35%" },
+            "EUR": { "code": "EUR", "name": "Euro", "symbol": "€", "parallelBuy": 1520.0, "parallelSell": 1540.0, "officialRate": 1490.80, "officialBuy": 1489.68, "officialSell": 1490.80, "change24h": "+0.15%" },
+            "GBP": { "code": "GBP", "name": "British Pound", "symbol": "£", "parallelBuy": 1825.0, "parallelSell": 1845.0, "officialRate": 1759.16, "officialBuy": 1757.84, "officialSell": 1759.16, "change24h": "+0.20%" },
+            "JPY": { "code": "JPY", "name": "Japanese Yen", "symbol": "¥", "parallelBuy": 8.40, "parallelSell": 8.55, "officialRate": 8.41, "officialBuy": 8.40, "officialSell": 8.41, "change24h": "-0.05%" }
+          }
+        }
+        """;
+
+        db.MarketDataRecords.Add(new MarketDataRecord
+        {
+            Id = 1,
+            MetricKey = "naira-fx",
+            Title = "Naira Exchange Rate (USD/NGN)",
+            PrimaryValue = "₦1,380.00 / $1",
+            SecondaryValue = "₦1,331.19 Official NAFEM",
+            Unit = "NGN per USD",
+            SourceAttribution = "NAFEM & Parallel",
+            HistoricalDataJson = sampleJson,
+            LastUpdated = DateTime.UtcNow
+        });
+        await db.SaveChangesAsync();
+
+        var controller = new MarketDataController(db, NullLogger<MarketDataController>.Instance);
+        var result = await controller.GetMetric("naira-fx");
+        var okResult = Assert.IsType<OkObjectResult>(result.Result);
+        var dto = Assert.IsType<MarketDataDto>(okResult.Value);
+
+        Assert.NotNull(dto.Currencies);
+        Assert.Equal(4, dto.Currencies.Count);
+        Assert.True(dto.Currencies.ContainsKey("USD"));
+        Assert.True(dto.Currencies.ContainsKey("EUR"));
+        Assert.True(dto.Currencies.ContainsKey("GBP"));
+        Assert.True(dto.Currencies.ContainsKey("JPY"));
+        Assert.Equal(1370.0, dto.Currencies["USD"].ParallelBuy);
+        Assert.Equal(1380.0, dto.Currencies["USD"].ParallelSell);
+        Assert.Equal(1331.19, dto.Currencies["USD"].OfficialRate);
+        Assert.Single(dto.HistoricalPoints);
+    }
 }

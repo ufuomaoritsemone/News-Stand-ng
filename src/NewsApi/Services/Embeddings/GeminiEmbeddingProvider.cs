@@ -19,6 +19,41 @@ public class GeminiEmbeddingProvider : IEmbeddingProvider
     private string? _cachedApiKey;
     private readonly object _clientLock = new();
 
+    // In-memory circuit breaker for Gemini embeddings: if calls fail, fallback to LocalFallbackEmbeddingProvider
+    // without making remote calls until cooldown expires.
+    private static DateTime _circuitBreakerUntilUtc = DateTime.MinValue;
+    private static readonly TimeSpan CircuitBreakerCooldown = TimeSpan.FromMinutes(10);
+    private static readonly object CircuitLock = new();
+
+    public static bool IsCircuitBreakerActive
+    {
+        get
+        {
+            lock (CircuitLock)
+            {
+                return DateTime.UtcNow < _circuitBreakerUntilUtc;
+            }
+        }
+    }
+
+    public static void TripCircuitBreaker(string reason, ILogger? logger = null)
+    {
+        lock (CircuitLock)
+        {
+            _circuitBreakerUntilUtc = DateTime.UtcNow.Add(CircuitBreakerCooldown);
+        }
+        logger?.LogWarning("Gemini Embedding Circuit Breaker TRIPPED until {UntilUtc:u}: {Reason}. Falling back to local provider.",
+            _circuitBreakerUntilUtc, reason);
+    }
+
+    public static void ResetCircuitBreaker()
+    {
+        lock (CircuitLock)
+        {
+            _circuitBreakerUntilUtc = DateTime.MinValue;
+        }
+    }
+
     public GeminiEmbeddingProvider(
         IConfiguration config,
         LocalFallbackEmbeddingProvider fallback,
@@ -37,6 +72,11 @@ public class GeminiEmbeddingProvider : IEmbeddingProvider
         if (string.IsNullOrWhiteSpace(text))
         {
             return new float[Dimensions];
+        }
+
+        if (IsCircuitBreakerActive)
+        {
+            return await _fallback.GenerateEmbeddingAsync(text, cancellationToken);
         }
 
         var client = GetClient();
@@ -66,7 +106,8 @@ public class GeminiEmbeddingProvider : IEmbeddingProvider
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            _logger.LogWarning(ex, "Gemini embedding request via Google.GenAI failed. Falling back to local provider.");
+            TripCircuitBreaker(ex.Message, _logger);
+            _logger.LogWarning(ex, "Gemini embedding request via Google.GenAI failed. Tripped circuit breaker. Falling back to local provider.");
         }
 
         return await _fallback.GenerateEmbeddingAsync(text, cancellationToken);
@@ -76,6 +117,11 @@ public class GeminiEmbeddingProvider : IEmbeddingProvider
     {
         var textList = texts.ToList();
         if (textList.Count == 0) return [];
+
+        if (IsCircuitBreakerActive)
+        {
+            return await _fallback.GenerateEmbeddingsBatchAsync(textList, cancellationToken);
+        }
 
         var client = GetClient();
         if (client == null)
@@ -106,7 +152,8 @@ public class GeminiEmbeddingProvider : IEmbeddingProvider
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            _logger.LogWarning(ex, "Gemini batch embedding request failed. Falling back to local provider.");
+            TripCircuitBreaker(ex.Message, _logger);
+            _logger.LogWarning(ex, "Gemini batch embedding request failed. Tripped circuit breaker. Falling back to local provider.");
             return await _fallback.GenerateEmbeddingsBatchAsync(textList, cancellationToken);
         }
     }

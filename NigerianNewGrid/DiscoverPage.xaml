@@ -261,6 +261,96 @@
                 <VerticalStackLayout Spacing="16" Margin="0,0,0,12">
 
                     <!-- ══════════════════════════════════════════════
+                         🔥 TRENDING DEVELOPING STORIES SECTION
+                    ══════════════════════════════════════════════ -->
+                    <VerticalStackLayout x:Name="TrendingStoriesSection"
+                                         IsVisible="{Binding IsTrendingStoriesVisible}"
+                                         Spacing="8">
+                        <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,4">
+                            <HorizontalStackLayout Grid.Column="0" Spacing="6" VerticalOptions="Center">
+                                <Label Text="🔥" FontSize="16" VerticalOptions="Center" />
+                                <Label Text="Trending Developing Stories"
+                                       FontFamily="LegacySerifBold"
+                                       FontSize="17"
+                                       FontAttributes="Bold"
+                                       TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource DarkTextPrimary}}" />
+                            </HorizontalStackLayout>
+                            <Border Grid.Column="1"
+                                    Padding="8,3"
+                                    BackgroundColor="{AppThemeBinding Light=#FEF3C7, Dark=#78350F}"
+                                    StrokeShape="RoundRectangle 8"
+                                    StrokeThickness="0"
+                                    VerticalOptions="Center">
+                                <Label Text="Multi-Source"
+                                       FontSize="10"
+                                       TextColor="{AppThemeBinding Light=#B45309, Dark=#FDE68A}"
+                                       FontAttributes="Bold" />
+                            </Border>
+                        </Grid>
+
+                        <!-- Horizontal Carousel for Trending Stories -->
+                        <ScrollView Orientation="Horizontal"
+                                    HorizontalScrollBarVisibility="Never"
+                                    HeightRequest="124"
+                                    Margin="-20,0,-20,0"
+                                    Padding="20,0,20,0">
+                            <HorizontalStackLayout BindableLayout.ItemsSource="{Binding TrendingStories}"
+                                                   Spacing="12"
+                                                   Padding="0,4,0,8">
+                                <BindableLayout.ItemTemplate>
+                                    <DataTemplate x:DataType="models:TrendingStoryItem">
+                                        <Border WidthRequest="260"
+                                                HeightRequest="112"
+                                                Padding="12"
+                                                Background="{AppThemeBinding Light={StaticResource WhiteBrush}, Dark={StaticResource Gray800Brush}}"
+                                                StrokeShape="RoundRectangle 14"
+                                                StrokeThickness="1"
+                                                Stroke="{AppThemeBinding Light={StaticResource Gray200Brush}, Dark={StaticResource Gray700Brush}}">
+                                            <Border.GestureRecognizers>
+                                                <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:DiscoverViewModel}}, Path=OpenTrendingStoryCommand}"
+                                                                      CommandParameter="{Binding .}" />
+                                            </Border.GestureRecognizers>
+                                            <VerticalStackLayout Spacing="6">
+                                                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="6">
+                                                    <Border Grid.Column="0"
+                                                            Padding="6,2"
+                                                            BackgroundColor="{AppThemeBinding Light=#E6F4EA, Dark=#137333}"
+                                                            StrokeShape="RoundRectangle 6"
+                                                            StrokeThickness="0">
+                                                        <Label Text="{Binding SourceCountText}"
+                                                               FontSize="9"
+                                                               FontAttributes="Bold"
+                                                               TextColor="{AppThemeBinding Light=#137333, Dark=#CEEAD6}" />
+                                                    </Border>
+                                                    <Label Grid.Column="1"
+                                                           Text="{Binding Category}"
+                                                           FontSize="10"
+                                                           TextColor="{AppThemeBinding Light={StaticResource Gray500}, Dark={StaticResource DarkTextSecondary}}"
+                                                           HorizontalOptions="End"
+                                                           MaxLines="1" />
+                                                </Grid>
+                                                <Label Text="{Binding Title}"
+                                                       FontFamily="LegacySerifBold"
+                                                       FontSize="13"
+                                                       FontAttributes="Bold"
+                                                       MaxLines="2"
+                                                       LineBreakMode="TailTruncation"
+                                                       TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource DarkTextPrimary}}" />
+                                                <Label Text="{Binding TopSourcesPreview}"
+                                                       FontFamily="LegacySansBook"
+                                                       FontSize="11"
+                                                       TextColor="{AppThemeBinding Light={StaticResource Gray500}, Dark={StaticResource DarkTextSecondary}}"
+                                                       MaxLines="1"
+                                                       LineBreakMode="TailTruncation" />
+                                            </VerticalStackLayout>
+                                        </Border>
+                                    </DataTemplate>
+                                </BindableLayout.ItemTemplate>
+                            </HorizontalStackLayout>
+                        </ScrollView>
+                    </VerticalStackLayout>
+
+                    <!-- ══════════════════════════════════════════════
                          🔥 TRENDING ON YOUTUBE SECTION
                     ══════════════════════════════════════════════ -->
                     <VerticalStackLayout x:Name="TrendingSection"

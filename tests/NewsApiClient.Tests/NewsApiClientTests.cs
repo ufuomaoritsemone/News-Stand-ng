@@ -215,5 +215,58 @@ namespace NigerianNewsGrid.Tests
             Assert.Null(articleNull);
             Assert.Null(articleEmpty);
         }
+
+        [Fact]
+        public async Task GetStoryClusterBySlugAsync_ReturnsClusterDetail_WhenApiReturnsOk()
+        {
+            var json = "{\"id\":\"cluster-1\",\"slug\":\"cbn-monetary-policy-update\",\"title\":\"CBN Holds MPR Steady\",\"summary\":\"Executive briefing summary\",\"sourceCount\":2,\"articleCount\":2,\"sources\":[\"The Punch\",\"Premium Times\"],\"articles\":[{\"articleId\":\"art-1\",\"title\":\"Punch Report\",\"url\":\"https://punchng.com/cbn\",\"source\":\"The Punch\",\"publishedAt\":\"2026-10-18T00:00:00Z\",\"similarityScore\":0.95}]}";
+            var response = new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(json, System.Text.Encoding.UTF8, "application/json")
+            };
+
+            var handler = new FakeHandler(response);
+            var client = new HttpClient(handler)
+            {
+                BaseAddress = new System.Uri("http://localhost")
+            };
+
+            var api = new NigerianNewsGrid.Client.NewsApiClient(client);
+            var cluster = await api.GetStoryClusterBySlugAsync("cbn-monetary-policy-update");
+
+            Assert.NotNull(cluster);
+            Assert.Equal("cluster-1", cluster!.Id);
+            Assert.Equal("CBN Holds MPR Steady", cluster.Title);
+            Assert.Equal(2, cluster.SourceCount);
+            Assert.Single(cluster.Articles);
+            Assert.Equal("The Punch", cluster.Articles[0].Source);
+        }
+
+        [Fact]
+        public async Task GetMarketMetricAsync_ReturnsNairaFxMetric_WhenApiReturnsOk()
+        {
+            var json = "{\"metricKey\":\"naira-fx\",\"title\":\"Naira Exchange Rate Today\",\"primaryValue\":\"₦1,655/$\",\"secondaryValue\":\"CBN NAFEM: ₦1,590/$\",\"sourceAttribution\":\"CBN & AbokiFX\",\"currencies\":{\"USD\":{\"code\":\"USD\",\"name\":\"US Dollar\",\"symbol\":\"$\",\"parallelBuy\":1640,\"parallelSell\":1655,\"officialBuy\":1580,\"officialSell\":1590}}}";
+            var response = new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(json, System.Text.Encoding.UTF8, "application/json")
+            };
+
+            var handler = new FakeHandler(response);
+            var client = new HttpClient(handler)
+            {
+                BaseAddress = new System.Uri("http://localhost")
+            };
+
+            var api = new NigerianNewsGrid.Client.NewsApiClient(client);
+            var metric = await api.GetMarketMetricAsync("naira-fx");
+
+            Assert.NotNull(metric);
+            Assert.Equal("naira-fx", metric!.MetricKey);
+            Assert.Equal("₦1,655/$", metric.PrimaryValue);
+            Assert.Equal("CBN NAFEM: ₦1,590/$", metric.SecondaryValue);
+            Assert.NotNull(metric.Currencies);
+            Assert.True(metric.Currencies!.ContainsKey("USD"));
+            Assert.Equal(1655m, metric.Currencies["USD"].ParallelSell);
+        }
     }
 }

@@ -58,7 +58,7 @@ public class AnalyticsController : ControllerBase
                 Category = e.Category?.Trim(),
                 Platform = e.Platform?.Trim(),
                 AppVersion = e.AppVersion?.Trim(),
-                OccurredAt = e.OccurredAt == default ? DateTimeOffset.UtcNow : e.OccurredAt,
+                OccurredAt = (e.OccurredAt == default ? DateTimeOffset.UtcNow : e.OccurredAt).ToUniversalTime(),
                 ReceivedAt = DateTimeOffset.UtcNow
             })
             .ToList();
@@ -105,21 +105,22 @@ public class AnalyticsController : ControllerBase
         var since = DateTimeOffset.UtcNow.AddDays(-Math.Abs(days));
         List<UserEvent> events;
 
-        // SQLite does not support native DateTimeOffset in ORDER BY clauses in EF Core.
-        // We push the date range filter to SQL, and order in-memory for SQLite, or in-database for PostgreSQL.
         if (_db.Database.ProviderName == "Microsoft.EntityFrameworkCore.Sqlite")
         {
-            // SQLite provider does not support DateTimeOffset in SQL expressions (WHERE / ORDER BY).
-            // Filter and order in-memory for SQLite; PostgreSQL executes natively in SQL.
-            var allRecent = await _db.UserEvents
+            // Execute filtering, ordering, and row bounding natively in SQLite using datetime()
+            // to avoid loading the entire UserEvents table into memory.
+            var sinceIso = since.UtcDateTime.ToString("yyyy-MM-dd HH:mm:ss");
+            events = await _db.UserEvents
+                .FromSqlRaw(
+                    """
+                    SELECT * FROM "UserEvents"
+                    WHERE datetime("OccurredAt") >= datetime({0})
+                    ORDER BY datetime("OccurredAt") DESC
+                    LIMIT 10000
+                    """,
+                    sinceIso)
                 .AsNoTracking()
                 .ToListAsync(cancellationToken);
-
-            events = allRecent
-                .Where(e => e.OccurredAt >= since)
-                .OrderByDescending(e => e.OccurredAt)
-                .Take(10000)
-                .ToList();
         }
         else
         {
@@ -158,7 +159,7 @@ public class AnalyticsController : ControllerBase
             .Select(date => new DailyCountDto
             {
                 Date = date.ToString("yyyy-MM-dd"),
-                Count = events.Count(e => e.OccurredAt.Date == date)
+                Count = events.Count(e => e.OccurredAt.UtcDateTime.Date == date)
             })
             .OrderBy(d => d.Date)
             .ToList();
@@ -220,6 +221,7 @@ public class AnalyticsController : ControllerBase
     {
         var size = Math.Clamp(pageSize, 1, 200);
         var pageIndex = Math.Max(1, page);
+        var offset = (pageIndex - 1) * size;
 
         var query = _db.UserEvents.AsNoTracking();
 
@@ -231,18 +233,39 @@ public class AnalyticsController : ControllerBase
         List<UserEvent> rawRows;
         if (_db.Database.ProviderName == "Microsoft.EntityFrameworkCore.Sqlite")
         {
-            var all = await query.ToListAsync(cancellationToken);
-            rawRows = all
-                .OrderByDescending(e => e.OccurredAt)
-                .Skip((pageIndex - 1) * size)
-                .Take(size)
-                .ToList();
+            if (!string.IsNullOrWhiteSpace(eventType))
+            {
+                rawRows = await _db.UserEvents
+                    .FromSqlRaw(
+                        """
+                        SELECT * FROM "UserEvents"
+                        WHERE "EventType" = {0}
+                        ORDER BY datetime("OccurredAt") DESC
+                        LIMIT {1} OFFSET {2}
+                        """,
+                        eventType.Trim().ToLowerInvariant(), size, offset)
+                    .AsNoTracking()
+                    .ToListAsync(cancellationToken);
+            }
+            else
+            {
+                rawRows = await _db.UserEvents
+                    .FromSqlRaw(
+                        """
+                        SELECT * FROM "UserEvents"
+                        ORDER BY datetime("OccurredAt") DESC
+                        LIMIT {0} OFFSET {1}
+                        """,
+                        size, offset)
+                    .AsNoTracking()
+                    .ToListAsync(cancellationToken);
+            }
         }
         else
         {
             rawRows = await query
                 .OrderByDescending(e => e.OccurredAt)
-                .Skip((pageIndex - 1) * size)
+                .Skip(offset)
                 .Take(size)
                 .ToListAsync(cancellationToken);
         }

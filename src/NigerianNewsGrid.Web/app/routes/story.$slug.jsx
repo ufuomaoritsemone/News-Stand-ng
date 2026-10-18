@@ -3,6 +3,7 @@ import { useLoaderData, Link } from "react-router";
 import { api, getOptimizedImageUrl } from "../../src/services/api";
 import { formatTimeAgo, formatFullDate } from "../../src/services/timeUtils";
 import Footer from "../../src/components/Footer";
+import { toAbsoluteImageUrl, buildArticleItemList } from "../utils/seo";
 import {
   ArrowLeft,
   Layers,
@@ -29,7 +30,7 @@ export function meta({ data }) {
     story.summary ||
     `Comparative analysis and timeline of how ${story.sourceCount} Nigerian publishers reported on '${story.title}'.`;
   const canonicalUrl = `https://newsstand.ng/story/${story.slug}`;
-  const imageUrl = story.imageUrl || "https://newsstand.ng/newsstand-masthead.png";
+  const imageUrl = toAbsoluteImageUrl(story.imageUrl);
 
   return [
     { title },
@@ -72,12 +73,19 @@ export async function loader({ params }) {
 export default function StoryClusterPage() {
   const { story } = useLoaderData();
 
+  const storyItemList = buildArticleItemList(
+    (story.articles || []).map((a) => ({ slug: a.slug, id: a.articleId, title: a.title }))
+  );
+
   const collectionJsonLd = {
     "@context": "https://schema.org",
     "@type": "CollectionPage",
     "name": `${story.title} - Comparative Coverage`,
     "description": story.summary || `How Nigerian media covered '${story.title}'.`,
     "url": `https://newsstand.ng/story/${story.slug}`,
+    "image": toAbsoluteImageUrl(story.imageUrl),
+    ...(story.updatedAt ? { "dateModified": story.updatedAt } : {}),
+    ...(storyItemList ? { "mainEntity": storyItemList } : {}),
     "publisher": {
       "@type": "NewsMediaOrganization",
       "name": "News Stand NG",
@@ -93,17 +101,11 @@ export default function StoryClusterPage() {
         "@type": "ListItem",
         "position": 1,
         "name": "Home",
-        "item": "https://newsstand.ng"
+        "item": "https://newsstand.ng/"
       },
       {
         "@type": "ListItem",
         "position": 2,
-        "name": "Story Clusters",
-        "item": "https://newsstand.ng"
-      },
-      {
-        "@type": "ListItem",
-        "position": 3,
         "name": story.title,
         "item": `https://newsstand.ng/story/${story.slug}`
       }

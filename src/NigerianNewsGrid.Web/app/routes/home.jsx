@@ -2,6 +2,7 @@ import React from "react";
 import { useLoaderData } from "react-router";
 import App from "../../src/App";
 import { api } from "../../src/services/api";
+import { buildArticleItemList } from "../utils/seo";
 
 export function meta() {
   const title = "News Stand NG | Live Breaking News, Top Stories & In-Depth Journalism";
@@ -29,22 +30,28 @@ export function meta() {
 
 export async function loader() {
   try {
-    const [articlesData, categories, sources, sponsored] = await Promise.all([
+    const [articlesData, categories, sources, sponsored, trendingStoriesData] = await Promise.all([
       api.getArticles({ pageSize: 24 }).catch(() => []),
       api.getCategories().catch(() => []),
       api.getSources().catch(() => []),
       api.getSponsoredArticles().catch(() => []),
+      api.getTrendingStories({ limit: 6, windowHours: 24 }).catch(() => ({ stories: [] })),
     ]);
 
     const articles = Array.isArray(articlesData)
       ? articlesData
       : (articlesData?.articles || []);
 
+    const trendingStories = Array.isArray(trendingStoriesData?.stories)
+      ? trendingStoriesData.stories
+      : (Array.isArray(trendingStoriesData) ? trendingStoriesData : []);
+
     return {
       initialArticles: articles,
       initialCategories: Array.isArray(categories) && categories.length > 0 ? categories : null,
       initialSources: Array.isArray(sources) && sources.length > 0 ? sources : null,
       initialSponsored: Array.isArray(sponsored) ? sponsored : [],
+      initialTrendingStories: trendingStories,
     };
   } catch (err) {
     console.warn("[SSR Home Loader] Error:", err.message);
@@ -53,12 +60,14 @@ export async function loader() {
       initialCategories: null,
       initialSources: null,
       initialSponsored: [],
+      initialTrendingStories: [],
     };
   }
 }
 
 export default function Home() {
   const data = useLoaderData();
+  const homeItemList = buildArticleItemList(data.initialArticles, 1, 20);
 
   const organizationStructuredData = {
     "@context": "https://schema.org",
@@ -93,7 +102,18 @@ export default function Home() {
           "target": "https://newsstand.ng/?search={search_term_string}",
           "query-input": "required name=search_term_string"
         }
-      }
+      },
+      ...(homeItemList
+        ? [{
+            "@type": "CollectionPage",
+            "@id": "https://newsstand.ng/#homepage",
+            "url": "https://newsstand.ng/",
+            "name": "Top Nigerian News Stories",
+            "isPartOf": { "@id": "https://newsstand.ng/#website" },
+            "publisher": { "@id": "https://newsstand.ng/#organization" },
+            "mainEntity": homeItemList
+          }]
+        : [])
     ]
   };
 

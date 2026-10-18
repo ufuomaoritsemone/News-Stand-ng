@@ -23,6 +23,368 @@ Projects:
 
 ## Updates
 
+### October 18, 2026 — End-to-End Technical & News SEO Enhancements
+Completed an audit and implementation of technical and News SEO improvements across `NewsApi` and `NigerianNewsGrid.Web`:
+- **[Sitemap Hygiene & Indexation Alignment (`SeoController.cs`)]**:
+  - Filtered out thin topics (`t.ArticleTopics.Count >= MinTopicArticlesForIndexing`, minimum 5 articles) in `case "topics"` to prevent submitting pages marked `<meta name="robots" content="noindex, follow">`, eliminating "Submitted URL marked 'noindex'" warnings in Google Search Console.
+  - Linked topic `LastMod` in `/sitemap-topics.xml` to `t.ArticleTopics.Max(at => at.Article!.PublishedAt)` so topic hub sitemaps reflect fresh coverage.
+  - Filtered `!a.IsSponsored` in `case "articles"` so sponsored commercial campaigns are never submitted to historical search engine sitemaps.
+  - Added on-demand clustering fallback via `IStoryClusteringService` in `case "stories"` so `/sitemap-stories.xml` is immediately populated on fresh or newly seeded deployments.
+  - Replaced count-only ETag with `ComputeSitemapETag` (SHA-256 hash over loc and lastmod ticks), preventing stale `304 Not Modified` responses when articles rotate without altering total count.
+- **[Pagination & Canonical Integrity (`category.$category.jsx`, `source.$slug.jsx`, `topic.$slug.jsx`)]**:
+  - Replaced static page-1 canonicals with self-referencing paginated URLs (`paginatedUrl`) and `paginationLinks` (`rel="prev"` / `rel="next"`) on category and publisher hub pages, adhering to the standard to never canonicalize page 2+ to page 1.
+  - Fixed thin-content guardrail in `topic.$slug.jsx` to evaluate the entire topic's `total` article count instead of the current page slice (`articles.length`), ensuring healthy topics remain indexed across paginated pages.
+- **[Structured Data (JSON-LD) & Aggregator Attribution (`seo.js`, `home.jsx`, `news.$slug.jsx`, `story.$slug.jsx`, `category.$category.jsx`, `topic.$slug.jsx`, `source.$slug.jsx`)]**:
+  - Created centralized [`app/utils/seo.js`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NigerianNewsGrid.Web/app/utils/seo.js) offering `toAbsoluteImageUrl`, `paginatedUrl`, `paginationLinks`, `buildArticleItemList`, and `buildAuthorNode`.
+  - Added schema.org `ItemList` as `mainEntity` of `CollectionPage` across the homepage (`home.jsx`), categories (`category.$category.jsx`), topics (`topic.$slug.jsx`), publishers (`source.$slug.jsx`), and cross-publisher developing stories (`story.$slug.jsx`).
+  - Refined `NewsArticle` JSON-LD author typing in `news.$slug.jsx` to dynamically produce `Person` for journalistic bylines and `Organization` for newsroom desks, removed the "Reported by" UI prefix from schema names, normalized images to absolute `https://` URLs, and added `isBasedOn` linking to original publisher URLs for aggregation transparency.
+  - Added `/sitemap-news.xml` directly alongside `/sitemap.xml` in [`robots[.]txt.jsx`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NigerianNewsGrid.Web/app/routes/robots%5B.%5Dtxt.jsx) to accelerate Google News bot discovery.
+- **[Autonomous SEO Remediation & CTR Feedback Loop (`SeoFeedbackLoopService.cs`, `SeoMonitoringBackgroundService.cs`)]**:
+  - Enhanced automated backfill remediation to process batches of unenriched articles per 4-hour cycle via a performant `NOT EXISTS` relational subquery.
+  - Upgraded CTR anomaly evaluation to resolve real article headlines, categories, and enrichment status for ranking landing pages instead of querying raw search terms.
+
+### October 18, 2026 — Mobile UI Smoothness & Trending Developing Stories Reliability
+Resolved mobile UI responsiveness/scroll smoothness bottlenecks and restored the **Trending Developing Stories** section across `NewsApi`, `NigerianNewGrid` (.NET 10 MAUI), and `NigerianNewsGrid.Web`:
+- **[Trending Developing Stories Backend Resilience (`StoriesController.cs`, `StoryClusteringService.cs`)]**:
+  - Fixed an inverted fallback time-window cutoff in [`StoriesController.cs`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NewsApi/Controllers/StoriesController.cs) (`GetTrendingStories`) where `Math.Min(36, ...)` clamped the fallback query to 36 hours instead of expanding it (`Math.Max(safeWindowHours * 3, 168)`).
+  - Added on-demand clustering (`_clusteringService.RunClusteringAsync`) when no clusters exist in the database and added `SynthesizeFallbackTrendingStoriesAsync` + `ResolveSynthesizedClusterBySlugAsync` (`trend-*` slugs) in [`StoriesController.cs`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NewsApi/Controllers/StoriesController.cs) so `GET /api/v1/stories/trending` and `GET /api/v1/stories/{slug}` always return developing story clusters whenever articles exist.
+  - Tuned [`StoryClusteringService.cs`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NewsApi/Services/StoryClusteringService.cs) with a 14-day fallback window when fewer than 4 embedded articles exist in the 72-hour window, provider-aware default similarity thresholds (`0.48f` for `LocalFallbackEmbeddingProvider`, `0.58f` for Gemini embeddings), and `ComputeTitleKeywordBoost` / `ExtractSignificantTokens` to reliably cluster cross-publisher coverage of the same event.
+- **[.NET MAUI Mobile Smoothness & Offline-Resilient Trending Rail (`MainViewModel.cs`, `DiscoverViewModel.cs`, `StoryClusterViewModel.cs`, `ArticleCardView.xaml.cs`, `MainPage.xaml`, `DiscoverPage.xaml`, `BookmarksPage.xaml`)]**:
+  - Updated [`MainViewModel.cs`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/NigerianNewGrid/ViewModels/MainViewModel.cs) (`EnsureFallbackTrendingStories`, `BuildFallbackTrendingStories`) and [`DiscoverViewModel.cs`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/NigerianNewGrid/ViewModels/DiscoverViewModel.cs) to populate `TrendingStories` immediately from cached and live briefing stories whenever the API returns 0 clusters or is unreachable, eliminating header layout shifts and ensuring the Trending rail is always visible.
+  - Added `TryPopulateFromLocalCacheAsync` to [`StoryClusterViewModel.cs`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/NigerianNewGrid/ViewModels/StoryClusterViewModel.cs) so tapping any trending story card resolves matching publisher perspectives from `IBriefingCacheService` even when offline, and updated `OpenTrendingStoryAsync` in [`DiscoverViewModel.cs`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/NigerianNewGrid/ViewModels/DiscoverViewModel.cs) to navigate to the native `storycluster` route.
+  - Eliminated full `CollectionView` visual-tree teardown on bookmark taps and redundant refreshes in [`MainViewModel.cs`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/NigerianNewGrid/ViewModels/MainViewModel.cs) (`OnBookmarksChanged`, `RefreshDisplayedStories`), and updated [`ArticleCardView.xaml.cs`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/NigerianNewGrid/Views/ArticleCardView.xaml.cs) to update its bookmark button visual state in-place with tactile card tap feedback.
+  - Parallelized `LoadAsync` in [`DiscoverViewModel.cs`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/NigerianNewGrid/ViewModels/DiscoverViewModel.cs) with `Task.WhenAll`, locked explicit heights (`HeightRequest="124"` / `"112"`) on horizontal trending rails in [`MainPage.xaml`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/NigerianNewGrid/MainPage.xaml) and [`DiscoverPage.xaml`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/NigerianNewGrid/DiscoverPage.xaml) to prevent `CollectionView.Header` re-measure jitter, and added `SafeAreaEdges="Container"` plus dark-mode `AppThemeBinding` to [`BookmarksPage.xaml`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/NigerianNewGrid/BookmarksPage.xaml).
+- **[Mobile Web Responsiveness & Trending Fallback (`TrendingStoriesSection.jsx`, `App.jsx`, `src/styles/index.css`)]**:
+  - Updated [`TrendingStoriesSection.jsx`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NigerianNewsGrid.Web/src/components/TrendingStoriesSection.jsx) to fall back to all provided clusters when none fall within the 36-hour window and added `effectiveTrendingStories` in [`App.jsx`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NigerianNewsGrid.Web/src/App.jsx) to synthesize developing story groups from the feed when `trendingStories` is empty.
+  - Refined `@media (max-width: 768px)` rules in [`src/styles/index.css`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NigerianNewsGrid.Web/src/styles/index.css) with `16 / 9` card media aspect ratios, `touch-action: manipulation`, `-webkit-tap-highlight-color: transparent`, and responsive `.trending-rail-card` sizing (`flex: 0 0 82vw; max-width: 310px`).
+- **[Naira FX Tracker Offline `0` Defaults & Live Scraped Display (`MainViewModel.cs`, `naira-exchange-rate.jsx`, `FxRatesScraperService.cs`, `MarketDataBackgroundService.cs`)]**:
+  - Updated [`MainViewModel.cs`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/NigerianNewGrid/ViewModels/MainViewModel.cs) (`OfflineNairaFxPillText = "₦0/$"`, `OfflineNairaFxParallelSummary = "Parallel: $ ₦0 · £ ₦0 · € ₦0"`, `OfflineNairaFxOfficialSummary = "CBN NAFEM: ₦0/$"`, `ResetNairaFxToOfflineDefaults`, `LoadNairaFxSummaryAsync`, `OnConnectivityChanged`) so the mobile FX pill and breakdown drawer default to `0` when offline and automatically fetch/display scraped rates when online.
+  - Updated [`app/routes/naira-exchange-rate.jsx`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NigerianNewsGrid.Web/app/routes/naira-exchange-rate.jsx) (`DEFAULT_CURRENCIES`, `OFFLINE_FALLBACK_METRIC`, `loader`, `NairaExchangeRatePage`, `CurrencyCalculatorCard`) so the web FX tracker defaults all currency rates and highlights to `0` (`₦0.00 / $1`, `₦0.00 Official NAFEM`) when offline (`navigator.onLine === false` or API unreachable) and dynamically refreshes live scraped values when online.
+  - Updated [`FxRatesScraperService.cs`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NewsApi/Services/FxRatesScraperService.cs) and [`MarketDataBackgroundService.cs`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NewsApi/Services/MarketDataBackgroundService.cs) to initialize un-scraped baseline rates to `0.0` instead of hardcoded fallback quotes.
+- **[Deployment, Docker Compose & CI Hardening (`NewsApi.csproj`, `NigerianNewsGrid.Web/Dockerfile`, `docker-compose.yml`, `ci.yml`, `Deployment.md`, `VPS_Deployment.md`)]**:
+  - Added `<Target Name="SixLabors_ValidateLicense" />` and `<ExcludeAssets>build</ExcludeAssets>` on `SixLabors.ImageSharp` in [`NewsApi.csproj`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NewsApi/NewsApi.csproj) so `-c Release` builds in Docker and GitHub Actions succeed without license task errors.
+  - Created [`src/NigerianNewsGrid.Web/Dockerfile`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NigerianNewsGrid.Web/Dockerfile) for multi-stage Node 22 Alpine SSR builds and added the `news-web` service, `127.0.0.1` loopback port bindings, `AllowedOrigins__0..2` pass-through, and `Scraper__MaxConcurrency` to [`docker-compose.yml`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/docker-compose.yml).
+  - Updated [`.github/workflows/ci.yml`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/.github/workflows/ci.yml) to execute `tests/NewsApi.Tests/NewsApi.Tests.csproj` and verify the `src/NigerianNewsGrid.Web` SSR build (`npm ci && npm run build`), and synchronized [`Deployment.md`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/Deployment.md) and [`VPS_Deployment.md`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/VPS_Deployment.md).
+- **[Verification & Unit Tests (`StoriesEndpointTests.cs`, `StoryClusteringTests.cs`)]**:
+  - Added `GetTrendingStories_SynthesizesFallback_WhenNoPreexistingClustersExist` in [`StoriesEndpointTests.cs`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/tests/NewsApi.Tests/StoriesEndpointTests.cs) and `RunClustering_FormsCluster_WithDefaultConfig_WhenCrossPublisherStoriesShareEvent` in [`StoryClusteringTests.cs`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/tests/NewsApi.Tests/StoryClusteringTests.cs).
+
+### October 18, 2026 — Priority 4 Mobile (.NET MAUI) UI/UX & Feature Parity
+Executed Priority 4 mobile UI/UX and feature parity enhancements across `NigerianNewGrid` (.NET 10 MAUI) and `NigerianNewsGrid.Client`:
+- **[Vector SVG Toolbar & Navigation Icons (`Resources/Images/*.svg`, `MainPage.xaml`, `ArticleWebPage.xaml`, `AudioBriefingCoordinator.cs`)]**:
+  - Added 6 vector SVG icons (`ic_search.svg`, `ic_refresh.svg`, `ic_headphones.svg`, `ic_pause.svg`, `ic_play.svg`, `ic_back.svg`) to [`NigerianNewGrid/Resources/Images/`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/NigerianNewGrid/Resources/Images/) for automatic multi-DPI Resizetizer rasterization.
+  - Replaced emoji text glyphs (`🔍`, `↻`, `🎧`/`⏸`/`▶`) on the top toolbar buttons in [`MainPage.xaml`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/NigerianNewGrid/MainPage.xaml) and the `"← Back"` button in [`ArticleWebPage.xaml`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/NigerianNewGrid/ArticleWebPage.xaml) with `ImageSource` vector drawables (`AudioButtonIcon` on [`IAudioBriefingCoordinator.cs`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/NigerianNewGrid/Services/IAudioBriefingCoordinator.cs), [`AudioBriefingCoordinator.cs`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/NigerianNewGrid/Services/AudioBriefingCoordinator.cs), and [`MainViewModel.cs`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/NigerianNewGrid/ViewModels/MainViewModel.cs)).
+- **[Native Multi-Source Story Cluster Page (`StoryClusterPage.xaml`, `StoryClusterViewModel.cs`, `NewsApiClient.cs`, `FeedModels.cs`)]**:
+  - Added `StoryClusterDetailDto` and `StoryClusterArticleItemDto` to [`FeedModels.cs`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NigerianNewsGrid.Client/Models/FeedModels.cs) and `GetStoryClusterBySlugAsync` (`GET /api/v1/stories/{slug}`) to [`NewsApiClient.cs`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NigerianNewsGrid.Client/NewsApiClient.cs).
+  - Created native [`StoryClusterPage.xaml`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/NigerianNewGrid/StoryClusterPage.xaml), [`StoryClusterPage.xaml.cs`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/NigerianNewGrid/StoryClusterPage.xaml.cs), and [`StoryClusterViewModel.cs`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/NigerianNewGrid/ViewModels/StoryClusterViewModel.cs) displaying the cluster hero, synthesized AI briefing summary, active publisher badges, and competing publisher perspectives list.
+  - Registered the `"storycluster"` route in [`AppShell.xaml.cs`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/NigerianNewGrid/AppShell.xaml.cs) and DI bindings in [`ServiceCollectionExtensions.cs`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/NigerianNewGrid/Extensions/ServiceCollectionExtensions.cs), and updated `OpenTrendingStoryAsync` in [`MainViewModel.cs`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/NigerianNewGrid/ViewModels/MainViewModel.cs) to open the native story cluster view when tapping a developing story card.
+- **[Live Naira FX Rate Pill & Multi-Currency Breakdown Drawer (`MainPage.xaml`, `MainViewModel.cs`, `NewsApiClient.cs`)]**:
+  - Added `MarketMetricDto` and `FxCurrencyRateItemDto` to [`FeedModels.cs`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NigerianNewsGrid.Client/Models/FeedModels.cs) and `GetMarketMetricAsync` (`GET /api/v1/data/{key}`) to [`NewsApiClient.cs`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NigerianNewsGrid.Client/NewsApiClient.cs).
+  - Added `LoadNairaFxSummaryAsync` and `ToggleNairaFxExpandedCommand` to [`MainViewModel.cs`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/NigerianNewGrid/ViewModels/MainViewModel.cs) and embedded a tap-to-expand **Live Naira FX Rate Pill** (`NGN ₦1,655/$ ▾`) in the top status strip of [`MainPage.xaml`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/NigerianNewGrid/MainPage.xaml) showing Parallel (`$ / £ / €`) and official CBN NAFEM rates.
+- **[Verification & Testing (`NewsApiClientTests.cs`)]**:
+  - Added unit tests `GetStoryClusterBySlugAsync_ReturnsClusterDetail_WhenApiReturnsOk` and `GetMarketMetricAsync_ReturnsNairaFxMetric_WhenApiReturnsOk` in [`NewsApiClientTests.cs`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/tests/NewsApiClient.Tests/NewsApiClientTests.cs) and verified `NigerianNewGrid.csproj` (`net10.0-android`) builds with 0 errors.
+
+### October 18, 2026 — Priority 3 Web UI/UX & SEO Refinements
+Executed Priority 3 frontend UX and technical SEO refinements across `NigerianNewsGrid.Web` to align the browser address bar with canonical SSR routes, streamline above-the-fold visual hierarchy, and synchronize category navigation with browser history and GA4 telemetry:
+- **[Canonical `/news/{slug}` URLs on `ReaderDrawer` Open/Close (`App.jsx`)]**:
+  - Updated `openArticle` in [`App.jsx`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NigerianNewsGrid.Web/src/App.jsx) so opening any story with a `slug` pushes `/news/${story.slug}` to the browser address bar via `window.history.pushState` (falling back to `?story=${story.id}` only when `slug` is absent) and dispatches `trackPageView`.
+  - Updated `closeArticle` and the `popstate` listener in [`App.jsx`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NigerianNewsGrid.Web/src/App.jsx) to restore the previous feed URL (`/`, `/category/{slug}`, or `/?tab=...`) when closing the drawer and to seamlessly reopen/close articles on browser Back/Forward navigation.
+- **[Streamlined Homepage Above-the-Fold Vertical Density (`WelcomeBanner.jsx`, `AudioBriefingBar.jsx`, `src/styles/index.css`)]**:
+  - Added a `compact` inline presentation mode to [`AudioBriefingBar.jsx`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NigerianNewsGrid.Web/src/components/AudioBriefingBar.jsx) and embedded it directly inside [`WelcomeBanner.jsx`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NigerianNewsGrid.Web/src/components/WelcomeBanner.jsx) (`welcome-banner-card--compact`), eliminating the separate vertical audio bar row while preserving the homepage and category `<h1>` heading for SEO crawlers.
+  - Tightened `.welcome-banner-section`, `.welcome-banner-card`, and `.welcome-headline` spacing in [`src/styles/index.css`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NigerianNewsGrid.Web/src/styles/index.css), bringing `HeroCarousel` and `TrendingStoriesSection` ~140px higher above the fold across desktop and mobile viewports.
+- **[Category Tabs & View Route Synchronization (`App.jsx`, `MobileBottomNav.jsx`)]**:
+  - Added `getUrlForCategory`, `resolveCategoryFromUrl`, and `handleSelectCategory` in [`App.jsx`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NigerianNewsGrid.Web/src/App.jsx) to synchronize category pills (`CategoryTabs`), header tabs (`Navbar`), and footer links (`Footer`) with `/category/{slug}`, `/?tab=forum`, `/?tab=saved`, `/?tab=top-videos`, `/?tab=news-videos`, and `/`, complete with GA4 `trackCategorySelect` and `trackPageView` attribution.
+  - Updated [`MobileBottomNav.jsx`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NigerianNewsGrid.Web/src/components/MobileBottomNav.jsx) to listen to `popstate` and highlight the active `Forum` (`/?tab=forum`) or `Stories` (`/`, `/category/*`) tab accurately.
+
+### October 18, 2026 — Priority 2 Backend Decomposition, Scraper Concurrency & Data Seeder Separation
+Executed Priority 2 architectural improvements across `NewsApi` and `NewsScraperService` to enforce the Single Responsibility Principle (SRP), parallelize news feed ingestion, and isolate slow or failing publisher endpoints:
+- **[`ArticlesController` Decomposition (`IBriefingService.cs`, `BriefingService.cs`, `IArticleIngestionService.cs`, `ArticleIngestionService.cs`, `ArticlesController.cs`)]**:
+  - Extracted [`IBriefingService`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NewsApi/Services/IBriefingService.cs) and [`BriefingService`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NewsApi/Services/BriefingService.cs) to own daily briefing assembly, freshness windowing, story deduplication, availability checks, and thread-safe `CancellationTokenSource` cache eviction.
+  - Extracted [`IArticleIngestionService`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NewsApi/Services/IArticleIngestionService.cs) and [`ArticleIngestionService`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NewsApi/Services/ArticleIngestionService.cs) to encapsulate batch URL/title deduplication, `Topic` & `ArticleTopic` resolution, `IIndexNowService` URL enqueueing, ML.NET category correction persistence, direct sponsored campaign CRUD, social share-card HTML rendering, and shared DTO mapping helpers.
+  - Refactored [`ArticlesController.cs`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NewsApi/Controllers/ArticlesController.cs) to delegate business logic to `IBriefingService` and `IArticleIngestionService`, reducing controller size by ~65% (from 1,573 lines to ~550 lines) while preserving backward-compatible constructor fallbacks for existing unit tests.
+- **[Parallel Scraper Execution & Per-Source Circuit Breakers (`ScraperWorker.cs`)]**:
+  - Upgraded [`ScraperWorker.cs`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NewsScraperService/ScraperWorker.cs) from a sequential `foreach` loop to bounded concurrent execution via `Parallel.ForEachAsync` (`Scraper:MaxConcurrency`, default `4`).
+  - Added per-source linked timeout budgets (`Scraper:SourceTimeoutSeconds`, default `45s`) and a thread-safe per-source circuit breaker (`ConcurrentDictionary`) that trips after 3 consecutive failures (`Scraper:CircuitBreakerFailureThreshold`) for a configurable cooldown window (`Scraper:CircuitBreakerCooldownMinutes`, default `30m`), preventing any single slow or unresponsive publisher from stalling the ingestion pipeline.
+- **[Database Schema vs. Data Seeding Separation (`DataSeeder.cs`, `DbInitializer.cs`, `ServiceCollectionExtensions.cs`)]**:
+  - Extracted [`IDataSeeder`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NewsApi/Infrastructure/DataSeeder.cs) and [`DataSeeder`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NewsApi/Infrastructure/DataSeeder.cs) out of [`DbInitializer.cs`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NewsApi/Infrastructure/DbInitializer.cs), separating publisher/article/video/social/topic seeding, startup data hygiene, and SEO slug backfilling from database schema migration and FTS5/tsvector setup.
+  - Registered `IBriefingService`, `IArticleIngestionService`, and `IDataSeeder` in [`ServiceCollectionExtensions.cs`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NewsApi/Extensions/ServiceCollectionExtensions.cs).
+- **[Verification & Automated Testing (`Priority2DecompositionTests.cs`)]**:
+  - Added [`Priority2DecompositionTests.cs`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/tests/NewsApi.Tests/Priority2DecompositionTests.cs) covering `BriefingService` caching & atomic invalidation, `ArticleIngestionService` batch deduplication & topic resolution, `DataSeeder` idempotency, and `ScraperWorker` circuit-breaker tripping & timeout isolation.
+  - Executed full `NewsApi.Tests` test suite (89/89 tests passing, 0 failures).
+
+### October 18, 2026 — Priority 1 Architecture, Database Performance & Security Hardening
+Executed Priority 1 system optimizations across `NewsApi` and container orchestration to eliminate SQLite full-table memory scans, optimize 14-day vector similarity queries, gate production console telemetry overhead, and remove hardcoded fallback credentials:
+- **[SQLite Native DateTimeOffset Filtering & Indexing (`NewsDbContext.cs`, `DbInitializer.cs`, `StoriesController.cs`, `AnalyticsController.cs`, `FeedbackService.cs`)]**:
+  - Added `IX_UserEvents_ArticleId` index on `UserEvent.ArticleId` in [`NewsDbContext.cs`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NewsApi/Data/NewsDbContext.cs) and [`DbInitializer.cs`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NewsApi/Infrastructure/DbInitializer.cs) for both PostgreSQL and SQLite.
+  - Updated [`StoriesController.cs`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NewsApi/Controllers/StoriesController.cs) to push `allArticleIds.Contains(ue.ArticleId)` directly into SQLite SQL (`WHERE "ArticleId" IN (...)`) instead of scanning all non-null `UserEvents` rows in memory.
+  - Replaced full-table memory loads in [`AnalyticsController.cs`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NewsApi/Controllers/AnalyticsController.cs) (`GetSummary` and `GetEvents`) and [`FeedbackService.cs`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NewsApi/Services/FeedbackService.cs) (`GetRecentFeedbacksAsync`) with native SQLite `datetime()` SQL filtering, ordering, and `LIMIT`/`OFFSET` pagination, and normalized incoming `UserEvent.OccurredAt` timestamps to UTC.
+- **[Vector Similarity Projection & Caching (`StoryClusteringService.cs`)]**:
+  - Injected `IMemoryCache` into [`StoryClusteringService.cs`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NewsApi/Services/StoryClusteringService.cs) to cache `FindRelatedArticlesAsync` results (`related_articles_v1_{articleId}_{limit}`) with a 10-minute sliding / 15-minute absolute TTL.
+  - Eliminated `.Include(ae => ae.Article)` across all 14-day candidate embeddings in `FindRelatedArticlesAsync`; now projects only `{ ae.ArticleId, ae.VectorBlob }` (bounded to the 500 most recent embeddings), scores cosine similarity using a reusable scratch float buffer, and fetches only the top `limit` matching `Article` entities by ID.
+  - Replaced the two-query `existingEmbeddingIds.Contains(a.Id)` check in `EnsureEmbeddingsAsync` with a single indexed relational `!_db.ArticleEmbeddings.Any(ae => ae.ArticleId == a.Id)` subquery.
+- **[Security & Observability Hardening (`docker-compose.yml`, `.env.example`, `ServiceCollectionExtensions.cs`, `Program.cs`)]**:
+  - Removed hardcoded fallback PostgreSQL passwords and API keys from [`docker-compose.yml`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/docker-compose.yml), enforcing required `.env` variables (`${POSTGRES_PASSWORD:?...}`, `${API_KEY:?...}`) and providing [`/.env.example`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/.env.example).
+  - Updated `AddObservability` in [`ServiceCollectionExtensions.cs`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NewsApi/Extensions/ServiceCollectionExtensions.cs) to gate OpenTelemetry `.AddConsoleExporter()` behind `IsDevelopment()` or explicit `Observability:EnableConsoleExporter=true` opt-in, preventing synchronous stdout span logging overhead in production.
+- **[Verification & Automated Testing (`StoryClusteringTests.cs`)]**:
+  - Added unit test `FindRelatedArticlesAsync_UsesVectorProjectionAndCachesResults` in [`StoryClusteringTests.cs`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/tests/NewsApi.Tests/StoryClusteringTests.cs) verifying vector similarity matching and `IMemoryCache` hit behavior.
+  - Executed full `NewsApi.Tests` test suite (85/85 tests passing, 0 failures).
+
+### October 15, 2026 — NairaExchangeRatePage Unique Key Fix & Currency DTO Mapping Normalization
+Resolved the React runtime console warning (`Each child in a list should have a unique "key" prop. Check the render method of NairaExchangeRatePage`):
+- **[Currency Model Normalization (`app/routes/naira-exchange-rate.jsx`)]**:
+  - Normalized `currencyList` mapping to bridge backend `FxCurrencyRateDto` properties (`code`, `name`, `parallelBuy`, `parallelSell`, `officialBuy`, `officialSell`, `symbol`) with frontend defaults (`currencyCode`, `currencyName`, `flag`, `buyRate`, `sellRate`, `officialBuyRate`, `officialSellRate`).
+  - Preserved the country flag emoji (`🇺🇸`, `🇪🇺`, `🇬🇧`, `🇯🇵`) which previously was overwritten by API objects lacking a `flag` field.
+  - Guaranteed stable, unique keys (`key={curr.currencyCode || curr.code || 'currency-' + idx}`) on `CurrencyCalculatorCard` components inside the currency calculator grid.
+- **[Child Lists Key Hardening (`app/routes/naira-exchange-rate.jsx`)]**:
+  - Hardened quick-preset buttons in `CurrencyCalculatorCard` with compound unique keys (`key={currCode + '-preset-' + p}`).
+  - Added robust fallback keys to the FAQ accordion (`key={faq.id || faq.question || 'faq-' + idx}`) and related articles shelf (`key={art.id || art.slug || 'related-art-' + idx}`).
+- **[Verification]**:
+  - Executed `npm run build` in `src/NigerianNewsGrid.Web`, completing client and SSR bundle builds with 0 errors.
+
+### October 14, 2026 — Official WhatsApp Brand Logo Integration in Mobile Share Buttons
+Integrated the vector WhatsApp brand logo into the mobile app's article card and reader detail share buttons:
+- **[Brand Vector Asset (`Resources/Images/ic_whatsapp.svg`)]**:
+  - Added official vector WhatsApp SVG asset to [`ic_whatsapp.svg`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/NigerianNewGrid/Resources/Images/ic_whatsapp.svg) (matching the web app's brand vector in `SocialIcons.jsx`), automatically processed into native resolution drawables by .NET MAUI Resizetizer.
+- **[Article Card Share Button (`ArticleCardView.xaml`)]**:
+  - Replaced the placeholder "💬" emoji text on the feed action square button in [`ArticleCardView.xaml`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/NigerianNewGrid/Views/ArticleCardView.xaml) with `ImageSource="ic_whatsapp.png"`, centered within the brand `#25D366` green background and 10px rounded corners.
+- **[Article Web / Reader Share Action (`ArticleWebPage.xaml`)]**:
+  - Upgraded the footer share action button in [`ArticleWebPage.xaml`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/NigerianNewGrid/ArticleWebPage.xaml) from placeholder text `"💬 WhatsApp"` to `ImageSource="ic_whatsapp.png"` with `ContentLayout="Left,8"` and `Text="WhatsApp"`.
+- **[Build & Verification]**:
+  - Compiled `NigerianNewGrid.csproj` (`net10.0-android`) with 0 errors, validating Resizetizer asset generation and XAML binding.
+
+### October 14, 2026 — MarketDataBackgroundService Startup Grace Delay & Cancellation Resilience
+Resolved `TaskCanceledException` in `MarketDataBackgroundService` during service startup, port re-binding, or rapid process shutdown:
+- **[Startup Grace Delay (`MarketDataBackgroundService.cs`)]**:
+  - Added an initial 5-second asynchronous grace delay before commencing market data sync to allow `DbInitializer`, schema migrations, and socket bindings to complete cleanly without resource contention.
+- **[Graceful Cancellation & Shutdown Handling (`MarketDataBackgroundService.cs`)]**:
+  - Updated `ExecuteAsync` and periodic timer loops to intercept `OperationCanceledException when (stoppingToken.IsCancellationRequested)` and log graceful information messages instead of logging `LogError` with full stack traces during routine host shutdown.
+  - Inserted `ct.ThrowIfCancellationRequested()` checkpoints between evergreen tracker seeding stages (`naira-fx`, `fuel-prices`, `jamb-waec`, `elections`) to safely abort synchronization early when the application is stopping.
+- **[Scraper Cancellation Propagation (`FxRatesScraperService.cs`)]**:
+  - Guarded HTTP scraping routines (`ScrapeAbokiForexHomeAsync`, `ScrapeCbnDirectApiAsync`, `ScrapeCbnNfemHistoryAsync`, `ScrapeAbokiForexCbnAsync`) to rethrow `OperationCanceledException` whenever `ct.IsCancellationRequested` is true, eliminating redundant downstream queries when the host is terminating.
+- **[Verification]**:
+  - Verified standalone compilation and executed all 84 test suites across `NewsApi.Tests` with 100% pass rate.
+
+### October 14, 2026 — Neutral Fallback Image Normalization & Red Placeholder Removal
+Removed the jarring red neon placeholder image from the top hero carousel and unified fallback image resolution across the web client:
+- **[Red Fallback Image Elimination (`HeroCarousel.jsx`)]**:
+  - Replaced the hardcoded vibrant pink/red cinema image (`photo-1536440136628-849c177e76a1`) in `HeroCarousel.jsx`'s `onError` handler with `DEFAULT_EDITORIAL_IMAGE` (`photo-1585829365295-ab7cd400c167`).
+  - Ensures stories rotating in the hero carousel with unresolvable or missing publisher thumbnails display an elegant, neutral editorial news image rather than flashing a bright red image.
+- **[Global Editorial Fallback Export (`services/api.js` & `ArticleCard.jsx`)]**:
+  - Exported `DEFAULT_EDITORIAL_IMAGE` from `api.js` for consistent, centralized reference across all component error handlers.
+  - Updated `ArticleCard.jsx` to consume `DEFAULT_EDITORIAL_IMAGE`.
+- **[Verification & Build]**:
+  - Executed `npm run build` in `src/NigerianNewsGrid.Web`, confirming zero SSR/client bundle errors.
+
+### October 14, 2026 — Batched Cloud AI Availability Probe & Adaptive Circuit Breaker for Summarization
+Implemented an in-memory adaptive circuit breaker and batch-level availability gate in `ArticleEnrichmentService` and `GeminiEmbeddingProvider` to eliminate redundant per-article outbound network stalls when Cloud AI (Gemini) is unreachable or rate-limited:
+- **[Batch Pre-Flight Gate & Single Probe (`ArticleEnrichmentService.cs`)]**:
+  - Refactored `ProcessUnenrichedBatchAsync` to evaluate Cloud AI availability once per batch cycle instead of making redundant outbound HTTP calls per article.
+  - If Cloud AI is unconfigured or under an active circuit breaker cooldown, the entire batch immediately executes via the local ML engine (`TextRank-Extractive`) with zero network delays or timeout overhead.
+  - When Cloud AI is eligible, the batch probes availability using the first article. If the request encounters a network failure, request timeout, HTTP 429 quota exhaustion, or authentication error, the circuit breaker trips immediately, and all remaining articles in the batch instantly bypass Cloud AI to run local TextRank.
+- **[Adaptive Circuit Breaker & Cooldown (`IArticleEnrichmentService.cs` & `ArticleEnrichmentService.cs`)]**:
+  - Implemented thread-safe circuit breaker mechanics (`IsCircuitBreakerActive`, `TripCircuitBreaker`, `ResetCircuitBreaker`, `IsCloudAiAvailableAsync`) with a 10-minute cooldown window to protect background workers and API endpoints from hammering failing remote endpoints.
+  - Added an explicit `skipCloudAi` overload on `GenerateEnrichmentAsync` for deterministic local execution.
+  - Enhanced `TryEnrichWithGeminiAsync` error handling with detailed HTTP status code logging (e.g. HTTP 429, 403, 500) and cancellation propagation.
+- **[Embedding Provider Circuit Breaker (`GeminiEmbeddingProvider.cs`)]**:
+  - Added matching circuit breaker protection to `GeminiEmbeddingProvider.GenerateEmbeddingAsync` and `GenerateEmbeddingsBatchAsync`.
+  - When Cloud AI rate limits or network issues occur, sentence embedding generation for local TextRank summarization and story clustering immediately falls back to `LocalFallbackEmbeddingProvider` (deterministic 768-dim hash n-grams) without incurring per-sentence network timeouts.
+- **[Verification & Automated Testing (`ArticleEnrichmentTests.cs`)]**:
+  - Added unit test `ProcessUnenrichedBatch_WhenCloudAiFails_ChecksOnceAndTripsCircuitBreakerForBatch`, verifying via custom `CountingErrorHttpMessageHandler` that a 3-article batch with HTTP 429 fails Cloud AI exactly once, trips the circuit breaker, and enriches all 3 articles with local TextRank.
+  - Added unit test `GenerateEnrichmentAsync_WithSkipCloudAi_BypassesCloudAiNetworkCalls`, verifying 0 HTTP calls when `skipCloudAi` is flagged.
+  - Executed full test suite on `NewsApi.Tests.csproj` (all 84/84 tests passing, 100% pass rate).
+
+### October 14, 2026 — Modern SaaS UI/UX Architecture & Dark-Themed Cockpit Redesign (Admin Dashboard)
+Completely redesigned and refactored the "News Stand NG" Admin Dashboard interface into a modern, high-craft dark-themed SaaS aesthetic inspired by Linear, Vercel, and Stripe, while strictly preserving 100% of existing business logic, model bindings, routing, and event handlers:
+- **[Unified SaaS App Shell Architecture (`Pages/Shared/_Layout.cshtml` & `site.css`)]**:
+  - Replaced duplicate, disparate horizontal button clusters on all pages with a persistent, collapsible sidebar navigation system organized into four functional domains: *Overview* (`/`, `/Analytics`, `/SearchConsole`), *Editorial & Media* (`/Videos`, `/Socials`, `/Comments`, `/Feedback`), *Intelligence & Ads* (`/Categorizer`, `/Sponsors`), and *Platform & Ops* (`/SystemHealth`, `/Settings`).
+  - Added a modern sticky top application bar featuring hierarchical breadcrumbs (`News Stand NG > Section > Page`), live API sync beacon (`API Live` with green pulsing dot), quick theme switcher (`Alt+T`), and user profile badge with avatar and signout actions.
+  - Implemented a **Global Command Palette (`Ctrl+K` / `⌘K`)**: A keyboard-driven spotlight search modal with instantaneous fuzzy filtering across all administrative sections, pages, actions, and theme toggling with arrow-key navigation.
+  - Implemented responsive mobile offcanvas drawer behavior with frosted glass backdrop blur.
+  - Kept unauthenticated [`Login.cshtml`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/AdminDashboard/Pages/Login.cshtml) isolated as a distraction-free, high-security login gateway with anti-CSRF protection.
+- **[Design Tokens & Visual Craftsmanship (`wwwroot/site.css`)]**:
+  - Engineered modern SaaS color tokens, deep slate/zinc backgrounds (`#090d16` canvas, `#090e1a` sidebar, `#0f172a` cards), subtle borders (`rgba(255,255,255,0.08)`), refined shadows, and typography hierarchy (`Outfit` geometric display headings and `Inter` tabular-numeral body font).
+  - Maintained complete dual-theme resilience (Dark Mode default with full WCAG AAA light theme contrast support and zero-FOUC persistence via `localStorage`).
+- **[Page Modernization & Zero-Regression Logic Preservation]**:
+  - Upgraded all Razor page views ([`Index.cshtml`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/AdminDashboard/Pages/Index.cshtml), [`Analytics.cshtml`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/AdminDashboard/Pages/Analytics.cshtml), [`SearchConsole.cshtml`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/AdminDashboard/Pages/SearchConsole.cshtml), [`SystemHealth.cshtml`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/AdminDashboard/Pages/SystemHealth.cshtml), [`Categorizer.cshtml`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/AdminDashboard/Pages/Categorizer.cshtml), [`Sponsors.cshtml`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/AdminDashboard/Pages/Sponsors.cshtml), [`Feedback.cshtml`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/AdminDashboard/Pages/Feedback.cshtml), [`Comments.cshtml`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/AdminDashboard/Pages/Comments.cshtml), [`Socials.cshtml`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/AdminDashboard/Pages/Socials.cshtml), [`Videos.cshtml`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/AdminDashboard/Pages/Videos.cshtml), [`Settings.cshtml`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/AdminDashboard/Pages/Settings.cshtml), [`Login.cshtml`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/AdminDashboard/Pages/Login.cshtml)) with clean `.saas-page-header` titles, status indicators, and contextual action toolbars.
+  - Strictly preserved 100% of existing `asp-page-handler` endpoints (`SyncSocials`, `SyncVideos`, `SyncTrending`, `GenerateAiSummary`, etc.), filter forms, antiforgery tokens, Chart.js integrations, and modal flows.
+- **[In-Browser Review & Visual Refinements]**:
+  - Tested dashboard live in the browser at `http://localhost:56192` across both Dark and Light themes.
+  - Eliminated redundant secondary theme button under the card on [`Login.cshtml`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/AdminDashboard/Pages/Login.cshtml), retaining the sleek floating toggle pill in the bottom right corner.
+  - Refined light-mode text contrast in [`wwwroot/site.css`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/AdminDashboard/wwwroot/site.css) and [`SystemHealth.cshtml`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/AdminDashboard/Pages/SystemHealth.cshtml) using theme-adaptive `.hero-status-card` and `.text-main` tokens to ensure all metric numbers and telemetry gauges are legible.
+  - Replaced legacy `table-dark table-striped` with clean `.table-hover` in [`SearchConsole.cshtml`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/AdminDashboard/Pages/SearchConsole.cshtml), [`Analytics.cshtml`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/AdminDashboard/Pages/Analytics.cshtml), [`Categorizer.cshtml`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/AdminDashboard/Pages/Categorizer.cshtml), [`Comments.cshtml`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/AdminDashboard/Pages/Comments.cshtml), and [`Sponsors.cshtml`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/AdminDashboard/Pages/Sponsors.cshtml) to ensure seamless table rows across both light and dark modes.
+- **[Verification & Testing]**:
+  - Executed `dotnet build src/AdminDashboard/AdminDashboard.csproj /t:CoreCompile` confirming zero compilation errors and zero warnings.
+  - Executed test suite on `NewsApiClient.Tests.csproj` confirming all unit and integration tests pass without regressions.
+
+### October 11, 2026 — Real-Time Story Freshness, Hero Carousel Editorial Diversity & Trending Cluster Resolution (Web & Backend)
+Diagnosed and resolved multiple interrelated issues causing the web application to display older stories, stale opinion clusters, and fallback placeholders:
+- **[SSR Local Network Transport & HTTPS Redirection Fix (`NewsApi/Program.cs`)]**:
+  - Identified that unconditional `app.UseHttpsRedirection()` in `Program.cs` was returning HTTP 307 redirects to `https://127.0.0.1:56193`, causing Node.js Vite SSR runtime in `home.jsx` to reject the self-signed certificate (`DEPTH_ZERO_SELF_SIGNED_CERT`).
+  - This caused the SSR loader's `Promise.all` to catch and return empty article lists, forcing the web client to render stale hardcoded fallback stories (`AUTHENTIC_NIGERIAN_FALLBACKS`).
+  - Scoped `app.UseHttpsRedirection()` and `app.UseHsts()` to non-development environments (`!app.Environment.IsDevelopment()`), ensuring clean plain-HTTP communication between local Node SSR and `NewsApi`.
+- **[Hero Carousel Editorial Diversity & Opinion Deprioritization (`App.jsx`)]**:
+  - Resolved an issue where a batch of opinion columns published in rapid succession by a single outlet (*Premium Times*) monopolized all 6 slides in the top Hero Carousel.
+  - Implemented a two-pass editorial curation algorithm in [`App.jsx`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NigerianNewsGrid.Web/src/App.jsx):
+    - **Pass 1:** Prioritizes verified hard news (`contentType !== 'Opinion'` and not category opinion), enforcing publisher diversity (maximum 2 stories per publication in the carousel).
+    - **Pass 2:** Backfills any remaining carousel slots while preserving source balance.
+  - Excluded featured Hero Carousel stories from the Latest National Stories grid (`heroStoryIds`) to prevent duplicated cards on the home page fold.
+- **[Trending Stories Freshness & Stale Cluster Suppression (`StoriesController.cs` & `TrendingStoriesSection.jsx`)]**:
+  - In [`StoriesController.cs`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NewsApi/Controllers/StoriesController.cs), eliminated aggressive 72-hour and unbounded cluster fallbacks that were pulling 2-day-old local crime and obituary stories into the real-time "What Nigeria Is Reading Right Now" rail.
+  - Constrained trending story candidates strictly to clusters with active article coverage in the requested freshness window (max 36 hours).
+  - In [`TrendingStoriesSection.jsx`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NigerianNewsGrid.Web/src/components/TrendingStoriesSection.jsx), added a client-side recency filter ensuring only developing events active within the last 36 hours are rendered.
+- **[Core Publisher Sitemaps & Scraping Defense (`DbInitializer.cs` & `ArticleContentExtractor.cs`)]**:
+  - Implemented `EnsureCorePublishersAsync` in [`DbInitializer.cs`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NewsApi/Infrastructure/DbInitializer.cs) to ensure *TheCable*, *Daily Post Nigeria*, *Vanguard News*, *Daily Trust*, and *Punch Newspaper* are configured with their Google News sitemaps (`/news-sitemap.xml`) alongside RSS fallbacks.
+  - In [`ArticleContentExtractor.cs`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NewsScraperService/Services/ArticleContentExtractor.cs), added protective validation to immediately drop cookie consent wall pages (such as `"Before you continue"` from Google-proxied sources) and URLs referencing `consent.google.com`.
+  - Added `CleanCorruptedArticlesAsync` in `DbInitializer` to scrub any existing consent artifacts from the database.
+- **[Verification & Testing]**:
+  - Verified backend test suite with all 82/82 passing tests in [`NewsApi.Tests`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/tests/NewsApi.Tests).
+  - Validated live SSR and client-side rendering on `http://localhost:5174/` via browser subagent, confirming the presence of fresh breaking national stories (within minutes to hours) across Punch, Vanguard, Channels TV, Premium Times, and BusinessDay.
+
+### October 11, 2026 — System Health & Service Diagnostics Dashboard (Admin & NewsApi)
+Architected and implemented a dedicated **System Health & Service Heartbeats** management page on the Admin Dashboard alongside comprehensive telemetry and safe maintenance probes on `NewsApi`:
+- **[Health & Telemetry Engine (`NewsApi/Controllers/HealthController.cs`)]**:
+  - Maintained core `/healthz/liveness` and `/healthz/readiness` orchestrator probes.
+  - Implemented `GET /Health/details` returning structured system telemetry: process Uptime, Working Set & GC Heap RAM, OS/Architecture info, live Database connection latency (ms), entity totals (Articles, Sources, Comments, Feedbacks), scraper ingestion freshness evaluation, and FX tracker/audio storage metrics.
+  - Implemented safe, non-destructive administrative actions: `POST /Health/ping-db` (live query round-trip latency probe) and `POST /Health/purge-cache` (safely purges WebP image proxy cache and flushes in-memory settings cache).
+- **[Admin Dashboard Health Page (`AdminDashboard/Pages/SystemHealth.cshtml` & `.cs`)]**:
+  - Created a glassmorphic system status center with real-time operational status banner.
+  - Added 4 interactive service telemetry cards: NewsApi Core, Database Subsystem, Scraper Service, and Storage/TTS Trackers.
+  - Integrated live database ping and cache purge action handlers with user feedback alerts.
+  - Added an architectural guide and modal with Docker Compose command cheatsheet for VPS deployment operations ([`VPS_Deployment.md`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/VPS_Deployment.md)).
+  - Added header navigation link to `/SystemHealth` on [`Index.cshtml`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/AdminDashboard/Pages/Index.cshtml) and [`Settings.cshtml`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/AdminDashboard/Pages/Settings.cshtml).
+- **[Testing & Verification]**:
+  - Added 4 integration tests in [`SystemHealthEndpointTests.cs`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/tests/NewsApi.Tests/SystemHealthEndpointTests.cs).
+  - All 82/82 tests in `NewsApi.Tests` passing.
+  - Clean builds across `NewsApi` and `AdminDashboard`.
+
+### October 11, 2026 — Major Currency Two-Way FX Calculators & Scraper Integration (Web & Backend)
+Streamlined the evergreen data tracker ecosystem by hiding temporary trackers (Fuel & JAMB) from navigation, implementing once-daily automated FX data ingestion from AbokiForex and the Central Bank of Nigeria (CBN), and deploying interactive two-way currency conversion calculators on the web:
+- **[Navigation Visibility Cleanup (`Navbar.jsx` & `MobileBottomNav.jsx`)]**:
+  - Removed Fuel Price and JAMB/WAEC tracker links from desktop navigation dropdowns, mobile navigation drawer menus, and docked bottom sheet quick actions.
+  - Retained underlying SEO-optimized routes (`/fuel-price-nigeria` and `/jamb-waec-news`) accessible for search traffic without cluttering core discovery surfaces.
+- **[Automated Multi-Source Daily FX Scraper (`NewsApi`)]**:
+  - Implemented [`IFxRatesScraperService.cs`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NewsApi/Services/IFxRatesScraperService.cs) and [`FxRatesScraperService.cs`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NewsApi/Services/FxRatesScraperService.cs) fetching daily parallel and official rates from `https://abokiforex.app/`, `https://abokiforex.app/cbn`, and the Central Bank of Nigeria (`cbn.gov.ng`) public endpoints.
+  - Multi-tier resilience: scrapes AbokiForex black market rates, AbokiForex CBN fixings, and official CBN API (`GetAllExchangeRatesGRAPH` and `GetAllNFEM_RatesGRAPH`) with robust fallback defaults.
+  - Stores multi-currency metadata (`USD`, `EUR`, `GBP`, `JPY`) with Buy, Sell, Official Buy, and Official Sell rates inside `MarketDataRecord.HistoricalDataJson`.
+  - Configured [`MarketDataBackgroundService.cs`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NewsApi/Services/MarketDataBackgroundService.cs) to run once-daily sync cycles (`TimeSpan.FromHours(24)`).
+  - Extended [`Dtos.cs`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NewsApi/Models/Dtos.cs) and [`MarketDataController.cs`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NewsApi/Controllers/MarketDataController.cs) to return structured `currencies` dictionary while preserving backwards compatibility with historical sparkline points.
+- **[Interactive Two-Way Currency Calculators (`naira-exchange-rate.jsx` & `index.css`)]**:
+  - Built an interactive currency calculation suite featuring 4 major currencies: US Dollar (USD), Euro (EUR), British Pound (GBP), and Japanese Yen (JPY) on [`naira-exchange-rate.jsx`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NigerianNewsGrid.Web/app/routes/naira-exchange-rate.jsx).
+  - Two-way interactive inputs: entering a foreign currency amount computes Naira via the active Buy Rate; entering a Naira amount computes foreign currency via the active Sell Rate.
+  - Global Market Mode Selector: seamlessly toggle all 4 calculators between "Parallel Market (Street / BDC)" and "Official CBN (NAFEM)" rates.
+  - Responsive design with preset chips (`Quick: $50, $100, $500, $1000` / `¥1,000, ¥5,000...`), live spread tags, 24h change indicators, active flow labels, and dark/light theme support in [`index.css`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NigerianNewsGrid.Web/src/styles/index.css).
+- **[Testing & Verification]**:
+  - Added unit test `MarketDataController_ReturnsMultiCurrencyFxData_WhenPresent` in [`DataPagesTests.cs`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/tests/NewsApi.Tests/DataPagesTests.cs).
+  - All 78/78 tests in `NewsApi.Tests` passing.
+  - Production build in `NigerianNewsGrid.Web` (`npm run build`) succeeded with 0 errors.
+
+### October 11, 2026 — Android MaterialComponents Theme & Clean Cache Startup Fix (Mobile)
+Resolved app startup crash on Android occurring when app cache/data is cleared or when BottomNavigationView initializes:
+- **[Root Cause Identification]**:
+  - Android logcat on device `R5GL34DA4DP` revealed two related startup exceptions during Android Activity lifecycle:
+    1. `java.lang.IllegalArgumentException: This component requires that you specify a valid TextAppearance attribute. Update your app theme to inherit from Theme.MaterialComponents (or a descendant)` triggered by Google Material Components' `ThemeEnforcement.checkTextAppearance` during `BottomNavigationView` creation in `ShellItemRenderer`.
+    2. `java.lang.IllegalArgumentException: No view found for id 0x7f0800f9 (com.nigeriannewsgrid.app:id/labeled) for fragment NavigationRootManager_ElementBasedFragment` when `hasSeenOnboarding` is reset to `false` and `OnboardingPage` was inflated under an unspecified application theme.
+- **[Fix Implementation]**:
+  - Added [`styles.xml`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/NigerianNewGrid/Platforms/Android/Resources/values/styles.xml) inheriting from `Theme.MaterialComponents.DayNight.NoActionBar` and explicitly mapping `bottomNavigationViewStyle` to `@style/Widget.MaterialComponents.BottomNavigationView`.
+  - Updated [`AndroidManifest.xml`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/NigerianNewGrid/Platforms/Android/AndroidManifest.xml) to declare `android:theme="@style/Maui.MainTheme"` on the `<application>` node.
+  - Verified on physical Samsung device: clean startup displays [`OnboardingPage`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/NigerianNewGrid/OnboardingPage.xaml) without errors, and tapping "Get Started" transitions smoothly into `AppShell` and `MainPage`.
+
+### October 11, 2026 — Compact Horizontal Trending Stories Rail (Web) & Discover Page Trending Section (Mobile)
+Implemented a streamlined, space-efficient horizontal scrolling rail for trending developing stories on the web, and created a dedicated Trending Developing Stories section and query navigation handler on the mobile (.NET MAUI) Discover page:
+- **[Web Frontend (`NigerianNewsGrid.Web`)]**:
+  - Replaced the large vertical two-column grid (which had a tall 16:9 media wrap) with a sleek, low-profile horizontal scrolling track ([`TrendingStoriesSection.jsx`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NigerianNewsGrid.Web/src/components/TrendingStoriesSection.jsx)).
+  - Styled compact cards ([`index.css`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NigerianNewsGrid.Web/src/styles/index.css)) featuring #1 rank gold badge, source count pill, category, timestamp, headline, top reporting outlets, and chevron navigation.
+  - Added left and right scroll navigation buttons (`.trending-rail-nav-btn`) and smooth `scroll-snap-type: x mandatory` track for both desktop mouse click and touch swipe.
+- **[Mobile Discover Page & Query Navigation (`NigerianNewGrid` - .NET MAUI)]**:
+  - Added a dedicated **🔥 Trending Developing Stories** section to [`DiscoverPage.xaml`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/NigerianNewGrid/DiscoverPage.xaml)'s `CollectionView.Header`, matching the multi-source card layout from the homepage.
+  - Updated [`DiscoverViewModel.cs`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/NigerianNewGrid/ViewModels/DiscoverViewModel.cs) to implement `IQueryAttributable` and load trending stories via `_apiClient.GetTrendingStoriesAsync(limit: 10, windowHours: 24)`.
+  - Added `OpenTrendingStoryCommand` to both `MainViewModel.cs` and `DiscoverViewModel.cs` using `DiscoverViewModel.GetSearchQueryForStory(story)` to automatically extract optimal search keywords (skipping noise/stopwords) and pre-fill and trigger full search upon tapping any trending story.
+  - Added resilient fallback search in `DiscoverViewModel.FetchSearchBatchAsync`: if an exact multi-word query returns 0 items on page 1, it automatically tries the top 2 keywords to ensure relevant coverage is always displayed.
+  - Implemented `IQueryAttributable` on [`DiscoverPage.xaml.cs`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/NigerianNewGrid/DiscoverPage.xaml.cs), ensuring that tapping a trending card from the Home screen navigates to Discover with `?query=...` and immediately runs and displays the search results.
+
+### October 11, 2026 — Trending Stories SQLite Translation Fix & Mobile Updates Restoration
+Resolved the HTTP 500 error on `GET /api/v1/stories/trending?limit=6&windowHours=24` and restored live trending story clusters and updates across the Web and Mobile (.NET MAUI) clients:
+- **[Root Cause Resolution (`StoriesController.cs`)]**:
+  - Identified untranslatable LINQ evaluation in SQLite EF Core provider when querying `_db.UserEvents` (`OccurredAt >= cutoff && ue.ArticleId != null`). Because SQLite stores `OccurredAt` as `DateTimeOffset` in TEXT format, direct SQL expression translation of `DateTimeOffset` comparisons failed under SQLite.
+  - Aligned implementation with the provider pattern established in [`AnalyticsController.cs`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NewsApi/Controllers/AnalyticsController.cs): for SQLite, projection of `{ ue.ArticleId, ue.OccurredAt }` is retrieved and filtered in-memory with `cutoffOffset` and `articleIdSet`, while maintaining native SQL execution under PostgreSQL.
+  - Resolved `GroupBy(ue => ue.ArticleId!)` SQLite translation limitations by grouping in-memory via `ToDictionary`.
+- **[Batch Ingestion Topic Cache & Duplicate Key Safeguard (`ArticlesController.cs`)]**:
+  - Identified secondary cause behind crawler update halts: when scraper workers pushed batches containing multiple articles tagged with the same newly discovered entity/topic slug, `FirstOrDefaultAsync` on the database returned null for uncommitted entities in the same batch, causing duplicate `Topic` entities and composite primary key collisions in `ArticleTopics`.
+  - Added an in-memory `topicCache` with `_db.Topics.Local` lookup and per-article `assignedTopicIds` verification, guaranteeing safe batch processing without 500 errors during continuous scraping.
+- **[Services & Mobile App Feed Restoration]**:
+  - Cleaned up locked orphan processes on port 56193 and rebuilt backend service assemblies.
+  - Restored `NewsScraperService` and `NewsApi` daemon processes ensuring continuous background scraping, categorization, and briefing updates.
+  - Verified `GET /api/v1/stories/trending` returning HTTP 200 with all 6 multi-source clusters, and `GET /api/v1/articles/briefings` returning 13 categories.
+  - Verified compilation and test suite passing with 77/77 tests passing in `NewsApi.Tests` and 0 errors in `NigerianNewGrid` (.NET MAUI net10.0-windows).
+
+### October 11, 2026 — Multi-Zone Sponsored Post Control for Web & Mobile (Main Page & In-Article Placements)
+Architected and implemented controllable direct sponsorship zones with granular platform targeting across the News Stand NG ecosystem, enabling independent publisher control over Main Page placements (Hero Spotlight, In-Feed, Partner Shelf) and In-Article reader placements (Top Header Sponsor, Mid-Content Breakout Box, Footer Partner Callout):
+- **[Data Model & Database Schema Migration (`NewsApi`)]**:
+  - Added `PlacementZone` (default `'MainPage_InFeed'`) and `TargetPlatform` (default `'All'`) properties to [`Article.cs`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NewsApi/Models/Article.cs).
+  - Implemented dynamic SQLite/PostgreSQL schema migration via `AddColumnIfMissingAsync` in [`DbInitializer.cs`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NewsApi/Infrastructure/DbInitializer.cs).
+  - Extended API DTOs ([`Dtos.cs`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NewsApi/Models/Dtos.cs)) and Briefing projections (`ArticleDto`, `CreateSponsoredArticleRequest`, `UpdateSponsoredArticleRequest`, `ArticleDetailDto`, `BriefingItemDto`).
+  - Updated `GET /api/v1/articles/sponsored` with `platform` and `zone` filtering query parameters in [`ArticlesController.cs`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NewsApi/Controllers/ArticlesController.cs).
+- **[Publisher Admin Dashboard (`AdminDashboard`)]**:
+  - Enhanced [`Sponsors.cshtml`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/AdminDashboard/Pages/Sponsors.cshtml) and [`Sponsors.cshtml.cs`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/AdminDashboard/Pages/Sponsors.cshtml.cs) with controls for both Target Platform (`All`, `Web`, `Mobile`) and Placement Zone (`MainPage_HeroSpotlight`, `MainPage_InFeed`, `MainPage_PartnerShelf`, `InArticle_Header`, `InArticle_MidContent`, `InArticle_Footer`).
+  - Added inline placement edit modal (`#editPlacementModal_@c.Id`) for rapid re-targeting and badge indicators for live campaign rows.
+- **[Client Shared Library (`NigerianNewsGrid.Client`)]**:
+  - Extended [`BriefingCategory.cs`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NigerianNewsGrid.Client/Models/BriefingCategory.cs) with `PlacementZone` and `TargetPlatform` record properties.
+  - Added `GetSponsoredArticlesAsync(platform, zone, ct)` to [`NewsApiClient.cs`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NigerianNewsGrid.Client/NewsApiClient.cs).
+  - Enhanced [`FeedSlotPlacementHelper.cs`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NigerianNewsGrid.Client/Helpers/FeedSlotPlacementHelper.cs) to filter candidates by platform eligibility and in-feed zone assignment.
+- **[Web Application (`NigerianNewsGrid.Web`)]**:
+  - Added query-filtered `getSponsoredArticles` support in [`api.js`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NigerianNewsGrid.Web/src/services/api.js).
+  - Created [`HeroSpotlightBanner.jsx`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NigerianNewsGrid.Web/src/components/HeroSpotlightBanner.jsx) featuring glassmorphic spotlight styling, impression tracking, and brand CTA.
+  - Updated [`App.jsx`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NigerianNewsGrid.Web/src/App.jsx) to categorize active campaigns into hero spotlight, in-feed items, partner shelf, and in-article header/mid/footer sponsors.
+  - Enhanced [`ReaderDrawer.jsx`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NigerianNewsGrid.Web/src/components/ReaderDrawer.jsx) with `in-article-header-sponsor-bar`, `in-article-mid-sponsor-card`, and `sponsored-perspective-callout` footer card.
+  - Added comprehensive responsive and dark/light mode styles in [`index.css`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NigerianNewsGrid.Web/src/styles/index.css).
+- **[Mobile App (`NigerianNewGrid` - .NET MAUI)]**:
+  - Added SQLite entity caching support for `PlacementZone` and `TargetPlatform` in [`CachedStoryEntity.cs`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/NigerianNewGrid/Models/CachedStoryEntity.cs).
+  - Updated [`MainViewModel.cs`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/NigerianNewGrid/ViewModels/MainViewModel.cs) with `HeroSpotlightCampaign`, `HasHeroSpotlight`, `PartnerShelfCampaigns`, `HasPartnerShelf`, automated impression tracking, and navigation commands.
+  - Enhanced [`MainPage.xaml`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/NigerianNewGrid/MainPage.xaml) CollectionView Header with Hero Spotlight Card and Partner Perspectives horizontal carousel.
+  - Updated [`ArticleViewModel.cs`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/NigerianNewGrid/ViewModels/ArticleViewModel.cs) with `HeaderSponsor`, `MidContentSponsor`, `FooterSponsor`, and `OpenInArticleSponsorCommand`.
+  - Added Top Header Sponsor Bar, Mid-Content Inline Breakout Box, and Footer Partner Perspective Card to [`ArticleWebPage.xaml`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/NigerianNewGrid/ArticleWebPage.xaml).
+- **[Testing & Verification]**:
+  - All 309/309 unit tests in `NewsApiClient.Tests` passing.
+  - All 77/77 unit tests in `NewsApi.Tests` passing.
+  - Clean builds across `NigerianNewsGrid.Client`, `NewsApi`, `AdminDashboard`, `NigerianNewGrid` (.NET MAUI net10.0-windows), and `NigerianNewsGrid.Web` (Vite / React SSR).
+
+### October 11, 2026 — Ephemeral Election Tracker: 22 Statutory INEC Parties & Candidate News Hub
+Architected and implemented a zero-schema-debt **Topic-Powered Overlay** for the 2026/2027 Nigerian Election cycle, providing an interactive political intelligence hub on [`/elections`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NigerianNewsGrid.Web/app/routes/elections.jsx) with effortless 3-month decommissioning:
+- **[Official INEC Statutory Register Ingestion ([`inecPartiesRegistry.js`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NigerianNewsGrid.Web/src/data/inecPartiesRegistry.js))]**:
+  - Ingested all 22 officially recognized political parties from the [INEC Nigeria Register](https://www.inecnigeria.org/parties) (APC, PDP, LP, NNPP, AAC, ADC, APGA, SDP, YPP, Accord, AA, ADP, APP, APM, BP, DLA, NDP, NRM, NDC, PRP, YP, ZLP).
+  - Populated complete party leadership (National Chairman, National Secretary), headquarters addresses in Abuja, brand colors, and presidential/gubernatorial flagbearers.
+- **[Gazetteer Entity Extraction Synchronization ([`ng-entities.json`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NewsScraperService/data/ng-entities.json))]**:
+  - Registered all 22 INEC political parties and key candidates (including Omoyele Sowore) into the Tier-1 gazetteer to ensure the scraper's entity extractor (`GazetteerEntityExtractor.cs`) automatically tags incoming news stories with their canonical topic slugs.
+- **[Interactive Multi-Tab Web Hub ([`elections.jsx`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NigerianNewsGrid.Web/app/routes/elections.jsx), [`index.css`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NigerianNewsGrid.Web/src/styles/index.css))]**:
+  - Built an interactive **Parties & Candidates Explorer** with real-time text search (matches party name, acronym, chairman, or candidate) and race filter pills (*All 22 Parties*, *Presidential Flagbearers*, *Gubernatorial Contenders*).
+  - Implemented 1-click filtering: selecting any party or candidate displays an active filter banner and dynamically queries live political coverage via `api.getElectionStories`.
+  - Maintained dedicated tabs for statutory **Electoral Calendar & Timetable** and **BVAS, IReV & Voter Education Guide**.
+- **[Google News & Technical SEO Compliance]**:
+  - Injected Schema.org `ItemList` with nested `PoliticalParty` entities, `FAQPage`, and `BreadcrumbList` JSON-LD structured data.
+- **[Zero-Risk Decommissioning Plan]**:
+  - Because no permanent SQL migrations or foreign key tables were created, retirement after election day requires zero database rollbacks—simply retiring the route or setting a 301 permanent redirect to `/category/politics`.
+
+
+### October 11, 2026 — Multi-Source Trending Stories (Event Clusters) Across Web, Backend & Mobile
+Architected and implemented real-time **Trending Stories (Multi-Source Event Clusters)** across the News Stand NG ecosystem, superseding keyword-only topic tags with multi-perspective developing news:
+- **[Scoring Algorithm & Caching (`NewsApi`)]**:
+  - Implemented `GET /api/v1/stories/trending?limit=6&windowHours=24` in [`StoriesController.cs`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NewsApi/Controllers/StoriesController.cs).
+  - Ranks clusters using coverage velocity: $(S \times 4.0) + (A_{24h} \times 2.0) + (E_{24h} \times 1.5) \times e^{-0.05 \cdot \Delta t}$, incorporating source diversity ($S \ge 2$), recent article volume, and reader events (`UserEvents`).
+  - Added fallback cascades to 72-hour high-density clusters during quiet news hours.
+  - Added in-memory caching (`IMemoryCache`, 5-min TTL) and HTTP `ETag` + `304 Not Modified` conditional response support.
+  - Added `TrendingStoryDto` and `TrendingStoryListResponse` in [`Dtos.cs`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NewsApi/Models/Dtos.cs).
+- **[Web Frontend (`NigerianNewsGrid.Web`)]**:
+  - Added `api.getTrendingStories` and `api.getStories` in [`api.js`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NigerianNewsGrid.Web/src/services/api.js).
+  - Updated SSR loader in [`home.jsx`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NigerianNewsGrid.Web/app/routes/home.jsx) to fetch trending stories concurrently.
+  - Created [`TrendingStoriesSection.jsx`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NigerianNewsGrid.Web/src/components/TrendingStoriesSection.jsx) featuring a featured lead story card with multi-source counters ("⚡ 5 Sources Reporting"), publisher badges, associated topic tags, and side story deck.
+  - Added responsive design system and glassmorphic card styling in [`index.css`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NigerianNewsGrid.Web/src/styles/index.css).
+  - Integrated into [`App.jsx`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NigerianNewsGrid.Web/src/App.jsx).
+- **[Mobile App (`NigerianNewGrid` - .NET MAUI)]**:
+  - Extended [`NewsApiClient.cs`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NigerianNewsGrid.Client/NewsApiClient.cs) with `GetTrendingStoriesAsync` and [`FeedModels.cs`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NigerianNewsGrid.Client/Models/FeedModels.cs) with `TrendingStoryItem`.
+  - Added `TrendingStories` and `HasTrendingStories` observable collections and `OpenTrendingStoryCommand` in [`MainViewModel.cs`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/NigerianNewGrid/ViewModels/MainViewModel.cs).
+  - Added horizontal developing stories carousel in `CollectionView.Header` in [`MainPage.xaml`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/NigerianNewGrid/MainPage.xaml).
+- **[Testing & Verification]**:
+  - Added unit test suite in [`StoriesEndpointTests.cs`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/tests/NewsApi.Tests/StoriesEndpointTests.cs) verifying ranking, topics, scoring, and 304 caching.
+
 ### October 10, 2026 — Service Registration Review & Null Safety Fixes
 Completed a comprehensive audit of dependency injection lifetimes and resolved compiler warnings across backend services:
 - **[DI & HTTP Security ([`ServiceCollectionExtensions.cs`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NewsApi/Extensions/ServiceCollectionExtensions.cs))]**: Audited service lifetimes across all core, embedding, clustering, and background workers (`ISystemSettingsService`, `IEmbeddingProvider`, `IStoryClusteringService`, `ISeoAnomalyEngine`). Upgraded `ImageProxy` HttpClient TLS handshake to permit both `Tls12` and `Tls13`.

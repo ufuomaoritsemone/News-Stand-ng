@@ -6,12 +6,11 @@
 
 <div class="container-fluid px-4 py-3">
 
-    <!-- Top Dashboard Header -->
-    <div class="dashboard-header d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
+    <!-- SaaS Page Header -->
+    <div class="saas-page-header">
         <div>
             <div class="d-flex align-items-center gap-3">
-                <h1 class="h2 mb-0 text-white brand-font">📰 News Stand NG</h1>
-                <span class="badge-live">LIVE API SYNC</span>
+                <h1 class="saas-page-title mb-0"><i class="bi bi-newspaper text-info"></i> Stories &amp; Feeds</h1>
                 @if (Model.IsUpToDate)
                 {
                     <span class="badge bg-success rounded-pill px-3 py-1 text-uppercase" style="font-size: 0.72rem; letter-spacing: 0.5px;"><i class="bi bi-shield-check me-1"></i> Storage Up-To-Date</span>
@@ -21,31 +20,20 @@
                     <span class="badge bg-warning text-dark rounded-pill px-3 py-1 text-uppercase" style="font-size: 0.72rem; letter-spacing: 0.5px;"><i class="bi bi-arrow-repeat me-1"></i> Auto-Refreshing Feed</span>
                 }
             </div>
-            <p class="text-muted mb-0 mt-1">Admin Management & Searchable Archived News Feed</p>
+            <p class="saas-page-desc mt-1">Aggregated Nigerian news archive, live RSS channel streams &amp; executive briefings</p>
         </div>
-        <div class="d-flex align-items-center gap-2 flex-wrap">
-            <a href="/Videos" class="btn btn-outline-danger btn-sm"><i class="bi bi-youtube me-1"></i> Videos</a>
-            <a href="/Socials" class="btn btn-outline-info btn-sm"><i class="bi bi-twitter-x me-1"></i> Socials</a>
-            <a href="/Analytics" class="btn btn-outline-success btn-sm"><i class="bi bi-bar-chart-fill me-1"></i> Analytics</a>
-            <a href="/SearchConsole" class="btn btn-outline-success btn-sm"><i class="bi bi-google me-1"></i> Search Console</a>
-            <a href="/Sponsors" class="btn btn-outline-warning btn-sm"><i class="bi bi-megaphone me-1"></i> Sponsored</a>
-            <a href="/Feedback" class="btn btn-outline-primary btn-sm"><i class="bi bi-chat-heart me-1"></i> Feedback</a>
-            <a href="/Comments" class="btn btn-outline-info btn-sm"><i class="bi bi-chat-square-text me-1"></i> Comments</a>
-            <a href="/Categorizer" class="btn btn-outline-purple btn-sm"><i class="bi bi-cpu-fill me-1"></i> ML Categorizer</a>
-            <a href="/Settings" class="btn btn-outline-secondary btn-sm"><i class="bi bi-gear-fill me-1"></i> Settings</a>
-            <button type="button" class="theme-toggle-btn" onclick="toggleAdminTheme()" title="Toggle Light / Dark Theme">
-                <i class="bi bi-moon-stars-fill theme-icon-dark"></i>
-                <i class="bi bi-sun-fill theme-icon-light"></i>
-                <span class="theme-toggle-label">Dark</span>
-            </button>
-            <form method="get" class="d-flex gap-2">
+        <div class="saas-toolbar">
+            <form method="get" class="d-flex align-items-center gap-2">
                 <input type="hidden" name="selectedChannel" value="@Model.SelectedChannel" />
                 <input type="hidden" name="selectedCategory" value="@Model.SelectedCategory" />
                 <input type="hidden" name="aiSummaryFilter" value="@Model.AiSummaryFilter" />
-                <input type="text" name="searchQuery" value="@Model.SearchQuery" placeholder="Search keywords or topics..." class="form-control form-control-glass form-control-sm" style="width: 240px;" />
-                <button type="submit" class="btn btn-outline-light btn-sm"><i class="bi bi-search"></i> Search</button>
+                <div class="input-group input-group-sm">
+                    <span class="input-group-text bg-transparent border-glass text-muted"><i class="bi bi-search"></i></span>
+                    <input type="text" name="searchQuery" value="@Model.SearchQuery" placeholder="Search keywords..." class="form-control form-control-glass" style="width: 200px;" />
+                </div>
+                <button type="submit" class="btn btn-saas-secondary btn-sm"><i class="bi bi-search"></i> Search</button>
             </form>
-            <a href="/" class="btn btn-gradient btn-sm"><i class="bi bi-arrow-clockwise"></i> Refresh Storage</a>
+            <a href="/" class="btn btn-saas-primary btn-sm"><i class="bi bi-arrow-clockwise"></i> Refresh Storage</a>
         </div>
     </div>
 

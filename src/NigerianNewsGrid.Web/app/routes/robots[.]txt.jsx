@@ -12,6 +12,7 @@ export async function loader() {
     "Disallow: /admin",
     "",
     `Sitemap: ${siteUrl}/sitemap.xml`,
+    `Sitemap: ${siteUrl}/sitemap-news.xml`,
   ].join("\n");
 
   return textResponse(robots, 300);

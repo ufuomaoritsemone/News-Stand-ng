@@ -3,7 +3,7 @@ import { Volume2, Play, Pause, X, Radio } from 'lucide-react';
 import { api } from '../services/api';
 import { trackAudioBriefing } from '../services/analytics';
 
-export default function AudioBriefingBar({ onClose }) {
+export default function AudioBriefingBar({ onClose, compact = false }) {
   const [briefing, setBriefing] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -65,76 +65,88 @@ export default function AudioBriefingBar({ onClose }) {
 
   if (loading || !briefing) return null;
 
-  return (
-    <div className="audio-briefing-bar app-container" role="region" aria-label="Audio Daily Briefing">
-      <div className="audio-briefing-inner">
-        <audio
-          ref={audioRef}
-          src={briefing.streamUrl}
-          onTimeUpdate={handleTimeUpdate}
-          onEnded={() => {
-            setIsPlaying(false);
-            trackAudioBriefing('completed', briefing.timeOfDay || 'Daily Briefing');
-          }}
-          onPause={() => {
-            setIsPlaying(false);
-            trackAudioBriefing('pause', briefing.timeOfDay || 'Daily Briefing');
-          }}
-          onPlay={() => {
-            setIsPlaying(true);
-            trackAudioBriefing('play', briefing.timeOfDay || 'Daily Briefing');
-          }}
-          preload="metadata"
+  const playerContent = (
+    <div className={`audio-briefing-inner ${compact ? 'audio-briefing-inner--compact' : ''}`}>
+      <audio
+        ref={audioRef}
+        src={briefing.streamUrl}
+        onTimeUpdate={handleTimeUpdate}
+        onEnded={() => {
+          setIsPlaying(false);
+          trackAudioBriefing('completed', briefing.timeOfDay || 'Daily Briefing');
+        }}
+        onPause={() => {
+          setIsPlaying(false);
+          trackAudioBriefing('pause', briefing.timeOfDay || 'Daily Briefing');
+        }}
+        onPlay={() => {
+          setIsPlaying(true);
+          trackAudioBriefing('play', briefing.timeOfDay || 'Daily Briefing');
+        }}
+        preload="metadata"
+      />
+
+      <div className="audio-briefing-left">
+        <div className="audio-badge">
+          <Radio size={13} className="pulse-icon" />
+          <span>{compact ? 'AUDIO BRIEFING' : 'DAILY AUDIO BRIEFING'}</span>
+        </div>
+        <div className="audio-briefing-title">
+          <span>{briefing.timeOfDay ? `${briefing.timeOfDay.toUpperCase()} EDITION` : 'TODAY’S HEADLINES'}</span>
+          {!compact && <span className="audio-voice-tag">🎙️ Nigerian Neural Voice</span>}
+        </div>
+      </div>
+
+      <div className="audio-briefing-center">
+        <button
+          type="button"
+          className="audio-play-btn"
+          onClick={togglePlay}
+          aria-label={isPlaying ? 'Pause briefing' : 'Play audio briefing'}
+          title={isPlaying ? 'Pause' : 'Play'}
+        >
+          {isPlaying ? <Pause size={15} /> : <Play size={15} style={{ marginLeft: 2 }} />}
+        </button>
+
+        <span className="audio-time-label">{formatSecs(currentTime)}</span>
+
+        <input
+          type="range"
+          min={0}
+          max={duration || 100}
+          value={currentTime}
+          onChange={handleSeek}
+          className="audio-seek-slider"
+          aria-label="Audio progress"
         />
 
-        <div className="audio-briefing-left">
-          <div className="audio-badge">
-            <Radio size={14} className="pulse-icon" />
-            <span>DAILY AUDIO BRIEFING</span>
-          </div>
-          <div className="audio-briefing-title">
-            <span>{briefing.timeOfDay ? `${briefing.timeOfDay.toUpperCase()} EDITION` : 'TODAY’S HEADLINES'}</span>
-            <span className="audio-voice-tag">🎙️ Nigerian Neural Voice</span>
-          </div>
-        </div>
-
-        <div className="audio-briefing-center">
-          <button
-            type="button"
-            className="audio-play-btn"
-            onClick={togglePlay}
-            aria-label={isPlaying ? 'Pause briefing' : 'Play audio briefing'}
-            title={isPlaying ? 'Pause' : 'Play'}
-          >
-            {isPlaying ? <Pause size={16} /> : <Play size={16} style={{ marginLeft: 2 }} />}
-          </button>
-
-          <span className="audio-time-label">{formatSecs(currentTime)}</span>
-
-          <input
-            type="range"
-            min={0}
-            max={duration || 100}
-            value={currentTime}
-            onChange={handleSeek}
-            className="audio-seek-slider"
-            aria-label="Audio progress"
-          />
-
-          <span className="audio-time-label">{formatSecs(duration)}</span>
-        </div>
-
-        {onClose && (
-          <button
-            type="button"
-            className="audio-close-btn"
-            onClick={onClose}
-            aria-label="Dismiss audio player"
-          >
-            <X size={16} />
-          </button>
-        )}
+        <span className="audio-time-label">{formatSecs(duration)}</span>
       </div>
+
+      {onClose && (
+        <button
+          type="button"
+          className="audio-close-btn"
+          onClick={onClose}
+          aria-label="Dismiss audio player"
+        >
+          <X size={16} />
+        </button>
+      )}
+    </div>
+  );
+
+  if (compact) {
+    return (
+      <div className="audio-briefing-inline" role="region" aria-label="Audio Daily Briefing">
+        {playerContent}
+      </div>
+    );
+  }
+
+  return (
+    <div className="audio-briefing-bar app-container" role="region" aria-label="Audio Daily Briefing">
+      {playerContent}
     </div>
   );
 }

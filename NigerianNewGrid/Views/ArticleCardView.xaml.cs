@@ -69,10 +69,29 @@ public partial class ArticleCardView : ContentView
         InitializeComponent();
     }
 
+    protected override void OnBindingContextChanged()
+    {
+        base.OnBindingContextChanged();
+        if (BindingContext is BriefingItem story)
+        {
+            UpdateBookmarkVisualState(story);
+        }
+    }
+
     private async void OnCardTapped(object? sender, EventArgs e)
     {
         if (BindingContext is BriefingItem story)
         {
+            try
+            {
+                await this.ScaleToAsync(0.985, 55, Easing.CubicOut);
+                await this.ScaleToAsync(1.0, 55, Easing.CubicIn);
+            }
+            catch
+            {
+                // Ignore animation cancellation if view detaches
+            }
+
             if (ArticleTappedCommand?.CanExecute(story) == true)
             {
                 ArticleTappedCommand.Execute(story);
@@ -100,10 +119,40 @@ public partial class ArticleCardView : ContentView
             if (BookmarkCommand?.CanExecute(story) == true)
             {
                 BookmarkCommand.Execute(story);
+                UpdateBookmarkVisualState(story);
                 return;
             }
 
-            BookmarkClicked?.Invoke(this, EventArgs.Empty);
+            if (BookmarkClicked != null)
+            {
+                BookmarkClicked.Invoke(this, EventArgs.Empty);
+                UpdateBookmarkVisualState(story);
+                return;
+            }
+
+            // Default bookmark toggle fallback (e.g. on BookmarksPage)
+            var bookmarkService = IPlatformApplication.Current?.Services.GetService<IBookmarkService>();
+            bookmarkService?.ToggleBookmark(story);
+            UpdateBookmarkVisualState(story);
+        }
+    }
+
+    private void UpdateBookmarkVisualState(BriefingItem story)
+    {
+        if (BookmarkButton == null) return;
+        var bookmarkService = IPlatformApplication.Current?.Services.GetService<IBookmarkService>();
+        if (bookmarkService == null) return;
+
+        bool isSaved = !string.IsNullOrWhiteSpace(story.Url) && bookmarkService.IsBookmarked(story.Url);
+        if (isSaved)
+        {
+            BookmarkButton.BorderColor = Color.FromArgb("#10B981");
+            BookmarkButton.BackgroundColor = Color.FromArgb("#1A10B981");
+        }
+        else
+        {
+            BookmarkButton.ClearValue(Button.BorderColorProperty);
+            BookmarkButton.ClearValue(Button.BackgroundColorProperty);
         }
     }
 

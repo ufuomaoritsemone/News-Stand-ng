@@ -42,7 +42,7 @@ async function fetchJson(url, options = {}) {
   }
 }
 
-const DEFAULT_EDITORIAL_IMAGE = 'https://images.unsplash.com/photo-1585829365295-ab7cd400c167?auto=format&fit=crop&w=800&q=80';
+export const DEFAULT_EDITORIAL_IMAGE = 'https://images.unsplash.com/photo-1585829365295-ab7cd400c167?auto=format&fit=crop&w=800&q=80';
 
 /**
  * Generates an optimized WebP image URL via the NewsApi image proxy.
@@ -139,6 +139,32 @@ export const api = {
   },
 
   /**
+   * Fetch stories for an election party or candidate.
+   * Leverages topic articles if available, with resilient politics search fallback.
+   */
+  async getElectionStories({ topicSlug, searchKeyword, page = 1, pageSize = 12 } = {}) {
+    const base = getApiBaseUrl();
+    if (topicSlug) {
+      try {
+        const topicRes = await fetchJson(`${base}/topics/${encodeURIComponent(topicSlug)}/articles?page=${page}&pageSize=${pageSize}`);
+        if (topicRes && topicRes.articles && topicRes.articles.length > 0) {
+          return topicRes;
+        }
+      } catch {
+        // Fallback to keyword search in Politics category
+      }
+    }
+
+    const search = searchKeyword || (topicSlug ? topicSlug.replace(/-/g, ' ') : 'election');
+    return this.getArticles({
+      search,
+      category: 'Politics',
+      page,
+      pageSize
+    });
+  },
+
+  /**
    * Fetch active story clusters.
    */
   async getStories({ page = 1, pageSize = 20 } = {}) {
@@ -155,6 +181,34 @@ export const api = {
   async getStoryBySlug(slug) {
     const base = getApiBaseUrl();
     return fetchJson(`${base}/stories/${encodeURIComponent(slug)}`);
+  },
+
+  /**
+   * Fetch real-time trending story clusters (multi-source events).
+   */
+  async getTrendingStories({ limit = 6, windowHours = 24 } = {}) {
+    const base = getApiBaseUrl();
+    const params = new URLSearchParams();
+    if (limit) params.append('limit', limit);
+    if (windowHours) params.append('windowHours', windowHours);
+    return fetchJson(`${base}/stories/trending?${params.toString()}`).catch(() => ({
+      totalCount: 0,
+      stories: []
+    }));
+  },
+
+  /**
+   * Fetch paginated active multi-source story clusters.
+   */
+  async getStories({ page = 1, pageSize = 20 } = {}) {
+    const base = getApiBaseUrl();
+    const params = new URLSearchParams({ page, pageSize });
+    return fetchJson(`${base}/stories?${params.toString()}`).catch(() => ({
+      page: 1,
+      pageSize: 20,
+      totalCount: 0,
+      stories: []
+    }));
   },
 
   /**
@@ -495,9 +549,13 @@ export const api = {
   /**
    * Fetch active direct sponsored campaigns from News API.
    */
-  async getSponsoredArticles() {
+  async getSponsoredArticles({ platform = 'Web', zone } = {}) {
     try {
-      const res = await fetchJson(`${API_BASE}/articles/sponsored`);
+      const params = new URLSearchParams();
+      if (platform) params.append('platform', platform);
+      if (zone) params.append('zone', zone);
+      const queryStr = params.toString() ? `?${params.toString()}` : '';
+      const res = await fetchJson(`${API_BASE}/articles/sponsored${queryStr}`);
       let list = [];
       if (Array.isArray(res)) list = res;
       else if (res && Array.isArray(res.value)) list = res.value;

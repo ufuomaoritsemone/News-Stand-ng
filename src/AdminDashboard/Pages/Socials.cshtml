@@ -6,29 +6,21 @@
 
 <div class="container-fluid px-4 py-3">
 
-    <!-- Header -->
-    <div class="dashboard-header d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
+    <!-- SaaS Page Header -->
+    <div class="saas-page-header">
         <div>
             <div class="d-flex align-items-center gap-3">
-                <h1 class="h2 mb-0 text-white brand-font">🐦 Social Stories & Tweets</h1>
-                <span class="badge-social">TWITTER / X PULSE</span>
+                <h1 class="saas-page-title mb-0"><i class="bi bi-twitter-x text-info"></i> Social Stories &amp; Tweets</h1>
+                <span class="badge bg-info bg-opacity-25 text-info border border-info border-opacity-50 px-3 py-1 rounded-pill" style="font-size:0.75rem;letter-spacing:.05em;">
+                    <i class="bi bi-twitter-x me-1"></i> X / TWITTER PULSE
+                </span>
             </div>
-            <p class="text-muted mb-0 mt-1">Latest breaking tweets and news updates from monitored Nigerian commentators & media handles</p>
+            <p class="saas-page-desc mt-1">Latest breaking tweets and news updates from monitored Nigerian commentators &amp; media handles</p>
         </div>
-        <div class="d-flex align-items-center gap-2 flex-wrap">
-            <a href="/Index" class="btn btn-outline-light btn-sm"><i class="bi bi-arrow-left"></i> Dashboard</a>
-            <a href="/Videos" class="btn btn-outline-danger btn-sm"><i class="bi bi-youtube me-1"></i> Videos</a>
-            <a href="/Analytics" class="btn btn-outline-success btn-sm"><i class="bi bi-bar-chart-fill me-1"></i> Analytics</a>
-            <a href="/Sponsors" class="btn btn-outline-warning btn-sm"><i class="bi bi-megaphone me-1"></i> Sponsored</a>
-            <a href="/Feedback" class="btn btn-outline-primary btn-sm"><i class="bi bi-chat-heart me-1"></i> Feedback</a>
-            <a href="/Categorizer" class="btn btn-outline-purple btn-sm"><i class="bi bi-cpu-fill me-1"></i> ML Categorizer</a>
-            <button type="button" class="theme-toggle-btn" onclick="toggleAdminTheme()" title="Toggle Light / Dark Theme">
-                <i class="bi bi-moon-stars-fill theme-icon-dark"></i>
-                <i class="bi bi-sun-fill theme-icon-light"></i>
-                <span class="theme-toggle-label">Dark</span>
-            </button>
+        <div class="saas-toolbar">
+            <a href="/Socials" class="btn btn-saas-secondary btn-sm"><i class="bi bi-arrow-clockwise me-1"></i> Refresh</a>
             <form method="post" asp-page-handler="SyncSocials" class="d-inline">
-                <button type="submit" class="btn btn-info text-dark btn-sm"><i class="bi bi-arrow-repeat me-1"></i> Sync Socials Now</button>
+                <button type="submit" class="btn btn-saas-primary btn-sm"><i class="bi bi-arrow-repeat me-1"></i> Sync Socials Now</button>
             </form>
         </div>
     </div>

@@ -14,10 +14,18 @@ public class SeoController(
     NewsDbContext db,
     ILogger<SeoController> logger,
     ISearchConsoleService? searchConsoleService = null,
-    SeoMonitoringBackgroundService? monitoringService = null) : ControllerBase
+    SeoMonitoringBackgroundService? monitoringService = null,
+    IStoryClusteringService? clusteringService = null) : ControllerBase
 {
     private readonly ISearchConsoleService? _searchConsole = searchConsoleService;
     private readonly SeoMonitoringBackgroundService? _monitoringService = monitoringService;
+    private readonly IStoryClusteringService? _clusteringService = clusteringService;
+
+    /// <summary>
+    /// Thin-content guardrail (seo-news SKILL §6.3): topic hubs with fewer articles render
+    /// <c>noindex, follow</c> and must therefore be excluded from the topics sitemap.
+    /// </summary>
+    public const int MinTopicArticlesForIndexing = 5;
     private static readonly string[] StandardCategories =
     [
         "politics", "business", "technology", "entertainment", "sports", "metro", "opinion"
@@ -90,9 +98,10 @@ public class SeoController(
 
             case "articles":
             {
+                // Sponsored content must never be submitted to search engines (seo-news SKILL §4).
                 var query = db.Articles
                     .AsNoTracking()
-                    .Where(a => !string.IsNullOrEmpty(a.Slug))
+                    .Where(a => !a.IsSponsored && !string.IsNullOrEmpty(a.Slug))
                     .OrderByDescending(a => a.PublishedAt);
 
                 response.TotalCount = await query.CountAsync(ct);
@@ -115,8 +124,11 @@ public class SeoController(
 
             case "topics":
             {
+                // Only indexable topic hubs (>= MinTopicArticlesForIndexing articles). Thin topics render
+                // "noindex, follow" and would otherwise raise "Submitted URL marked 'noindex'" in GSC.
                 var query = db.Topics
                     .AsNoTracking()
+                    .Where(t => !string.IsNullOrEmpty(t.Slug) && t.ArticleTopics.Count >= MinTopicArticlesForIndexing)
                     .OrderBy(t => t.Slug);
 
                 response.TotalCount = await query.CountAsync(ct);
@@ -124,13 +136,18 @@ public class SeoController(
                 var items = await query
                     .Skip((safePage - 1) * safePageSize)
                     .Take(safePageSize)
-                    .Select(t => new { t.Slug, t.CreatedAt })
+                    .Select(t => new
+                    {
+                        t.Slug,
+                        t.CreatedAt,
+                        LatestArticle = t.ArticleTopics.Max(at => at.Article!.PublishedAt)
+                    })
                     .ToListAsync(ct);
 
                 response.Entries = items.Select(t => new SitemapEntryDto
                 {
                     Loc = $"/topic/{t.Slug}",
-                    LastMod = t.CreatedAt,
+                    LastMod = t.LatestArticle ?? t.CreatedAt,
                     ChangeFreq = "daily",
                     Priority = 0.8
                 }).ToList();
@@ -177,14 +194,30 @@ public class SeoController(
 
             case "stories":
             {
-                var query = db.StoryClusters
+                IQueryable<StoryCluster> BuildQuery() => db.StoryClusters
                     .AsNoTracking()
                     .Where(sc => sc.ArticleCount >= 2 && sc.SourceCount >= 2 && !string.IsNullOrEmpty(sc.Slug))
                     .OrderByDescending(sc => sc.UpdatedAt);
 
-                response.TotalCount = await query.CountAsync(ct);
+                response.TotalCount = await BuildQuery().CountAsync(ct);
 
-                var items = await query
+                // If nothing is persisted yet (fresh deploy / clustering job not run), cluster on demand so
+                // the stories sitemap is not empty. Ephemeral synthesized clusters are intentionally NOT
+                // submitted because their slugs are not stable.
+                if (response.TotalCount == 0 && safePage == 1 && _clusteringService is not null)
+                {
+                    try
+                    {
+                        await _clusteringService.RunClusteringAsync(ct);
+                        response.TotalCount = await BuildQuery().CountAsync(ct);
+                    }
+                    catch (Exception ex) when (ex is not OperationCanceledException)
+                    {
+                        logger.LogWarning(ex, "On-demand story clustering for sitemap-stories failed.");
+                    }
+                }
+
+                var items = await BuildQuery()
                     .Skip((safePage - 1) * safePageSize)
                     .Take(safePageSize)
                     .Select(sc => new { sc.Slug, sc.UpdatedAt, sc.Title })
@@ -215,7 +248,7 @@ public class SeoController(
             }
         }
 
-        var eTag = $"\"sitemap_{normalizedType}_{safePage}_{safePageSize}_{response.TotalCount}\"";
+        var eTag = ComputeSitemapETag(normalizedType, safePage, safePageSize, response);
         if (Request.Headers.TryGetValue("If-None-Match", out var clientETag) && clientETag == eTag)
         {
             return StatusCode(StatusCodes.Status304NotModified);
@@ -225,6 +258,23 @@ public class SeoController(
         Response.Headers.Append("Cache-Control", "public, max-age=60");
 
         return Ok(response);
+    }
+
+    /// <summary>
+    /// Builds a strong ETag from the sitemap content (each entry's loc + lastmod), so any edit,
+    /// rotation, or replacement invalidates the tag even when <see cref="SitemapEntriesResponse.TotalCount"/> is unchanged.
+    /// </summary>
+    internal static string ComputeSitemapETag(string type, int page, int pageSize, SitemapEntriesResponse response)
+    {
+        var sb = new System.Text.StringBuilder(64 + response.Entries.Count * 48);
+        sb.Append(type).Append('|').Append(page).Append('|').Append(pageSize).Append('|').Append(response.TotalCount);
+        foreach (var entry in response.Entries)
+        {
+            sb.Append('|').Append(entry.Loc).Append('@').Append(entry.LastMod?.Ticks ?? 0);
+        }
+
+        var hash = System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(sb.ToString()));
+        return $"\"sitemap_{type}_{Convert.ToHexString(hash, 0, 12).ToLowerInvariant()}\"";
     }
 
     /// <summary>

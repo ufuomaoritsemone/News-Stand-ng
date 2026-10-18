@@ -380,6 +380,43 @@ public class NewsApiClient
         }
     }
 
+    /// <summary>
+    /// Fetches direct sponsored campaigns and PR briefings from the backend API.
+    /// Can filter by platform ("Mobile", "Web") and placement zone ("MainPage_HeroSpotlight", "InArticle_Header", etc.).
+    /// </summary>
+    public async Task<List<BriefingItem>> GetSponsoredArticlesAsync(
+        string? platform = "Mobile",
+        string? zone = null,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var normalizedBaseUrl = NormalizeBaseUrl(BaseUrl);
+            var builder = new UriBuilder(new Uri(new Uri(normalizedBaseUrl), "api/v1/articles/sponsored"));
+            var query = System.Web.HttpUtility.ParseQueryString(builder.Query);
+            if (!string.IsNullOrWhiteSpace(platform))
+            {
+                query["platform"] = platform;
+            }
+            if (!string.IsNullOrWhiteSpace(zone))
+            {
+                query["zone"] = zone;
+            }
+            builder.Query = query.ToString();
+
+            var response = await _httpClient.GetAsync(builder.Uri, cancellationToken);
+            if (!response.IsSuccessStatusCode) return new List<BriefingItem>();
+
+            var items = await response.Content.ReadFromJsonAsync<List<BriefingItem>>(JsonOptions, cancellationToken);
+            return items ?? new List<BriefingItem>();
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            System.Diagnostics.Debug.WriteLine($"❌ [NewsApiClient] Failed to fetch sponsored articles: {ex.Message}");
+            return new List<BriefingItem>();
+        }
+    }
+
     public async Task<bool> TrackArticleImpressionAsync(string articleId, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(articleId)) return false;
@@ -469,6 +506,92 @@ public class NewsApiClient
         {
             System.Diagnostics.Debug.WriteLine($"[NewsApiClient] Delta sync error: {ex.Message}");
             return new List<ArticleDeltaDto>();
+        }
+    }
+
+    /// <summary>
+    /// Fetches real-time multi-source trending story clusters from the backend API.
+    /// </summary>
+    public async Task<List<TrendingStoryItem>> GetTrendingStoriesAsync(
+        int limit = 6,
+        int windowHours = 24,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var normalizedBaseUrl = NormalizeBaseUrl(BaseUrl);
+            var uri = $"{normalizedBaseUrl}/api/v1/stories/trending?limit={limit}&windowHours={windowHours}";
+            var response = await _httpClient.GetAsync(uri, cancellationToken);
+            if (!response.IsSuccessStatusCode)
+            {
+                System.Diagnostics.Debug.WriteLine($"⚠️ [NewsApiClient] Failed to get trending stories. HTTP {response.StatusCode}");
+                return new List<TrendingStoryItem>();
+            }
+
+            var result = await response.Content.ReadFromJsonAsync<TrendingStoryResponse>(JsonOptions, cancellationToken);
+            return result?.Stories ?? new List<TrendingStoryItem>();
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            System.Diagnostics.Debug.WriteLine($"❌ [NewsApiClient] Trending stories request error: {ex.Message}");
+            return new List<TrendingStoryItem>();
+        }
+    }
+
+    /// <summary>
+    /// Fetches a full multi-source story cluster and all grouped publisher articles by slug or cluster ID.
+    /// </summary>
+    public async Task<StoryClusterDetailDto?> GetStoryClusterBySlugAsync(
+        string slugOrId,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(slugOrId)) return null;
+
+        try
+        {
+            var normalizedBaseUrl = NormalizeBaseUrl(BaseUrl);
+            var uri = new Uri(new Uri(normalizedBaseUrl), $"api/v1/stories/{Uri.EscapeDataString(slugOrId.Trim())}");
+            var response = await _httpClient.GetAsync(uri, cancellationToken);
+            if (!response.IsSuccessStatusCode)
+            {
+                System.Diagnostics.Debug.WriteLine($"⚠️ [NewsApiClient] Story cluster '{slugOrId}' returned HTTP {(int)response.StatusCode}");
+                return null;
+            }
+
+            return await response.Content.ReadFromJsonAsync<StoryClusterDetailDto>(JsonOptions, cancellationToken);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            System.Diagnostics.Debug.WriteLine($"❌ [NewsApiClient] Story cluster fetch error for '{slugOrId}': {ex.Message}");
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Fetches live Nigerian macroeconomic market data (e.g. "naira-fx", "fuel-prices", "ngx-asi").
+    /// </summary>
+    public async Task<MarketMetricDto?> GetMarketMetricAsync(
+        string metricKey = "naira-fx",
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(metricKey)) return null;
+
+        try
+        {
+            var normalizedBaseUrl = NormalizeBaseUrl(BaseUrl);
+            var uri = new Uri(new Uri(normalizedBaseUrl), $"api/v1/data/{Uri.EscapeDataString(metricKey.Trim())}");
+            var response = await _httpClient.GetAsync(uri, cancellationToken);
+            if (!response.IsSuccessStatusCode)
+            {
+                return null;
+            }
+
+            return await response.Content.ReadFromJsonAsync<MarketMetricDto>(JsonOptions, cancellationToken);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            System.Diagnostics.Debug.WriteLine($"⚠️ [NewsApiClient] Market metric '{metricKey}' fetch error: {ex.Message}");
+            return null;
         }
     }
 

@@ -9,7 +9,7 @@ public class MarketDataBackgroundService : BackgroundService
 {
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<MarketDataBackgroundService> _logger;
-    private readonly TimeSpan _syncInterval = TimeSpan.FromMinutes(30);
+    private readonly TimeSpan _syncInterval = TimeSpan.FromHours(24);
 
     public MarketDataBackgroundService(
         IServiceScopeFactory scopeFactory,
@@ -21,12 +21,28 @@ public class MarketDataBackgroundService : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        _logger.LogInformation("MarketDataBackgroundService starting.");
+        _logger.LogInformation("MarketDataBackgroundService starting with 24-hour daily synchronization interval.");
+
+        // Grace startup delay to ensure DbInitializer and port bindings settle cleanly
+        try
+        {
+            await Task.Delay(TimeSpan.FromSeconds(5), stoppingToken);
+        }
+        catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+        {
+            _logger.LogInformation("MarketDataBackgroundService stopped during initial startup delay.");
+            return;
+        }
 
         // Initial seed and sync on startup
         try
         {
             await SyncMarketDataAsync(stoppingToken);
+        }
+        catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+        {
+            _logger.LogInformation("MarketDataBackgroundService initial sync canceled due to application shutdown.");
+            return;
         }
         catch (Exception ex)
         {
@@ -34,59 +50,74 @@ public class MarketDataBackgroundService : BackgroundService
         }
 
         using var timer = new PeriodicTimer(_syncInterval);
-        while (!stoppingToken.IsCancellationRequested && await timer.WaitForNextTickAsync(stoppingToken))
+        while (!stoppingToken.IsCancellationRequested)
         {
             try
             {
+                if (!await timer.WaitForNextTickAsync(stoppingToken))
+                    break;
+
                 await SyncMarketDataAsync(stoppingToken);
+            }
+            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+            {
+                _logger.LogInformation("MarketDataBackgroundService periodic sync canceled due to application shutdown.");
+                break;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Periodic market data sync failed.");
+                _logger.LogError(ex, "Daily market data sync failed.");
             }
         }
     }
 
     public async Task SyncMarketDataAsync(CancellationToken ct = default)
     {
+        ct.ThrowIfCancellationRequested();
         using var scope = _scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<NewsDbContext>();
+        var fxScraper = scope.ServiceProvider.GetRequiredService<IFxRatesScraperService>();
 
-        await SeedOrUpdateNairaFxAsync(db, ct);
+        await SeedOrUpdateNairaFxAsync(db, fxScraper, ct);
+        ct.ThrowIfCancellationRequested();
+
         await SeedOrUpdateFuelPricesAsync(db, ct);
+        ct.ThrowIfCancellationRequested();
+
         await SeedOrUpdateJambWaecAsync(db, ct);
+        ct.ThrowIfCancellationRequested();
+
         await SeedOrUpdateElectionsAsync(db, ct);
+        ct.ThrowIfCancellationRequested();
 
         await db.SaveChangesAsync(ct);
-        _logger.LogInformation("Market data sync successfully executed for all 4 evergreen trackers.");
+        _logger.LogInformation("Market data sync successfully executed for all evergreen trackers.");
     }
 
-    private static async Task SeedOrUpdateNairaFxAsync(NewsDbContext db, CancellationToken ct)
+    private static async Task SeedOrUpdateNairaFxAsync(NewsDbContext db, IFxRatesScraperService fxScraper, CancellationToken ct)
     {
         var record = await db.MarketDataRecords.FirstOrDefaultAsync(r => r.MetricKey == "naira-fx", ct);
         var now = DateTime.UtcNow;
 
-        // Generate 30 daily realistic points ending today
-        var points = new List<MarketDataPointDto>();
-        var baseOfficial = 1482.50;
-        var baseParallel = 1645.00;
-
-        for (int i = 29; i >= 0; i--)
+        FxScrapeResult fxResult;
+        try
         {
-            var date = now.AddDays(-i);
-            // Deterministic slight walk based on day
-            var offset = Math.Sin(date.Day * 0.7) * 8.5;
-            var offRate = Math.Round(baseOfficial + offset, 2);
-            var parRate = Math.Round(baseParallel + (offset * 1.4), 2);
-
-            points.Add(new MarketDataPointDto
+            fxResult = await fxScraper.ScrapeLatestFxRatesAsync(ct);
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch
+        {
+            fxResult = new FxScrapeResult
             {
-                Date = date.ToString("yyyy-MM-dd"),
-                Label = date.ToString("MMM dd"),
-                PrimaryValue = parRate,
-                SecondaryValue = offRate,
-                Note = i == 0 ? "Latest Quote" : null
-            });
+                PrimaryValue = "₦0.00 / $1",
+                SecondaryValue = "₦0.00 Official NAFEM",
+                Change24h = "0.00%",
+                SourceAttribution = "Central Bank of Nigeria (NAFEM) & Lagos Parallel Market Desk",
+                ScrapedAt = now
+            };
         }
 
         var faqs = new List<FaqItemDto>
@@ -112,15 +143,19 @@ public class MarketDataBackgroundService : BackgroundService
         }
 
         record.Title = "Naira Exchange Rate (USD/NGN)";
-        record.PrimaryValue = "₦1,645.00 / $1";
-        record.SecondaryValue = "₦1,482.50 Official NAFEM";
-        record.Change24h = "+0.35%";
+        record.PrimaryValue = fxResult.PrimaryValue;
+        record.SecondaryValue = fxResult.SecondaryValue;
+        record.Change24h = fxResult.Change24h;
         record.Unit = "NGN per USD";
-        record.SourceAttribution = "Central Bank of Nigeria (NAFEM) & Lagos Parallel Market Desk";
-        record.SummaryMarkdown = "Authoritative real-time tracker for the Nigerian Naira against the United States Dollar. Compares the Central Bank of Nigeria official NAFEM window with the open street parallel market, backed by historical 30-day volatility charts.";
-        record.HistoricalDataJson = JsonSerializer.Serialize(points);
+        record.SourceAttribution = fxResult.SourceAttribution;
+        record.SummaryMarkdown = "Authoritative real-time tracker for the Nigerian Naira against the United States Dollar, Euro, British Pound, and Japanese Yen. Compares the Central Bank of Nigeria official NAFEM window with the open street parallel market, backed by historical volatility charts and two-way conversion calculators.";
+        record.HistoricalDataJson = JsonSerializer.Serialize(new
+        {
+            points = fxResult.HistoricalPoints,
+            currencies = fxResult.Currencies
+        });
         record.FaqsJson = JsonSerializer.Serialize(faqs);
-        record.LastUpdated = now;
+        record.LastUpdated = fxResult.ScrapedAt;
     }
 
     private static async Task SeedOrUpdateFuelPricesAsync(NewsDbContext db, CancellationToken ct)

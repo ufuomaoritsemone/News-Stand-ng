@@ -18,17 +18,24 @@ public class ArticleEnrichmentTests
 {
     private readonly LocalFallbackEmbeddingProvider _embeddingProvider = new();
 
-    private ArticleEnrichmentService CreateService(NewsDbContext? db = null)
+    private ArticleEnrichmentService CreateService(
+        NewsDbContext? db = null,
+        IConfiguration? config = null,
+        IHttpClientFactory? httpClientFactory = null)
     {
-        var config = new ConfigurationBuilder().Build();
-        var clientFactoryMock = new Mock<IHttpClientFactory>();
-        clientFactoryMock.Setup(f => f.CreateClient(It.IsAny<string>())).Returns(new HttpClient());
+        config ??= new ConfigurationBuilder().Build();
+        if (httpClientFactory == null)
+        {
+            var clientFactoryMock = new Mock<IHttpClientFactory>();
+            clientFactoryMock.Setup(f => f.CreateClient(It.IsAny<string>())).Returns(new HttpClient());
+            httpClientFactory = clientFactoryMock.Object;
+        }
 
         return new ArticleEnrichmentService(
             db ?? CreateInMemoryDbContext(),
             _embeddingProvider,
             config,
-            clientFactoryMock.Object,
+            httpClientFactory,
             NullLogger<ArticleEnrichmentService>.Instance);
     }
 
@@ -264,6 +271,118 @@ public class ArticleEnrichmentTests
         Assert.NotNull(fullSummary);
         Assert.NotEmpty(fullSummary.ExecutiveOverview);
         Assert.True(fullSummary.ReadingTimeSeconds > 0);
+    }
+
+    [Fact]
+    public async Task ProcessUnenrichedBatch_WhenCloudAiFails_ChecksOnceAndTripsCircuitBreakerForBatch()
+    {
+        // Reset any prior circuit breaker state
+        ArticleEnrichmentService.ResetCircuitBreaker();
+
+        var db = CreateInMemoryDbContext();
+        for (int i = 1; i <= 3; i++)
+        {
+            db.Articles.Add(new Article
+            {
+                Id = $"batch-art-{i}",
+                Title = $"Nigerian Economic Update Article {i}",
+                Summary = $"Summary for article {i}",
+                Content = $"This is full content for article {i} covering financial policy in Nigeria on Monday with ₦50 billion allocation.",
+                Source = "BusinessDay",
+                Category = "Economy",
+                PublishedAt = DateTime.UtcNow.AddHours(-i)
+            });
+        }
+        await db.SaveChangesAsync();
+
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Gemini:ApiKey"] = "fake-test-api-key",
+                ["AiEnrichment:GeminiEnabled"] = "true"
+            })
+            .Build();
+
+        var countingHandler = new CountingErrorHttpMessageHandler(System.Net.HttpStatusCode.TooManyRequests);
+        var client = new HttpClient(countingHandler);
+        var clientFactoryMock = new Mock<IHttpClientFactory>();
+        clientFactoryMock.Setup(f => f.CreateClient(It.IsAny<string>())).Returns(client);
+
+        var service = CreateService(db, config, clientFactoryMock.Object);
+
+        // Process batch of 3 articles
+        int enrichedCount = await service.ProcessUnenrichedBatchAsync(batchSize: 3);
+
+        // All 3 articles must be successfully enriched via local ML fallback
+        Assert.Equal(3, enrichedCount);
+
+        // Key Assertion: The Cloud AI endpoint must have been called EXACTLY ONCE (probe/first article),
+        // not 3 times. Once it failed, the circuit breaker tripped and the remaining 2 articles bypassed Cloud AI.
+        Assert.Equal(1, countingHandler.CallCount);
+
+        // Verify the circuit breaker is now active
+        Assert.True(service.IsCircuitBreakerActive);
+        Assert.False(await service.IsCloudAiAvailableAsync());
+
+        // Verify that all 3 saved records used the local TextRank fallback engine
+        var savedEnrichments = await db.ArticleEnrichments.ToListAsync();
+        Assert.Equal(3, savedEnrichments.Count);
+        Assert.All(savedEnrichments, e => Assert.Equal("TextRank-Extractive", e.Engine));
+    }
+
+    [Fact]
+    public async Task GenerateEnrichmentAsync_WithSkipCloudAi_BypassesCloudAiNetworkCalls()
+    {
+        ArticleEnrichmentService.ResetCircuitBreaker();
+
+        var config = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Gemini:ApiKey"] = "fake-test-api-key",
+                ["AiEnrichment:GeminiEnabled"] = "true"
+            })
+            .Build();
+
+        var countingHandler = new CountingErrorHttpMessageHandler(System.Net.HttpStatusCode.InternalServerError);
+        var client = new HttpClient(countingHandler);
+        var clientFactoryMock = new Mock<IHttpClientFactory>();
+        clientFactoryMock.Setup(f => f.CreateClient(It.IsAny<string>())).Returns(client);
+
+        var service = CreateService(null, config, clientFactoryMock.Object);
+
+        var article = new Article
+        {
+            Id = "test-skip",
+            Title = "Nigeria Tech Ecosystem Expands in Lagos",
+            Summary = "Lagos startups report increased investor participation.",
+            Content = "Lagos startups secured fresh investment on Tuesday across fintech and logistics.",
+            Category = "Technology"
+        };
+
+        // Call with skipCloudAi: true
+        var result = await service.GenerateEnrichmentAsync(
+            article.Title, article.Summary, article.Content, article.Category,
+            knownEntities: null, skipCloudAi: true);
+
+        Assert.NotNull(result);
+        Assert.Equal("TextRank-Extractive", result.Engine);
+        // Zero outbound HTTP calls were made
+        Assert.Equal(0, countingHandler.CallCount);
+    }
+
+    private sealed class CountingErrorHttpMessageHandler(System.Net.HttpStatusCode statusCode) : HttpMessageHandler
+    {
+        public int CallCount { get; private set; }
+
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            CallCount++;
+            return Task.FromResult(new HttpResponseMessage(statusCode)
+            {
+                ReasonPhrase = "Quota Exceeded or Network Error",
+                Content = new StringContent("{\"error\": \"resource exhausted\"}")
+            });
+        }
     }
 }
 

@@ -75,6 +75,8 @@ public class SponsorsModel : PageModel
                 Category = !string.IsNullOrWhiteSpace(NewCampaign.Category) ? NewCampaign.Category.Trim() : "Business",
                 CampaignExpiresAt = expiresAt,
                 IsPinned = NewCampaign.IsPinned,
+                PlacementZone = !string.IsNullOrWhiteSpace(NewCampaign.PlacementZone) ? NewCampaign.PlacementZone.Trim() : "MainPage_InFeed",
+                TargetPlatform = !string.IsNullOrWhiteSpace(NewCampaign.TargetPlatform) ? NewCampaign.TargetPlatform.Trim() : "All",
                 TargetPosition = NewCampaign.TargetPosition,
                 PriorityWeight = NewCampaign.PriorityWeight > 0 ? NewCampaign.PriorityWeight : 1
             };
@@ -102,7 +104,12 @@ public class SponsorsModel : PageModel
         return Page();
     }
 
-    public async Task<IActionResult> OnPostUpdatePlacementAsync(string id, int? targetPosition, int priorityWeight)
+    public async Task<IActionResult> OnPostUpdatePlacementAsync(
+        string id,
+        string? placementZone,
+        string? targetPlatform,
+        int? targetPosition,
+        int priorityWeight)
     {
         if (string.IsNullOrWhiteSpace(id)) return RedirectToPage();
 
@@ -111,7 +118,13 @@ public class SponsorsModel : PageModel
 
         try
         {
-            var update = new { TargetPosition = targetPosition, PriorityWeight = priorityWeight };
+            var update = new
+            {
+                PlacementZone = !string.IsNullOrWhiteSpace(placementZone) ? placementZone.Trim() : "MainPage_InFeed",
+                TargetPlatform = !string.IsNullOrWhiteSpace(targetPlatform) ? targetPlatform.Trim() : "All",
+                TargetPosition = targetPosition,
+                PriorityWeight = priorityWeight
+            };
             var response = await client.PutAsJsonAsync($"{apiBaseUrl.TrimEnd('/')}/api/v1/articles/sponsored/{id}", update);
 
             if (response.IsSuccessStatusCode)
@@ -311,7 +324,10 @@ public class SponsoredArticleInput
 
     public bool IsPinned { get; set; } = false;
 
-    public int? TargetPosition { get; set; } = 5;
+    public string PlacementZone { get; set; } = "MainPage_InFeed";
+    public string TargetPlatform { get; set; } = "All";
+
+    public int? TargetPosition { get; set; } = 3;
     public int PriorityWeight { get; set; } = 1;
 }
 
@@ -331,6 +347,8 @@ public class SponsoredCampaignItem
     public string? SponsorUrl { get; set; }
     public DateTime? CampaignExpiresAt { get; set; }
     public bool IsPinned { get; set; }
+    public string PlacementZone { get; set; } = "MainPage_InFeed";
+    public string TargetPlatform { get; set; } = "All";
     public int? TargetPosition { get; set; }
     public int PriorityWeight { get; set; } = 1;
     public int ImpressionCount { get; set; }
@@ -339,16 +357,32 @@ public class SponsoredCampaignItem
         ? Math.Round(((double)ClickCount / ImpressionCount) * 100, 2)
         : 0;
 
-    public bool IsSpecialPlacement => TargetPosition is >= 1 and <= 3;
+    public bool IsSpecialPlacement => PlacementZone != "MainPage_InFeed" || TargetPosition is >= 1 and <= 3;
 
-    public string PlacementDisplay => TargetPosition switch
+    public string PlacementDisplay => PlacementZone switch
     {
-        1 => "Placement 2: Partner Shelf #1",
-        2 => "Placement 2: Partner Shelf #2",
-        3 => "Placement 1: In-Feed Slot #3 (Sweet Spot)",
-        4 => "Placement 3: Reader Drawer Footer",
-        >= 5 and <= 30 => $"In-Feed Slot #{TargetPosition}",
-        _ => IsPinned ? "⭐ Special Pinned Slot" : "Standard In-Feed"
+        "MainPage_HeroSpotlight" => "🌟 Hero Spotlight Banner",
+        "MainPage_InFeed" => TargetPosition.HasValue ? $"📰 In-Feed Slot #{TargetPosition}" : "📰 In-Feed Native Card",
+        "MainPage_PartnerShelf" => "🤝 Partner Shelf",
+        "InArticle_Header" => "🏷️ In-Article Header",
+        "InArticle_MidContent" => "📖 In-Article Mid-Body",
+        "InArticle_Footer" => "🎯 In-Article Footer",
+        _ => TargetPosition switch
+        {
+            1 => "Partner Shelf #1",
+            2 => "Partner Shelf #2",
+            3 => "In-Feed Slot #3",
+            4 => "In-Article Footer",
+            >= 5 and <= 30 => $"In-Feed Slot #{TargetPosition}",
+            _ => "Standard Placement"
+        }
+    };
+
+    public string PlatformDisplay => TargetPlatform switch
+    {
+        "Web" => "💻 Web Only",
+        "Mobile" => "📱 Mobile Only",
+        _ => "🌐 All (Web & Mobile)"
     };
 
     public bool IsActive => IsSponsored && (CampaignExpiresAt == null || CampaignExpiresAt > DateTime.UtcNow);

@@ -45,6 +45,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
     // ── Observable Properties ─────────────────────────────────────
     [ObservableProperty] public partial ObservableCollection<BriefingDateGroup> DateGroups { get; set; } = [];
     [ObservableProperty] public partial ObservableCollection<VideoStoryItem> VideoStories { get; set; } = [];
+    [ObservableProperty] public partial ObservableCollection<TrendingStoryItem> TrendingStories { get; set; } = [];
+    [ObservableProperty] public partial bool HasTrendingStories { get; set; }
     [ObservableProperty] public partial bool IsLoading { get; set; }
     [ObservableProperty] public partial bool IsRefreshing { get; set; }
     [ObservableProperty] public partial bool IsSkeletonVisible { get; set; }
@@ -59,14 +61,32 @@ public partial class MainViewModel : ObservableObject, IDisposable
     [ObservableProperty] public partial bool IsSpeaking { get; set; }
     [ObservableProperty] public partial bool IsPaused { get; set; }
     [ObservableProperty] public partial string AudioButtonText { get; set; } = "🎧";
+    [ObservableProperty] public partial string AudioButtonIcon { get; set; } = "ic_headphones.png";
     [ObservableProperty] public partial string AudioButtonHint { get; set; } = "Play daily audio briefing";
     [ObservableProperty] public partial int DisplayedCount { get; set; } = PageSize;
     [ObservableProperty] public partial int TotalAvailableStories { get; set; }
+
+    // Live Naira FX Rate Pill & Multi-Currency Breakdown Strip (Priority 4.3)
+    public const string OfflineNairaFxPillText = "₦0/$";
+    public const string OfflineNairaFxParallelSummary = "Parallel: $ ₦0 · £ ₦0 · € ₦0";
+    public const string OfflineNairaFxOfficialSummary = "CBN NAFEM: ₦0/$";
+
+    [ObservableProperty] public partial bool HasNairaFxData { get; set; } = true;
+    [ObservableProperty] public partial bool IsNairaFxExpanded { get; set; }
+    [ObservableProperty] public partial string NairaFxPillText { get; set; } = OfflineNairaFxPillText;
+    [ObservableProperty] public partial string NairaFxParallelSummary { get; set; } = OfflineNairaFxParallelSummary;
+    [ObservableProperty] public partial string NairaFxOfficialSummary { get; set; } = OfflineNairaFxOfficialSummary;
 
     // Floating pill notification properties when background worker saves fresh stories
     [ObservableProperty] public partial bool HasNewStoriesAvailable { get; set; }
     [ObservableProperty] public partial int NewStoriesCount { get; set; }
     [ObservableProperty] public partial string NewStoriesPillText { get; set; } = string.Empty;
+
+    // Direct Sponsorship Areas (Hero Spotlight & Partner Perspectives Shelf)
+    [ObservableProperty] public partial BriefingItem? HeroSpotlightCampaign { get; set; }
+    [ObservableProperty] public partial bool HasHeroSpotlight { get; set; }
+    [ObservableProperty] public partial ObservableCollection<BriefingItem> PartnerShelfCampaigns { get; set; } = [];
+    [ObservableProperty] public partial bool HasPartnerShelf { get; set; }
 
     public event Action? ScrollToTopRequested;
 
@@ -159,6 +179,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
                 {
                     _allCategories = cached;
                     DisplayedCount = PageSize;
+                    EnsureFallbackTrendingStories(_allCategories);
                     RefreshDisplayedStories();
                     IsSkeletonVisible = false;
                     IsCategoriesVisible = true;
@@ -218,6 +239,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
             ct.ThrowIfCancellationRequested();
             DisplayedCount = PageSize;
 
+            EnsureFallbackTrendingStories(_allCategories);
             RefreshDisplayedStories();
             _keywordAlertCoordinator.EvaluateKeywordAlerts(_allCategories);
             UpdateTimestampStatus(isPullToRefresh);
@@ -254,9 +276,11 @@ public partial class MainViewModel : ObservableObject, IDisposable
             IsSkeletonVisible   = false;
             IsCategoriesVisible = true;
 
-            // Fire video load as a background task — never blocks refresh completion.
-            // Uses a fresh token so a subsequent pull-to-refresh can cancel it cleanly.
+            // Fire video, trending story, sponsored campaign & Naira FX loads as background tasks — never blocks refresh completion.
             LoadVideoFeedsAsync(CancellationToken.None).SafeFireAndForget(_logger, "LoadVideoFeeds");
+            LoadTrendingStoriesAsync(CancellationToken.None).SafeFireAndForget(_logger, "LoadTrendingStories");
+            LoadSponsoredCampaignsAsync(CancellationToken.None).SafeFireAndForget(_logger, "LoadSponsoredCampaigns");
+            LoadNairaFxSummaryAsync(CancellationToken.None).SafeFireAndForget(_logger, "LoadNairaFxSummary");
         }
     }
 
@@ -415,6 +439,7 @@ public partial class MainViewModel : ObservableObject, IDisposable
         IsSpeaking = _audioCoordinator.IsSpeaking;
         IsPaused = _audioCoordinator.IsPaused;
         AudioButtonText = _audioCoordinator.AudioButtonText;
+        AudioButtonIcon = _audioCoordinator.AudioButtonIcon;
         AudioButtonHint = _audioCoordinator.AudioButtonHint;
     }
 
@@ -502,13 +527,36 @@ public partial class MainViewModel : ObservableObject, IDisposable
                 _arrangedFeed = arrangedFeed;
                 TotalAvailableStories = totalAvailable;
 
-                // Update DateGroups in-place to avoid full teardown/rebuild flicker.
-                // Replacing the collection reference forces BindableLayout to detach
-                // and re-create every visual item; in-place update is smoother.
-                DateGroups.Clear();
-                foreach (var g in groups)
+                bool isIdentical = DateGroups.Count == groups.Count && DateGroups.Count > 0;
+                if (isIdentical)
                 {
-                    DateGroups.Add(g);
+                    for (int i = 0; i < groups.Count; i++)
+                    {
+                        if (DateGroups[i].Date != groups[i].Date || DateGroups[i].Count != groups[i].Count)
+                        {
+                            isIdentical = false;
+                            break;
+                        }
+                        for (int j = 0; j < groups[i].Count; j++)
+                        {
+                            if (!string.Equals(DateGroups[i][j].Id, groups[i][j].Id, StringComparison.Ordinal) ||
+                                !string.Equals(DateGroups[i][j].Url, groups[i][j].Url, StringComparison.Ordinal))
+                            {
+                                isIdentical = false;
+                                break;
+                            }
+                        }
+                        if (!isIdentical) break;
+                    }
+                }
+
+                if (!isIdentical)
+                {
+                    DateGroups.Clear();
+                    foreach (var g in groups)
+                    {
+                        DateGroups.Add(g);
+                    }
                 }
 
                 IsEmptyStateVisible = groups.Count == 0;
@@ -649,8 +697,8 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
     private void OnBookmarksChanged()
     {
-        // Re-render to reflect updated bookmark states in the UI
-        RefreshDisplayedStories();
+        // Individual ArticleCardView instances listen and update their own bookmark icon state in-place
+        // without tearing down and rebuilding the entire CollectionView.
     }
 
 
@@ -812,6 +860,267 @@ public partial class MainViewModel : ObservableObject, IDisposable
         }
     }
 
+    public async Task LoadTrendingStoriesAsync(CancellationToken ct = default)
+    {
+        try
+        {
+            var stories = await _apiClient.GetTrendingStoriesAsync(limit: 6, windowHours: 72, cancellationToken: ct);
+            if (stories.Count == 0 && _allCategories.Count > 0)
+            {
+                stories = BuildFallbackTrendingStories(_allCategories.SelectMany(c => c.Top).ToList());
+            }
+
+            if (stories.Count > 0)
+            {
+                MainThread.BeginInvokeOnMainThread(() =>
+                {
+                    TrendingStories = new ObservableCollection<TrendingStoryItem>(stories);
+                    HasTrendingStories = true;
+                });
+            }
+            else
+            {
+                EnsureFallbackTrendingStories(_allCategories);
+            }
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _logger.LogWarning(ex, "Failed to load trending stories in mobile view model; using local fallback.");
+            EnsureFallbackTrendingStories(_allCategories);
+        }
+    }
+
+    private void EnsureFallbackTrendingStories(IReadOnlyList<BriefingCategory> categories)
+    {
+        if (TrendingStories.Count > 0 && HasTrendingStories)
+            return;
+
+        var rawItems = categories?.SelectMany(c => c.Top).ToList() ?? [];
+        var fallback = BuildFallbackTrendingStories(rawItems);
+        if (fallback.Count == 0)
+            return;
+
+        MainThread.BeginInvokeOnMainThread(() =>
+        {
+            if (TrendingStories.Count == 0)
+            {
+                TrendingStories = new ObservableCollection<TrendingStoryItem>(fallback);
+                HasTrendingStories = true;
+            }
+        });
+    }
+
+    public static List<TrendingStoryItem> BuildFallbackTrendingStories(IReadOnlyList<BriefingItem> articles, int limit = 6)
+    {
+        if (articles == null || articles.Count == 0)
+            return [];
+
+        var groups = articles
+            .Where(a => !a.IsAdMobPlaceholder && !string.IsNullOrWhiteSpace(a.Title))
+            .GroupBy(
+                a => string.IsNullOrWhiteSpace(a.Category) ? "General" : a.Category.Trim(),
+                StringComparer.OrdinalIgnoreCase)
+            .OrderByDescending(g => g.Select(a => a.Source).Where(s => !string.IsNullOrWhiteSpace(s)).Distinct(StringComparer.OrdinalIgnoreCase).Count())
+            .ThenByDescending(g => g.Count())
+            .Take(limit)
+            .ToList();
+
+        var result = new List<TrendingStoryItem>();
+        int rank = 0;
+
+        foreach (var group in groups)
+        {
+            var topArticles = group.OrderByDescending(a => a.PublishedAt ?? DateTime.MinValue).Take(5).ToList();
+            if (topArticles.Count == 0) continue;
+
+            var lead = topArticles[0];
+            var sources = topArticles
+                .Select(a => a.Source)
+                .Where(s => !string.IsNullOrWhiteSpace(s))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .Select(s => s!)
+                .ToList();
+            if (sources.Count == 0) sources.Add("News Stand NG");
+
+            var catSlug = group.Key.ToLowerInvariant().Replace(" ", "-");
+            var now = DateTime.UtcNow;
+
+            result.Add(new TrendingStoryItem
+            {
+                Id = $"trend-{catSlug}",
+                Slug = $"trend-{catSlug}",
+                Title = lead.Title,
+                Summary = lead.Summary,
+                ImageUrl = lead.ImageUrl,
+                Category = group.Key,
+                ArticleCount = Math.Max(2, topArticles.Count),
+                SourceCount = Math.Max(2, sources.Count),
+                Sources = sources,
+                TrendingScore = Math.Round(18.0 - (rank * 1.5), 2),
+                CreatedAt = topArticles.Min(a => a.PublishedAt ?? now.AddHours(-4)),
+                UpdatedAt = topArticles.Max(a => a.PublishedAt ?? now),
+                Topics = [group.Key]
+            });
+            rank++;
+        }
+
+        return result;
+    }
+
+    [RelayCommand]
+    private async Task OpenTrendingStoryAsync(TrendingStoryItem? story)
+    {
+        if (story == null) return;
+        await _sonicService.PlaySoundAsync(SonicSound.CategorySelect);
+        try
+        {
+            await Shell.Current.GoToAsync("storycluster", new Dictionary<string, object>
+            {
+                ["Story"] = story
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to navigate to native storycluster page; falling back to discover search.");
+            var query = DiscoverViewModel.GetSearchQueryForStory(story);
+            try
+            {
+                await Shell.Current.GoToAsync($"//discover?query={Uri.EscapeDataString(query)}");
+            }
+            catch (Exception innerEx)
+            {
+                _logger.LogWarning(innerEx, "Fallback discover navigation also failed.");
+            }
+        }
+    }
+
+    [RelayCommand]
+    private void ToggleNairaFxExpanded()
+    {
+        IsNairaFxExpanded = !IsNairaFxExpanded;
+    }
+
+    private void ResetNairaFxToOfflineDefaults()
+    {
+        MainThread.BeginInvokeOnMainThread(() =>
+        {
+            NairaFxPillText = OfflineNairaFxPillText;
+            NairaFxParallelSummary = OfflineNairaFxParallelSummary;
+            NairaFxOfficialSummary = OfflineNairaFxOfficialSummary;
+            HasNairaFxData = true;
+        });
+    }
+
+    public async Task LoadNairaFxSummaryAsync(CancellationToken ct = default)
+    {
+        try
+        {
+            if (Connectivity.Current.NetworkAccess != NetworkAccess.Internet)
+            {
+                ResetNairaFxToOfflineDefaults();
+                return;
+            }
+
+            var metric = await _apiClient.GetMarketMetricAsync("naira-fx", ct);
+            if (metric == null || string.IsNullOrWhiteSpace(metric.PrimaryValue))
+            {
+                ResetNairaFxToOfflineDefaults();
+                return;
+            }
+
+            var pillText = metric.PrimaryValue;
+            var officialText = !string.IsNullOrWhiteSpace(metric.SecondaryValue)
+                ? metric.SecondaryValue
+                : OfflineNairaFxOfficialSummary;
+
+            string parallelSummary = $"Parallel: {metric.PrimaryValue}";
+            if (metric.Currencies is { Count: > 0 } currencies)
+            {
+                var parts = new List<string>();
+                if (currencies.TryGetValue("USD", out var usd))
+                {
+                    if (usd.ParallelSell > 0)
+                        pillText = $"₦{usd.ParallelSell:N0}/$";
+                    parts.Add($"$ ₦{(usd.ParallelSell > 0 ? usd.ParallelSell : 0):N0}");
+                }
+                if (currencies.TryGetValue("GBP", out var gbp))
+                    parts.Add($"£ ₦{(gbp.ParallelSell > 0 ? gbp.ParallelSell : 0):N0}");
+                if (currencies.TryGetValue("EUR", out var eur))
+                    parts.Add($"€ ₦{(eur.ParallelSell > 0 ? eur.ParallelSell : 0):N0}");
+
+                if (parts.Count > 0)
+                {
+                    parallelSummary = "Parallel: " + string.Join(" · ", parts);
+                }
+            }
+
+            MainThread.BeginInvokeOnMainThread(() =>
+            {
+                NairaFxPillText = pillText;
+                NairaFxParallelSummary = parallelSummary;
+                NairaFxOfficialSummary = officialText;
+                HasNairaFxData = true;
+            });
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _logger.LogDebug(ex, "Naira FX summary load failed or offline; resetting to 0 defaults.");
+            ResetNairaFxToOfflineDefaults();
+        }
+    }
+
+    public async Task LoadSponsoredCampaignsAsync(CancellationToken ct = default)
+    {
+        try
+        {
+            var sponsored = await _apiClient.GetSponsoredArticlesAsync(platform: "Mobile", cancellationToken: ct);
+            var hero = sponsored.FirstOrDefault(s => string.Equals(s.PlacementZone, "MainPage_HeroSpotlight", StringComparison.OrdinalIgnoreCase));
+            var shelf = sponsored.Where(s => string.Equals(s.PlacementZone, "MainPage_PartnerShelf", StringComparison.OrdinalIgnoreCase)).ToList();
+
+            MainThread.BeginInvokeOnMainThread(() =>
+            {
+                HeroSpotlightCampaign = hero;
+                HasHeroSpotlight = hero != null;
+                PartnerShelfCampaigns = new ObservableCollection<BriefingItem>(shelf);
+                HasPartnerShelf = shelf.Count > 0;
+            });
+
+            if (hero != null && !string.IsNullOrWhiteSpace(hero.Id))
+            {
+                _apiClient.TrackArticleImpressionAsync(hero.Id).SafeFireAndForget(_logger, "TrackHeroImpression");
+            }
+            foreach (var item in shelf)
+            {
+                if (!string.IsNullOrWhiteSpace(item.Id))
+                {
+                    _apiClient.TrackArticleImpressionAsync(item.Id).SafeFireAndForget(_logger, "TrackShelfImpression");
+                }
+            }
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _logger.LogWarning(ex, "Failed to load mobile sponsored campaigns.");
+        }
+    }
+
+    [RelayCommand]
+    public async Task OpenSponsoredHeroAsync()
+    {
+        if (HeroSpotlightCampaign != null)
+        {
+            await _interactionService.OpenArticleAsync(HeroSpotlightCampaign);
+        }
+    }
+
+    [RelayCommand]
+    public async Task OpenPartnerShelfStoryAsync(BriefingItem? item)
+    {
+        if (item != null)
+        {
+            await _interactionService.OpenArticleAsync(item);
+        }
+    }
+
     public static List<VideoStoryItem> GetFallbackVideoStories() =>
     [
         new VideoStoryItem
@@ -879,6 +1188,15 @@ public partial class MainViewModel : ObservableObject, IDisposable
 
     private void OnConnectivityChanged(object? sender, ConnectivityChangedEventArgs e)
     {
+        if (e.NetworkAccess != NetworkAccess.Internet)
+        {
+            ResetNairaFxToOfflineDefaults();
+        }
+        else
+        {
+            LoadNairaFxSummaryAsync(CancellationToken.None).SafeFireAndForget(_logger, "LoadNairaFxSummaryOnReconnect");
+        }
+
         MainThread.BeginInvokeOnMainThread(() =>
         {
             if (_allCategories.Count > 0)

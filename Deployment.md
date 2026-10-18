@@ -42,14 +42,16 @@ The $300 Google Cloud Free Trial credit (valid for 90 days) will easily cover 10
 
 ## 2.5 API Keys, Secrets & Configuration Requirements
 
-News Stand NG implements a **dual-layer resiliency pattern**: all microservices and machine learning models are designed to operate out-of-the-box with **$0 cloud cost and zero mandatory API keys** via built-in local algorithms and fallback engines. When cloud API keys are supplied, the platform seamlessly upgrades to Google Gemini 1.5 Flash, Neural2 speech synthesis, and live Google Search Console telemetry.
+News Stand NG implements a **dual-layer resiliency pattern**: all microservices and machine learning models are designed to operate out-of-the-box with **$0 cloud cost and zero mandatory API keys** via built-in local algorithms and fallback engines. When cloud API keys are supplied, the platform seamlessly upgrades to Google Gemini 2.5 Flash, Neural2 speech synthesis, and live Google Search Console telemetry.
 
 ### Comprehensive Configuration & Environment Variable Matrix
 
 | Variable Name | Environment / Secret Variable | Target Service | Required in Prod? | Default / Offline Fallback if Omitted | Purpose & Feature Impact |
 | :--- | :--- | :--- | :---: | :--- | :--- |
-| `Gemini:ApiKey` | `GEMINI_API_KEY`<br>`Gemini__ApiKey` | `NewsApi` | **Optional** (Highly Recommended) | • `LocalFallbackEmbeddingProvider` (768-dim)<br>• `TextRank-Extractive` graph centrality<br>• Algorithmic headline & FAQ rule engine | **Powers 3 AI Capabilities:**<br>1. **Vector Embeddings** (`text-embedding-004`) for 72h Greedy Leader story clustering & related coverage.<br>2. **AI Article Enrichment** (`gemini-1.5-flash`) for abstractive key takeaways & FAQPage rich snippet generation.<br>3. **Continuous SEO Optimization**: Generative AI headline rewrite suggestions ($\le 60$ chars) and SERP accordion FAQ pairs. |
-| `AiEnrichment:GeminiEnabled` | `AiEnrichment__GeminiEnabled` | `NewsApi` | **Optional** | `false` | Master toggle enabling Gemini 1.5 Flash enrichment API calls in `ArticleEnrichmentService`. Set to `true` when `Gemini:ApiKey` is provided. |
+| `Gemini:ApiKey` | `GEMINI_API_KEY`<br>`Gemini__ApiKey` | `NewsApi` | **Optional** (Highly Recommended) | • `LocalFallbackEmbeddingProvider` (768-dim)<br>• `TextRank-Extractive` graph centrality<br>• Algorithmic headline & FAQ rule engine | **Powers 3 AI Capabilities:**<br>1. **Vector Embeddings** (`gemini-embedding-001`) for 72h Greedy Leader story clustering & related coverage.<br>2. **AI Article Enrichment** (`gemini-2.5-flash`) for abstractive key takeaways & FAQPage rich snippet generation.<br>3. **Continuous SEO Optimization**: Generative AI headline rewrite suggestions ($\le 60$ chars) and SERP accordion FAQ pairs. |
+| `AiEnrichment:GeminiEnabled` | `AiEnrichment__GeminiEnabled` | `NewsApi` | **Optional** | `false` | Master toggle enabling Gemini 2.5 Flash enrichment API calls in `ArticleEnrichmentService`. Set to `true` when `Gemini:ApiKey` is provided. |
+| `Clustering:SimilarityThreshold` | `Clustering__SimilarityThreshold` | `NewsApi` | **Optional** | `0.48` (local embeddings)<br>`0.58` (Gemini embeddings) | Cosine similarity + title-keyword overlap threshold for Greedy Leader cross-publisher story clustering (`StoryClusteringService`). |
+| `Scraper:MaxConcurrency` | `SCRAPER_MAX_CONCURRENCY`<br>`Scraper__MaxConcurrency` | `NewsScraperService` | **Optional** | `4` | Maximum concurrent publisher feed scrapers (`Parallel.ForEachAsync` degree of parallelism in `ScraperWorker`). |
 | `ApiKey` | `API_KEY`<br>`ApiKey` | `NewsApi`<br>`AdminDashboard`<br>`NewsScraperService`<br>`TtsWorker` | **Required** | Fails closed with HTTP 503 if missing in `Production` / `Staging` | Shared secret protecting all internal write endpoints (`POST /api/v1/articles/ingest`, `/api/v1/video-stories/trending/sync`, `/api/v1/seo/trigger-remediation`). |
 | `IndexNow:Key` | `IndexNow__Key`<br>`INDEXNOW_KEY` | `NewsApi`<br>`NigerianNewsGrid.Web` | **Recommended** | `3a7b9c1d2e4f5a6b7c8d9e0f1a2b3c4d` | Hexadecimal API key used by `IndexNowBackgroundService` and `SeoFeedbackLoopService` to notify Bing and Yandex of published and modified URLs. The web app serves this key at `/{key}.txt`. |
 | `GoogleCloud:ApiKey` | `GCP_TTS_API_KEY`<br>`GoogleCloud__ApiKey` | `TtsWorker`<br>`NewsApi` | **Optional** | Microsoft Edge Neural (`en-NG-EzinneNeural` & `en-NG-AbeoNeural`) | Activates Tier 1 Google Cloud Text-to-Speech (`en-NG-Neural2-A`). When omitted, Tier 2 Edge Neural delivers high-quality Nigerian English audio for **$0**. |
@@ -211,15 +213,13 @@ Before executing production deployment to Google Cloud Run, Compute Engine, or c
 
 ---
 
-### Priority 2: Video Player & Audio Experience Polish
+### Priority 2: Video Player & Audio Experience Polish (Completed)
 
-- [ ] **6. Video Player Modal / Inline Embed Integration ([`VideoSection.jsx`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NigerianNewsGrid.Web/src/components/VideoSection.jsx))**
-  - **Purpose**: Deliver seamless multimedia playback for video news stories on desktop and mobile web.
-  - **Action**: Wire video card clicks in `VideoSection.jsx` to an embedded responsive YouTube modal or inline player for Arise TV and Channels TV broadcasts, ensuring responsive aspect ratio (`16:9`) and smooth backdrop dismissals.
+- [x] **6. Video Player Modal / Inline Embed Integration ([`VideoSection.jsx`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NigerianNewsGrid.Web/src/components/VideoSection.jsx))**
+  - **Status**: Implemented — video cards open a responsive `16:9` YouTube modal/inline player for Arise TV, Channels TV, and TVC broadcasts.
 
-- [ ] **7. Neural Audio Briefing Player Wiring ([`AudioBriefingBar.jsx`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NigerianNewsGrid.Web/src/components/AudioBriefingBar.jsx))**
-  - **Purpose**: Provide streaming morning (8:00 AM WAT) and evening (6:00 PM WAT) synthesized Nigerian English audio broadcasts.
-  - **Action**: Connect `AudioBriefingBar.jsx` to the backend seekable range endpoint `GET /api/v1/audio/briefings/latest` (`HTTP 206 Partial Content`), supporting live scrubbing, duration calculation, and pause/resume states.
+- [x] **7. Neural Audio Briefing Player Wiring ([`AudioBriefingBar.jsx`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NigerianNewsGrid.Web/src/components/AudioBriefingBar.jsx))**
+  - **Status**: Implemented — wired to `GET /api/v1/audio/briefings/latest` (`HTTP 206 Partial Content`) with compact inline presentation inside [`WelcomeBanner.jsx`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NigerianNewsGrid.Web/src/components/AudioBriefingBar.jsx), live scrubbing, and pause/resume controls.
 
 ---
 
@@ -229,20 +229,21 @@ Before executing production deployment to Google Cloud Run, Compute Engine, or c
   - **Purpose**: Validate container images, dependency resolution, internal network routing, and health checks before pushing to Google Artifact Registry.
   - **Action**: Execute local build and compose smoke test from the repository root:
     ```bash
-    docker-compose up --build -d
+    docker compose up --build -d
     ```
-  - **Verification**: Check container status with `docker-compose ps` to ensure all 6 services (`news-db`, `news-api`, `admin-dashboard`, `news-web`, `news-scraper`, `tts-worker`) reach healthy status.
+  - **Verification**: Check container status with `docker compose ps` to ensure all 6 services (`postgres`, `news-api`, `admin-dashboard`, `news-web`, `news-scraper-service`, `tts-worker`) reach healthy status.
 
 - [ ] **9. Database Schema Migration Verification**
-  - **Purpose**: Ensure PostgreSQL schema and entity tables (`Articles`, `StoryClusters`, `ClusterArticles`, `Topics`, `TopicArticles`, `AudioBriefings`, `VideoStories`, `SeoAnomalyEvents`) initialize cleanly.
+  - **Purpose**: Ensure PostgreSQL schema and entity tables (`Articles`, `StoryClusters`, `ClusterArticles`, `Topics`, `TopicArticles`, `AudioBriefings`, `VideoStories`, `SeoAnomalyEvents`, `MarketDataRecords`) initialize cleanly.
   - **Action**: Run `dotnet ef database update --project src/NewsApi` against the target PostgreSQL instance or verify automated initialization logic on container startup.
 
 - [ ] **10. Pre-Flight API & SSR Smoke Testing**
   - **Action**: Run local or staging verification curls:
     ```bash
-    curl -s http://localhost:56193/health
+    curl -s http://localhost:56193/healthz/readiness
     curl -s http://localhost:56193/api/v1/articles?pageSize=5
-    curl -s http://localhost:56193/api/v1/stories
+    curl -s http://localhost:56193/api/v1/stories/trending?limit=6&windowHours=72
+    curl -s http://localhost:56193/api/v1/data/naira-fx
     curl -s http://localhost:56193/api/v1/states
     curl -s -i http://localhost:5173/ | grep "HTTP/1.1 200"
     ```

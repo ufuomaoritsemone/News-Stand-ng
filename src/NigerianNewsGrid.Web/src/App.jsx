@@ -2,7 +2,6 @@ import React, { useState, useEffect, useCallback, useMemo, useRef, Suspense } fr
 import Navbar from './components/Navbar';
 import WelcomeBanner from './components/WelcomeBanner';
 import BreakingTicker from './components/BreakingTicker';
-import AudioBriefingBar from './components/AudioBriefingBar';
 import HeroCarousel from './components/HeroCarousel';
 import ArticleCard from './components/ArticleCard';
 import CategoryTabs from './components/CategoryTabs';
@@ -17,13 +16,43 @@ import { usePwaInstall } from './hooks/usePwaInstall';
 import IosInstallModal from './components/IosInstallModal';
 import PwaQuickPill from './components/PwaQuickPill';
 import PwaInstallFeedCard from './components/PwaInstallFeedCard';
+import TrendingStoriesSection from './components/TrendingStoriesSection';
+import HeroSpotlightBanner from './components/HeroSpotlightBanner';
 
 const VideoSection = React.lazy(() => import('./components/VideoSection'));
 const AuthModal = React.lazy(() => import('./components/AuthModal'));
 import { api } from './services/api';
 import { getVerifiedUser } from './services/forumUser';
 import { getRecencyTag } from './services/articleMetadata';
+import { trackPageView, trackCategorySelect } from './services/analytics';
 import { RefreshCw, BookmarkCheck, ArrowRight, Filter, AlertTriangle, Radio } from 'lucide-react';
+
+function getUrlForCategory(category) {
+  if (!category || category === 'All') return '/';
+  if (category === 'Forum' || category === 'Discussions') return '/?tab=forum';
+  if (category === 'Saved') return '/?tab=saved';
+  if (category === 'Top Videos' || category === 'Top Video') return '/?tab=top-videos';
+  if (category === 'News Videos' || category === 'News Video') return '/?tab=news-videos';
+  return `/category/${encodeURIComponent(category.toLowerCase())}`;
+}
+
+function resolveCategoryFromUrl(pathname, search, fallbackCategory = 'All') {
+  const params = new URLSearchParams(search || '');
+  const tab = (params.get('tab') || '').toLowerCase();
+  if (tab === 'forum' || tab === 'discussions') return 'Forum';
+  if (tab === 'saved' || tab === 'bookmarks') return 'Saved';
+  if (tab === 'top-videos') return 'Top Videos';
+  if (tab === 'news-videos') return 'News Videos';
+
+  const catMatch = (pathname || '').match(/^\/category\/([^/?#]+)/i);
+  if (catMatch && catMatch[1]) {
+    const raw = decodeURIComponent(catMatch[1]).trim();
+    if (raw) {
+      return raw.charAt(0).toUpperCase() + raw.slice(1).toLowerCase();
+    }
+  }
+  return fallbackCategory || 'All';
+}
 
 // Authentic Nigerian baseline fallback stories (used only when offline and cache is empty)
 const AUTHENTIC_NIGERIAN_FALLBACKS = [
@@ -111,6 +140,7 @@ export default function App({ initialData = null, initialCategory = 'All' }) {
 
   // Data States
   const [articles, setArticles] = useState(() => initialData?.initialArticles || []);
+  const [trendingStories, setTrendingStories] = useState(() => initialData?.initialTrendingStories || []);
   const [isOfflineCached, setIsOfflineCached] = useState(false);
   const [cachedTime, setCachedTime] = useState('');
   const [hasNewStoriesAlert, setHasNewStoriesAlert] = useState(false);
@@ -179,39 +209,134 @@ export default function App({ initialData = null, initialCategory = 'All' }) {
   }, []);
 
   const [initialScrollToComments, setInitialScrollToComments] = useState(false);
+  const previousUrlRef = useRef(getUrlForCategory(initialCategory || 'All'));
 
-  // Open & Close Article with Browser History (Back-button & deep linking support)
-  const openArticle = useCallback((story, options = {}) => {
-    if (!story) return;
-    recordEngagement();
-    setSelectedArticle(story);
-    setInitialScrollToComments(Boolean(options?.scrollToComments));
-    if (story.id) {
-      const url = new URL(window.location.href);
-      url.searchParams.set('story', story.id);
-      window.history.pushState({ storyId: story.id }, '', url.toString());
+  // Select Category or View Tab and synchronize with browser URL & History
+  const handleSelectCategory = useCallback((cat, options = {}) => {
+    const nextCat = cat || 'All';
+    setActiveCategory(nextCat);
+    setSelectedSource('All');
+    setSelectedArticle(null);
+
+    const targetUrl = getUrlForCategory(nextCat);
+    previousUrlRef.current = targetUrl;
+
+    if (typeof window !== 'undefined') {
+      const currentUrl = window.location.pathname + window.location.search;
+      if (currentUrl !== targetUrl) {
+        window.history.pushState({ category: nextCat }, '', targetUrl);
+      }
+      trackCategorySelect(nextCat);
+      trackPageView(
+        targetUrl,
+        nextCat === 'All' ? 'News Stand NG — Real-Time Nigerian News' : `${nextCat} News — News Stand NG`
+      );
+      if (options.scroll) {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
     }
   }, []);
 
+  // Open & Close Article with Canonical /news/{slug} Browser History (Back-button, SEO & deep-link support)
+  const openArticle = useCallback((story, options = {}) => {
+    if (!story) return;
+    recordEngagement();
+
+    if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/news/')) {
+      const cleanUrl = new URL(window.location.href);
+      cleanUrl.searchParams.delete('story');
+      previousUrlRef.current = cleanUrl.pathname + (cleanUrl.search ? cleanUrl.search : '');
+    }
+
+    setSelectedArticle(story);
+    setInitialScrollToComments(Boolean(options?.scrollToComments));
+
+    if (typeof window !== 'undefined') {
+      if (story.slug) {
+        const canonicalPath = `/news/${encodeURIComponent(story.slug)}`;
+        if (window.location.pathname !== canonicalPath) {
+          window.history.pushState(
+            {
+              readerDrawer: true,
+              storyId: story.id,
+              slug: story.slug,
+              returnUrl: previousUrlRef.current,
+            },
+            '',
+            canonicalPath
+          );
+        }
+        trackPageView(canonicalPath, story.title);
+      } else if (story.id) {
+        const url = new URL(window.location.href);
+        url.searchParams.set('story', story.id);
+        window.history.pushState(
+          {
+            readerDrawer: true,
+            storyId: story.id,
+            returnUrl: previousUrlRef.current,
+          },
+          '',
+          url.toString()
+        );
+      }
+    }
+  }, [recordEngagement]);
+
   const closeArticle = useCallback(() => {
     setSelectedArticle(null);
+    if (typeof window === 'undefined') return;
+
+    if (window.location.pathname.startsWith('/news/')) {
+      const restoreUrl = previousUrlRef.current || getUrlForCategory(activeCategory);
+      window.history.pushState({ category: activeCategory }, '', restoreUrl);
+      return;
+    }
+
     const url = new URL(window.location.href);
     if (url.searchParams.has('story')) {
       url.searchParams.delete('story');
       const cleanPath = url.pathname + (url.search ? url.search : '');
-      window.history.pushState({}, '', cleanPath);
+      window.history.pushState({ category: activeCategory }, '', cleanPath);
     }
-  }, []);
+  }, [activeCategory]);
 
-  // Listen to popstate for browser back/forward navigation
+  // Listen to popstate for browser back/forward navigation across articles and category hubs
   useEffect(() => {
-    const handlePopState = () => {
-      const params = new URLSearchParams(window.location.search);
+    const handlePopState = (event) => {
+      const pathname = window.location.pathname;
+      const search = window.location.search;
+      const params = new URLSearchParams(search);
       const storyId = params.get('story');
-      if (!storyId) {
-        setSelectedArticle(null);
-      } else {
-        const found = articles.find((a) => a.id === storyId);
+
+      if (pathname.startsWith('/news/')) {
+        const slug = decodeURIComponent(pathname.slice('/news/'.length).replace(/\/$/, ''));
+        const stateStoryId = event.state?.storyId;
+        const found = articles.find(
+          (a) => (slug && a.slug === slug) || (stateStoryId && String(a.id) === String(stateStoryId))
+        );
+        if (found) {
+          setSelectedArticle(found);
+        } else if (slug) {
+          api.getArticleBySlug(slug)
+            .then((story) => {
+              if (story) setSelectedArticle(story);
+            })
+            .catch(() => {
+              if (stateStoryId) {
+                api.getArticleById(stateStoryId)
+                  .then((story) => {
+                    if (story) setSelectedArticle(story);
+                  })
+                  .catch(() => {});
+              }
+            });
+        }
+        return;
+      }
+
+      if (storyId) {
+        const found = articles.find((a) => String(a.id) === String(storyId));
         if (found) {
           setSelectedArticle(found);
         } else {
@@ -219,15 +344,30 @@ export default function App({ initialData = null, initialCategory = 'All' }) {
             .then((story) => setSelectedArticle(story))
             .catch(() => {});
         }
+        return;
       }
+
+      setSelectedArticle(null);
+      const resolvedCat =
+        event.state?.category || resolveCategoryFromUrl(pathname, search, initialCategory || 'All');
+      setActiveCategory(resolvedCat);
+      previousUrlRef.current = pathname + search;
     };
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
-  }, [articles]);
+  }, [articles, initialCategory]);
 
-  // Initial Deep-Link check on mount (e.g. user opens ?story=123 from a shared link)
+  // Initial Deep-Link & URL Tab Hydration on mount (e.g. ?story=123 or ?tab=forum or /category/politics)
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
+    const pathname = window.location.pathname;
+    const search = window.location.search;
+    const resolvedCat = resolveCategoryFromUrl(pathname, search, initialCategory || 'All');
+    if (resolvedCat !== activeCategory) {
+      setActiveCategory(resolvedCat);
+    }
+    previousUrlRef.current = getUrlForCategory(resolvedCat);
+
+    const params = new URLSearchParams(search);
     const initialStoryId = params.get('story');
     if (initialStoryId) {
       api.getArticleById(initialStoryId)
@@ -254,6 +394,15 @@ export default function App({ initialData = null, initialCategory = 'All' }) {
         setSponsoredArticles(list);
       })
       .catch((err) => console.warn('Sponsored stories load notice:', err.message));
+
+    if (trendingStories.length === 0) {
+      api.getTrendingStories()
+        .then((data) => {
+          const list = Array.isArray(data?.stories) ? data.stories : (Array.isArray(data) ? data : []);
+          if (list.length > 0) setTrendingStories(list);
+        })
+        .catch(() => {});
+    }
 
     setLoadingVideos(true);
     Promise.all([
@@ -425,28 +574,140 @@ export default function App({ initialData = null, initialCategory = 'All' }) {
 
   const allStories = articles.length > 0 ? articles : (activeCategory === 'All' ? AUTHENTIC_NIGERIAN_FALLBACKS : []);
 
-  // Hero Carousel Stories (Top 6 most recent verified stories)
-  const carouselStories = allStories.slice(0, 6);
+  // Hero Carousel Stories: Curate up to 6 top verified, visually compelling, source-diverse stories
+  const carouselStories = useMemo(() => {
+    if (!allStories || allStories.length === 0) return [];
 
-  // Latest News Grid Stories (remaining stories)
-  const latestNewsStories =
-    activeCategory === 'All' && selectedSource === 'All' && displayedArticles.length > 6
-      ? displayedArticles.slice(6)
-      : displayedArticles;
+    const candidates = [...allStories];
+    const selected = [];
+    const usedSources = new Map();
+
+    // Pass 1: Prioritize hard breaking news (not pure opinion) with valid images and diverse sources
+    for (const story of candidates) {
+      if (selected.length >= 6) break;
+      const isOpinion = story.contentType === 'Opinion' || (story.category || '').toLowerCase() === 'opinion';
+      if (isOpinion) continue;
+
+      const src = (story.source || 'Unknown').trim().toLowerCase();
+      const count = usedSources.get(src) || 0;
+      if (count < 2) {
+        selected.push(story);
+        usedSources.set(src, count + 1);
+      }
+    }
+
+    // Pass 2: If we still have slots (< 6), fill from remaining candidate stories
+    if (selected.length < 6) {
+      for (const story of candidates) {
+        if (selected.length >= 6) break;
+        if (!selected.some((s) => s.id === story.id)) {
+          selected.push(story);
+        }
+      }
+    }
+
+    return selected.slice(0, 6);
+  }, [allStories]);
+
+  const heroStoryIds = useMemo(() => new Set(carouselStories.map((s) => s.id)), [carouselStories]);
+
+  // Latest News Grid Stories (excluding items already prominently featured in the top hero carousel)
+  const latestNewsStories = useMemo(() => {
+    if (activeCategory === 'All' && selectedSource === 'All' && carouselStories.length > 0) {
+      return displayedArticles.filter((s) => !heroStoryIds.has(s.id));
+    }
+    return displayedArticles;
+  }, [displayedArticles, activeCategory, selectedSource, carouselStories, heroStoryIds]);
+
+  // Ensure Trending Developing Stories always has items even when offline or before server clusters populate
+  const effectiveTrendingStories = useMemo(() => {
+    if (trendingStories && trendingStories.length > 0) {
+      return trendingStories;
+    }
+    if (!allStories || allStories.length === 0) return [];
+
+    const byCategory = new Map();
+    for (const art of allStories) {
+      const cat = (art.category || 'General').trim();
+      if (!byCategory.has(cat)) byCategory.set(cat, []);
+      byCategory.get(cat).push(art);
+    }
+
+    const fallback = [];
+    for (const [cat, items] of byCategory.entries()) {
+      if (fallback.length >= 6) break;
+      const lead = items[0];
+      const sources = Array.from(new Set(items.map((i) => i.source).filter(Boolean)));
+      if (sources.length < 2) {
+        sources.push('Verified Nigerian Desk');
+      }
+      const catSlug = cat.toLowerCase().replace(/\s+/g, '-');
+      fallback.push({
+        id: `trend-${catSlug}`,
+        slug: `trend-${catSlug}`,
+        title: lead.title,
+        summary: lead.summary || lead.excerpt,
+        imageUrl: lead.imageUrl,
+        category: cat,
+        articleCount: Math.max(2, items.length),
+        sourceCount: Math.max(2, sources.length),
+        sources,
+        updatedAt: lead.publishedAt || new Date().toISOString(),
+        leadArticle: lead
+      });
+    }
+    return fallback;
+  }, [trendingStories, allStories]);
 
   // Active Sponsored Feature (Partner Studio)
   const featuredSponsoredStory = sponsoredArticles.find((s) => s.isSponsored) || null;
 
-  // Placement 1: Native In-Feed Insertion ("The 3rd / 4th Card Sweet Spot")
-  const gridStoriesWithSponsor = useMemo(() => {
-    if (!featuredSponsoredStory || activeCategory === 'Saved') return latestNewsStories;
-    if (latestNewsStories.some((s) => s.id === featuredSponsoredStory.id)) return latestNewsStories;
+  // Main Page - Zone 1: Top Hero / Masthead Spotlight Banner
+  const heroSpotlightCampaign = useMemo(() => {
+    return sponsoredArticles.find((s) => s.isSponsored && s.placementZone === 'MainPage_HeroSpotlight') || null;
+  }, [sponsoredArticles]);
 
-    const copy = [...latestNewsStories];
-    const targetIdx = Math.min(2, copy.length);
-    copy.splice(targetIdx, 0, featuredSponsoredStory);
-    return copy;
-  }, [latestNewsStories, featuredSponsoredStory, activeCategory]);
+  // Main Page - Zone 2: Native In-Feed Stories
+  const inFeedSponsoredStories = useMemo(() => {
+    return sponsoredArticles.filter((s) => s.isSponsored && (s.placementZone === 'MainPage_InFeed' || !s.placementZone));
+  }, [sponsoredArticles]);
+
+  // Main Page - Zone 3: Partner Perspectives Shelf Stories
+  const partnerShelfStories = useMemo(() => {
+    return sponsoredArticles.filter((s) => s.isSponsored && s.placementZone === 'MainPage_PartnerShelf');
+  }, [sponsoredArticles]);
+
+  // In-Article Placements
+  const inArticleHeaderSponsor = useMemo(() => {
+    return sponsoredArticles.find((s) => s.isSponsored && s.placementZone === 'InArticle_Header') || null;
+  }, [sponsoredArticles]);
+
+  const inArticleMidSponsor = useMemo(() => {
+    return sponsoredArticles.find((s) => s.isSponsored && s.placementZone === 'InArticle_MidContent') || null;
+  }, [sponsoredArticles]);
+
+  const inArticleFooterSponsor = useMemo(() => {
+    return sponsoredArticles.find((s) => s.isSponsored && s.placementZone === 'InArticle_Footer') || null;
+  }, [sponsoredArticles]);
+
+  // Placement: Native In-Feed Insertion (Configurable slots)
+  const gridStoriesWithSponsor = useMemo(() => {
+    if (activeCategory === 'Saved') return latestNewsStories;
+    let list = [...latestNewsStories];
+    const storiesToInsert = inFeedSponsoredStories.length > 0
+      ? inFeedSponsoredStories
+      : (featuredSponsoredStory ? [featuredSponsoredStory] : []);
+
+    for (const sponsor of storiesToInsert) {
+      if (list.some((s) => s.id === sponsor.id)) continue;
+      const targetPos = sponsor.targetPosition && sponsor.targetPosition > 0
+        ? sponsor.targetPosition - 1
+        : 2;
+      const insertIdx = Math.min(Math.max(0, targetPos), list.length);
+      list.splice(insertIdx, 0, sponsor);
+    }
+    return list;
+  }, [latestNewsStories, inFeedSponsoredStories, featuredSponsoredStory, activeCategory]);
 
   // Breaking News stories for the top ticker
   const breakingNewsItems = useMemo(() => {
@@ -464,12 +725,11 @@ export default function App({ initialData = null, initialCategory = 'All' }) {
         toggleTheme={toggleTheme}
         onOpenSearch={() => setIsSearchOpen(true)}
         bookmarkCount={bookmarks.length}
-        onSelectBookmarks={() => setActiveCategory('Saved')}
+        onSelectBookmarks={() => handleSelectCategory('Saved', { scroll: true })}
         activeCategory={activeCategory}
         onSelectNavTab={(tab) => {
-          if (tab === 'Stories') setActiveCategory('All');
-          else if (tab === 'Forum') setActiveCategory('Forum');
-          window.scrollTo({ top: 0, behavior: 'smooth' });
+          if (tab === 'Stories') handleSelectCategory('All', { scroll: true });
+          else if (tab === 'Forum') handleSelectCategory('Forum', { scroll: true });
         }}
         onOpenNotifications={() => setIsNotificationOpen(true)}
         verifiedUser={verifiedUser}
@@ -518,21 +778,26 @@ export default function App({ initialData = null, initialCategory = 'All' }) {
         </div>
       )}
 
-      {/* 2. Editorial Masthead & Date Strip */}
+      {/* 2. Compact Editorial Masthead, Date Strip & Inline Audio Briefing */}
       {activeCategory !== 'Saved' && !isForum && (
         <WelcomeBanner
           brandName="NEWS STAND NG"
           storyCount={articles.length}
+          activeCategory={activeCategory}
+          showAudioBriefing={activeCategory === 'All' && !isForum}
         />
-      )}
-
-      {/* Tri-Tier Neural Audio Daily Briefing Player */}
-      {activeCategory === 'All' && !isForum && (
-        <AudioBriefingBar />
       )}
 
       {/* Main Content Area */}
       <main id="main-content" style={{ flex: 1 }}>
+        {/* Main Page Zone 1: Top Hero / Masthead Spotlight Banner */}
+        {activeCategory === 'All' && !isForum && heroSpotlightCampaign && (
+          <HeroSpotlightBanner
+            campaign={heroSpotlightCampaign}
+            onSelectStory={openArticle}
+          />
+        )}
+
         {/* 3. Hero Section: Carousel of Top Verified Nigerian Stories */}
         {activeCategory !== 'Saved' && !isTopVideos && !isNewsVideos && !isForum && carouselStories.length > 0 && (
           <HeroCarousel
@@ -544,15 +809,20 @@ export default function App({ initialData = null, initialCategory = 'All' }) {
           />
         )}
 
+        {/* Real-time Multi-Source Trending Stories */}
+        {activeCategory === 'All' && !isForum && !isTopVideos && !isNewsVideos && effectiveTrendingStories.length > 0 && (
+          <TrendingStoriesSection
+            stories={effectiveTrendingStories}
+            onSelectStory={openArticle}
+          />
+        )}
+
         {/* Category Filter Pills Bar */}
         {!isForum && (
           <CategoryTabs
             categories={categories}
             activeCategory={activeCategory}
-            onSelectCategory={(cat) => {
-              setActiveCategory(cat);
-              setSelectedSource('All');
-            }}
+            onSelectCategory={(cat) => handleSelectCategory(cat)}
             bookmarkCount={bookmarks.length}
           />
         )}
@@ -634,10 +904,7 @@ export default function App({ initialData = null, initialCategory = 'All' }) {
                     <button
                       type="button"
                       className="latest-news-see-all"
-                      onClick={() => {
-                        setActiveCategory('All');
-                        setSelectedSource('All');
-                      }}
+                      onClick={() => handleSelectCategory('All')}
                     >
                       See all <ArrowRight size={16} />
                     </button>
@@ -666,10 +933,7 @@ export default function App({ initialData = null, initialCategory = 'All' }) {
                   <button
                     type="button"
                     className="primary-btn"
-                    onClick={() => {
-                      setActiveCategory('All');
-                      setSelectedSource('All');
-                    }}
+                    onClick={() => handleSelectCategory('All')}
                   >
                     Browse All Stories
                   </button>
@@ -696,7 +960,7 @@ export default function App({ initialData = null, initialCategory = 'All' }) {
                   <button
                     type="button"
                     className="primary-btn"
-                    onClick={() => setActiveCategory('All')}
+                    onClick={() => handleSelectCategory('All')}
                   >
                     Browse Latest News
                   </button>
@@ -738,10 +1002,10 @@ export default function App({ initialData = null, initialCategory = 'All' }) {
               )}
             </div>
 
-            {/* Placement 2: Dedicated Partner Perspectives / Corporate Briefings Shelf (Positioned naturally below the primary news grid) */}
-            {activeCategory === 'All' && selectedSource === 'All' && sponsoredArticles.length > 0 && (
+            {/* Placement 2: Dedicated Partner Perspectives / Corporate Briefings Shelf */}
+            {activeCategory === 'All' && selectedSource === 'All' && (partnerShelfStories.length > 0 || (sponsoredArticles.length > 0 && partnerShelfStories.length === 0)) && (
               <PartnerPerspectives
-                stories={sponsoredArticles}
+                stories={partnerShelfStories.length > 0 ? partnerShelfStories : sponsoredArticles}
                 onSelectStory={openArticle}
               />
             )}
@@ -767,7 +1031,7 @@ export default function App({ initialData = null, initialCategory = 'All' }) {
         onClose={() => setIsNotificationOpen(false)}
       />
 
-      {/* 6. Distraction-Free Reader Drawer with Placement 3 Contextual Sponsored Callout */}
+      {/* 6. Distraction-Free Reader Drawer with Placement Contextual Sponsored Controls */}
       <ReaderDrawer
         article={selectedArticle}
         isOpen={Boolean(selectedArticle)}
@@ -779,6 +1043,9 @@ export default function App({ initialData = null, initialCategory = 'All' }) {
         initialScrollToComments={initialScrollToComments}
         onOpenAuth={() => setIsAuthOpen(true)}
         featuredSponsoredStory={featuredSponsoredStory}
+        headerSponsor={inArticleHeaderSponsor}
+        midContentSponsor={inArticleMidSponsor}
+        footerSponsor={inArticleFooterSponsor || featuredSponsoredStory}
         onSelectStory={openArticle}
       />
 
@@ -799,10 +1066,7 @@ export default function App({ initialData = null, initialCategory = 'All' }) {
 
       {/* 8. Footer */}
       <Footer
-        onSelectCategory={(cat) => {
-          setActiveCategory(cat);
-          window.scrollTo({ top: 0, behavior: 'smooth' });
-        }}
+        onSelectCategory={(cat) => handleSelectCategory(cat, { scroll: true })}
       />
 
       {/* Floating PWA Quick Install Pill (Engaged users who haven't dismissed) */}

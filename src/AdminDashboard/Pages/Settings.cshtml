@@ -6,28 +6,18 @@
 
 <div class="container-fluid px-4 py-3">
 
-    <!-- Header Navigation -->
-    <div class="dashboard-header d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3 mb-4">
+    <!-- SaaS Page Header -->
+    <div class="saas-page-header">
         <div>
             <div class="d-flex align-items-center gap-3">
-                <h1 class="h2 mb-0 text-white brand-font">⚙️ System Configuration</h1>
+                <h1 class="saas-page-title mb-0"><i class="bi bi-gear-fill text-secondary"></i> System Configuration</h1>
                 <span class="badge bg-primary rounded-pill px-3 py-1" style="font-size: 0.72rem; letter-spacing: 0.5px;">LIVE HOT-RELOAD</span>
                 <span class="badge bg-secondary rounded-pill px-3 py-1" style="font-size: 0.72rem;">@Model.Diagnostics.EnvironmentName</span>
             </div>
-            <p class="text-muted mb-0 mt-1">Manage external API keys, service intervals, AI parameters, and diagnostic telemetry.</p>
+            <p class="saas-page-desc mt-1">Manage external API keys, service intervals, AI parameters, and diagnostic telemetry.</p>
         </div>
-        <div class="d-flex align-items-center gap-2 flex-wrap">
-            <a href="/" class="btn btn-outline-light btn-sm"><i class="bi bi-house-door me-1"></i> Dashboard</a>
-            <a href="/Videos" class="btn btn-outline-danger btn-sm"><i class="bi bi-youtube me-1"></i> Videos</a>
-            <a href="/Analytics" class="btn btn-outline-success btn-sm"><i class="bi bi-bar-chart-fill me-1"></i> Analytics</a>
-            <a href="/Feedback" class="btn btn-outline-primary btn-sm"><i class="bi bi-chat-heart me-1"></i> Feedback</a>
-            <a href="/Comments" class="btn btn-outline-info btn-sm"><i class="bi bi-chat-square-text me-1"></i> Comments</a>
-            <a href="/Categorizer" class="btn btn-outline-purple btn-sm"><i class="bi bi-cpu-fill me-1"></i> ML Categorizer</a>
-            <button type="button" class="theme-toggle-btn" onclick="toggleAdminTheme()" title="Toggle Light / Dark Theme">
-                <i class="bi bi-moon-stars-fill theme-icon-dark"></i>
-                <i class="bi bi-sun-fill theme-icon-light"></i>
-                <span class="theme-toggle-label">Dark</span>
-            </button>
+        <div class="saas-toolbar">
+            <a href="/Settings" class="btn btn-saas-secondary btn-sm"><i class="bi bi-arrow-clockwise me-1"></i> Reload Config</a>
         </div>
     </div>
 

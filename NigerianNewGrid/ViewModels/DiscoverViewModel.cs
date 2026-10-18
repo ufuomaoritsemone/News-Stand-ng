@@ -15,7 +15,7 @@ namespace NigerianNewGrid.ViewModels;
 /// ViewModel for the Discover tab (search, category filter, trending videos, keyword alerts, and pagination).
 /// Extracted from DiscoverPage.xaml.cs to satisfy clean MVVM separation and SRP (Fix #13 / Fix #33).
 /// </summary>
-public partial class DiscoverViewModel : ObservableObject, IDisposable
+public partial class DiscoverViewModel : ObservableObject, IDisposable, IQueryAttributable
 {
     private readonly NewsApiClient _apiClient;
     private readonly IKeywordMatchingService _keywordMatchingService;
@@ -45,6 +45,9 @@ public partial class DiscoverViewModel : ObservableObject, IDisposable
     // ── Observable Properties ─────────────────────────────────────
     [ObservableProperty] public partial ObservableCollection<BriefingItem> FilteredItems { get; set; } = [];
     [ObservableProperty] public partial ObservableCollection<VideoStoryItem> TrendingVideos { get; set; } = [];
+    [ObservableProperty] public partial ObservableCollection<TrendingStoryItem> TrendingStories { get; set; } = [];
+    [ObservableProperty] public partial bool HasTrendingStories { get; set; } = false;
+    [ObservableProperty] public partial bool IsTrendingStoriesVisible { get; set; } = false;
     [ObservableProperty] public partial string SelectedCategory { get; set; } = "All";
     [ObservableProperty] public partial string SearchQuery { get; set; } = string.Empty;
     [ObservableProperty] public partial string ResultsHeader { get; set; } = "Recent News Articles";
@@ -87,8 +90,15 @@ public partial class DiscoverViewModel : ObservableObject, IDisposable
         try
         {
             await LoadFromCacheAsync();
-            await LoadTrendingVideosAsync();
-            await ApplyCategoryFilterAsync(SelectedCategory);
+
+            var filterTask = (!IsSearchMode && string.IsNullOrWhiteSpace(SearchQuery))
+                ? ApplyCategoryFilterAsync(SelectedCategory)
+                : (!string.IsNullOrWhiteSpace(SearchQuery) ? SearchAsync(SearchQuery) : Task.CompletedTask);
+
+            await Task.WhenAll(
+                filterTask,
+                LoadTrendingVideosAsync(),
+                LoadTrendingStoriesAsync());
         }
         finally
         {
@@ -107,7 +117,7 @@ public partial class DiscoverViewModel : ObservableObject, IDisposable
         _categoryArticles.Clear();
         _arrangedCategoryFeed.Clear();
         IsLoadMoreVisible = false;
-        IsTrendingSectionVisible = category.Equals("All", StringComparison.OrdinalIgnoreCase) && TrendingVideos.Count > 0;
+        UpdateTrendingVisibility();
 
         if (string.Equals(category, "RecentlyRead", StringComparison.OrdinalIgnoreCase))
         {
@@ -228,7 +238,7 @@ public partial class DiscoverViewModel : ObservableObject, IDisposable
 
         IsSearchMode = true;
         IsClearButtonVisible = true;
-        IsTrendingSectionVisible = false;
+        UpdateTrendingVisibility();
         _searchPage = 1;
         _searchResults.Clear();
 
@@ -246,6 +256,68 @@ public partial class DiscoverViewModel : ObservableObject, IDisposable
         IsClearButtonVisible = false;
         IsSearchMode = false;
         await ApplyCategoryFilterAsync(SelectedCategory);
+    }
+
+    [RelayCommand]
+    public async Task OpenTrendingStoryAsync(TrendingStoryItem? story)
+    {
+        if (story == null) return;
+
+        if (Shell.Current is not null)
+        {
+            try
+            {
+                await Shell.Current.GoToAsync("storycluster", new Dictionary<string, object>
+                {
+                    ["Story"] = story
+                });
+                return;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to navigate to storycluster from Discover; falling back to search.");
+            }
+        }
+
+        var query = GetSearchQueryForStory(story);
+        SearchQuery = query;
+        await SearchAsync(query);
+    }
+
+    public static string GetSearchQueryForStory(TrendingStoryItem story)
+    {
+        if (story.Topics.Count > 0 && !string.IsNullOrWhiteSpace(story.Topics[0]))
+        {
+            return story.Topics[0];
+        }
+
+        var stopwords = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "a", "an", "the", "and", "or", "in", "on", "at", "to", "for", "of", "with", "by", "from",
+            "as", "is", "was", "are", "were", "been", "be", "has", "have", "had", "how", "what",
+            "when", "where", "who", "which", "why", "this", "that", "these", "those", "it", "its",
+            "says", "said", "over", "after", "into", "amid", "will", "new", "all", "out", "about",
+            "breaking", "report", "reports", "nigeria", "nigerian"
+        };
+
+        var words = story.Title
+            .Split(new[] { ' ', '-', '—', ':', ',', '.', ';', '?', '!', '"', '\'', '‘', '’' }, StringSplitOptions.RemoveEmptyEntries)
+            .Where(w => w.Length > 2 && !stopwords.Contains(w))
+            .Take(3)
+            .ToList();
+
+        return words.Count > 0 ? string.Join(" ", words) : story.Title;
+    }
+
+    public void ApplyQueryAttributes(IDictionary<string, object> query)
+    {
+        if (query.TryGetValue("query", out var queryObj) && queryObj is string qStr && !string.IsNullOrWhiteSpace(qStr))
+        {
+            var decoded = Uri.UnescapeDataString(qStr);
+            SearchQuery = decoded;
+            IsClearButtonVisible = true;
+            _ = SearchAsync(decoded);
+        }
     }
 
     [RelayCommand]
@@ -435,7 +507,17 @@ public partial class DiscoverViewModel : ObservableObject, IDisposable
             TrendingVideos.Add(v);
         }
 
-        IsTrendingSectionVisible = _trendingVideos.Count > 0 && SelectedCategory == "All" && !IsSearchMode;
+        if (TrendingStories.Count == 0 && _allItems.Count > 0)
+        {
+            var fallbackStories = MainViewModel.BuildFallbackTrendingStories(_allItems, 8);
+            if (fallbackStories.Count > 0)
+            {
+                TrendingStories = new ObservableCollection<TrendingStoryItem>(fallbackStories);
+                HasTrendingStories = true;
+            }
+        }
+
+        UpdateTrendingVisibility();
     }
 
     private async Task LoadTrendingVideosAsync()
@@ -462,8 +544,55 @@ public partial class DiscoverViewModel : ObservableObject, IDisposable
         }
         finally
         {
-            IsTrendingSectionVisible = _trendingVideos.Count > 0 && SelectedCategory == "All" && !IsSearchMode;
+            UpdateTrendingVisibility();
         }
+    }
+
+    public async Task LoadTrendingStoriesAsync(CancellationToken ct = default)
+    {
+        try
+        {
+            EnsureApiBaseUrl();
+            var stories = await _apiClient.GetTrendingStoriesAsync(limit: 10, windowHours: 72, cancellationToken: ct);
+            if (stories.Count == 0 && _allItems.Count > 0)
+            {
+                stories = MainViewModel.BuildFallbackTrendingStories(_allItems, 8);
+            }
+
+            if (stories.Count > 0)
+            {
+                MainThread.BeginInvokeOnMainThread(() =>
+                {
+                    TrendingStories = new ObservableCollection<TrendingStoryItem>(stories);
+                    HasTrendingStories = true;
+                    UpdateTrendingVisibility();
+                });
+            }
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _logger.LogWarning(ex, "Failed to load trending stories in DiscoverViewModel.");
+            if (TrendingStories.Count == 0 && _allItems.Count > 0)
+            {
+                var fallback = MainViewModel.BuildFallbackTrendingStories(_allItems, 8);
+                if (fallback.Count > 0)
+                {
+                    MainThread.BeginInvokeOnMainThread(() =>
+                    {
+                        TrendingStories = new ObservableCollection<TrendingStoryItem>(fallback);
+                        HasTrendingStories = true;
+                        UpdateTrendingVisibility();
+                    });
+                }
+            }
+        }
+    }
+
+    private void UpdateTrendingVisibility()
+    {
+        var isAll = string.Equals(SelectedCategory, "All", StringComparison.OrdinalIgnoreCase);
+        IsTrendingStoriesVisible = HasTrendingStories && isAll && !IsSearchMode;
+        IsTrendingSectionVisible = TrendingVideos.Count > 0 && isAll && !IsSearchMode;
     }
 
     private async Task FetchSearchBatchAsync()
@@ -486,6 +615,25 @@ public partial class DiscoverViewModel : ObservableObject, IDisposable
                 days: null,
                 page: _searchPage,
                 pageSize: 30);
+
+            // Resilient fallback: if 0 results on page 1 and query had multiple words, try with the first 2 terms
+            if (_searchPage == 1 && newItems.Count == 0 && SearchQuery.Contains(' '))
+            {
+                var fallbackQuery = string.Join(" ", SearchQuery.Split(' ', StringSplitOptions.RemoveEmptyEntries).Take(2));
+                if (!string.Equals(fallbackQuery, SearchQuery, StringComparison.OrdinalIgnoreCase))
+                {
+                    var fallbackItems = await _apiClient.GetArticlesAsync(
+                        search: fallbackQuery,
+                        category: catParam,
+                        days: null,
+                        page: 1,
+                        pageSize: 30);
+                    if (fallbackItems.Count > 0)
+                    {
+                        newItems = fallbackItems;
+                    }
+                }
+            }
 
             if (_searchPage == 1)
             {

@@ -4,6 +4,13 @@ import { api, getOptimizedImageUrl } from "../../src/services/api";
 import { formatTimeAgo } from "../../src/services/timeUtils";
 import Footer from "../../src/components/Footer";
 import {
+  DEFAULT_OG_IMAGE,
+  MIN_TOPIC_ARTICLES_FOR_INDEXING,
+  paginatedUrl,
+  paginationLinks,
+  buildArticleItemList,
+} from "../utils/seo";
+import {
   ArrowLeft,
   Tag,
   Calendar,
@@ -23,22 +30,24 @@ export function meta({ data }) {
     ];
   }
 
-  const { topic, articles, page, total, pageSize } = data;
+  const { topic, page, total, pageSize } = data;
   const title = `${topic.name} News, Analysis & Reports | News Stand NG`;
   const description =
     topic.description ||
     `Explore aggregated news coverage, timeline reports, and updates regarding ${topic.name} on News Stand NG.`;
-  const canonicalUrl = `https://newsstand.ng/topic/${topic.slug}${page > 1 ? `?page=${page}` : ""}`;
+  const topicPath = `/topic/${topic.slug}`;
+  const canonicalUrl = paginatedUrl(topicPath, page);
   const totalPages = Math.ceil((total || 0) / (pageSize || 20));
 
-  // Thin content guardrail: noindex, follow when fewer than 5 articles
-  const isThin = (articles?.length || 0) < 5;
+  // Thin content guardrail: noindex, follow when the TOPIC (not the current page) has fewer
+  // than MIN_TOPIC_ARTICLES_FOR_INDEXING articles. Mirrors the sitemap filter in SeoController.
+  const isThin = (total || 0) < MIN_TOPIC_ARTICLES_FOR_INDEXING;
   const robots = isThin
     ? "noindex, follow"
     : "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1";
 
-  const tags = [
-    { title },
+  return [
+    { title: page > 1 ? `${title} — Page ${page}` : title },
     { name: "description", content: description },
     { tagName: "link", rel: "canonical", href: canonicalUrl },
     { name: "robots", content: robots },
@@ -47,29 +56,13 @@ export function meta({ data }) {
     { property: "og:title", content: title },
     { property: "og:description", content: description },
     { property: "og:url", content: canonicalUrl },
-    { property: "og:image", content: "https://newsstand.ng/newsstand-masthead.png" },
+    { property: "og:image", content: DEFAULT_OG_IMAGE },
     { name: "twitter:card", content: "summary_large_image" },
     { name: "twitter:title", content: title },
     { name: "twitter:description", content: description },
-    { name: "twitter:image", content: "https://newsstand.ng/newsstand-masthead.png" },
+    { name: "twitter:image", content: DEFAULT_OG_IMAGE },
+    ...paginationLinks(topicPath, page, totalPages),
   ];
-
-  if (page > 1) {
-    tags.push({
-      tagName: "link",
-      rel: "prev",
-      href: `https://newsstand.ng/topic/${topic.slug}${page - 1 === 1 ? "" : `?page=${page - 1}`}`
-    });
-  }
-  if (page < totalPages) {
-    tags.push({
-      tagName: "link",
-      rel: "next",
-      href: `https://newsstand.ng/topic/${topic.slug}?page=${page + 1}`
-    });
-  }
-
-  return tags;
 }
 
 export async function loader({ params, request }) {
@@ -127,16 +120,24 @@ export default function TopicHubPage() {
 
   const totalPages = Math.ceil(total / pageSize);
 
+  const topicItemList = buildArticleItemList(articles, (page - 1) * pageSize + 1, pageSize);
+  const aboutType =
+    topic.type === "Person" ? "Person"
+      : topic.type === "Place" ? "Place"
+      : topic.type === "Organization" ? "Organization"
+      : "Thing";
+
   const collectionPageJsonLd = {
     "@context": "https://schema.org",
     "@type": "CollectionPage",
     "name": `${topic.name} News & Reports`,
     "description": topic.description || `Aggregated news coverage and reports regarding ${topic.name}.`,
-    "url": `https://newsstand.ng/topic/${topic.slug}`,
+    "url": paginatedUrl(`/topic/${topic.slug}`, page),
     "about": {
-      "@type": topic.type === "Person" ? "Person" : topic.type === "Place" ? "Place" : "Thing",
+      "@type": aboutType,
       "name": topic.name
     },
+    ...(topicItemList ? { "mainEntity": topicItemList } : {}),
     "publisher": {
       "@type": "NewsMediaOrganization",
       "name": "News Stand NG",
@@ -152,17 +153,11 @@ export default function TopicHubPage() {
         "@type": "ListItem",
         "position": 1,
         "name": "Home",
-        "item": "https://newsstand.ng"
+        "item": "https://newsstand.ng/"
       },
       {
         "@type": "ListItem",
         "position": 2,
-        "name": "Topics",
-        "item": "https://newsstand.ng"
-      },
-      {
-        "@type": "ListItem",
-        "position": 3,
         "name": topic.name,
         "item": `https://newsstand.ng/topic/${topic.slug}`
       }

@@ -133,20 +133,6 @@ export default function Navbar({
                           <div className="tracker-item-desc">Parallel Market vs. CBN NAFEM Rates</div>
                         </div>
                       </a>
-                      <a href="/fuel-price-nigeria" className="tracker-dropdown-item" role="menuitem">
-                        <span className="tracker-icon-badge fuel">⛽</span>
-                        <div className="tracker-item-text">
-                          <div className="tracker-item-title">Fuel Price Tracker</div>
-                          <div className="tracker-item-desc">PMS Petrol Pump Prices Across 36 States</div>
-                        </div>
-                      </a>
-                      <a href="/jamb-waec-news" className="tracker-dropdown-item" role="menuitem">
-                        <span className="tracker-icon-badge exam">🎓</span>
-                        <div className="tracker-item-text">
-                          <div className="tracker-item-title">JAMB & WAEC Tracker</div>
-                          <div className="tracker-item-desc">2026 Examination Calendars & Timetables</div>
-                        </div>
-                      </a>
                       <a href="/elections" className="tracker-dropdown-item" role="menuitem">
                         <span className="tracker-icon-badge vote">🗳️</span>
                         <div className="tracker-item-text">
@@ -404,29 +390,6 @@ export default function Navbar({
               </div>
             </a>
 
-            <a
-              href="/fuel-price-nigeria"
-              className="mobile-tracker-link"
-              onClick={() => setIsMobileMenuOpen(false)}
-            >
-              <span className="tracker-icon-badge fuel">⛽</span>
-              <div>
-                <div className="mobile-tracker-title">Fuel Price Tracker</div>
-                <div className="mobile-tracker-subtitle">State-by-State PMS Petrol Pump Prices</div>
-              </div>
-            </a>
-
-            <a
-              href="/jamb-waec-news"
-              className="mobile-tracker-link"
-              onClick={() => setIsMobileMenuOpen(false)}
-            >
-              <span className="tracker-icon-badge exam">🎓</span>
-              <div>
-                <div className="mobile-tracker-title">JAMB & WAEC Tracker</div>
-                <div className="mobile-tracker-subtitle">2026 Examination Calendars & Timetables</div>
-              </div>
-            </a>
 
             <a
               href="/elections"

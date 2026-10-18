@@ -11,6 +11,7 @@ import {
 } from "../../src/services/analytics";
 import { XIcon, WhatsAppIcon } from "../../src/components/SocialIcons";
 import Footer from "../../src/components/Footer";
+import { toAbsoluteImageUrl, buildAuthorNode } from "../utils/seo";
 
 const CommentSection = lazy(() => import("../../src/components/CommentSection"));
 import {
@@ -45,12 +46,7 @@ export function meta({ data }) {
     article.summary ||
     "Read the latest curated news report on News Stand NG.";
   const canonicalUrl = `https://newsstand.ng/news/${article.slug}`;
-  let imageUrl = article.imageUrl || "https://newsstand.ng/newsstand-masthead.png";
-  if (imageUrl.startsWith("/")) {
-    imageUrl = `https://newsstand.ng${imageUrl}`;
-  } else if (imageUrl.startsWith("http://")) {
-    imageUrl = imageUrl.replace(/^http:\/\//i, "https://");
-  }
+  const imageUrl = toAbsoluteImageUrl(article.imageUrl);
 
   return [
     { title },
@@ -196,15 +192,13 @@ export default function ArticleLandingPage() {
     },
     "headline": article.title,
     "description": article.excerpt || article.summary || article.title,
-    "image": [article.imageUrl || "https://newsstand.ng/newsstand-masthead.png"],
+    "image": [toAbsoluteImageUrl(article.imageUrl)],
     "datePublished": article.publishedAt,
     "dateModified": article.updatedAt || article.publishedAt,
     "articleSection": article.category || "General",
     "inLanguage": "en-NG",
-    "author": {
-      "@type": "Person",
-      "name": article.author ? `Reported by ${article.author}` : `Reported by ${article.source || "News Stand NG"}`
-    },
+    "author": buildAuthorNode(article),
+    ...(article.sourceUrl ? { "isBasedOn": article.sourceUrl } : {}),
     "publisher": {
       "@type": "NewsMediaOrganization",
       "name": "News Stand NG",

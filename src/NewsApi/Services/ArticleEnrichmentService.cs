@@ -20,6 +20,54 @@ public partial class ArticleEnrichmentService(
     private readonly IHttpClientFactory _httpClientFactory = httpClientFactory;
     private readonly ILogger<ArticleEnrichmentService> _logger = logger;
 
+    // In-memory circuit breaker state: if Cloud AI fails, all subsequent articles in the batch
+    // and subsequent requests skip Cloud AI and immediately use local ML (TextRank) until cooldown expires.
+    private static DateTime _circuitBreakerUntilUtc = DateTime.MinValue;
+    private static readonly TimeSpan CircuitBreakerCooldown = TimeSpan.FromMinutes(10);
+    private static readonly object CircuitLock = new();
+
+    public bool IsCircuitBreakerActive => IsCircuitBreakerOpen();
+
+    public static bool IsCircuitBreakerOpen()
+    {
+        lock (CircuitLock)
+        {
+            return DateTime.UtcNow < _circuitBreakerUntilUtc;
+        }
+    }
+
+    public static void TripCircuitBreaker(string reason, ILogger logger)
+    {
+        lock (CircuitLock)
+        {
+            _circuitBreakerUntilUtc = DateTime.UtcNow.Add(CircuitBreakerCooldown);
+        }
+        logger.LogWarning(
+            "Cloud AI Circuit Breaker TRIPPED until {UntilUtc:u}: {Reason}. Falling back to local ML (TextRank) for batch and subsequent requests.",
+            _circuitBreakerUntilUtc, reason);
+    }
+
+    public static void ResetCircuitBreaker()
+    {
+        lock (CircuitLock)
+        {
+            _circuitBreakerUntilUtc = DateTime.MinValue;
+        }
+    }
+
+    public Task<bool> IsCloudAiAvailableAsync(CancellationToken cancellationToken = default)
+    {
+        var geminiKey = _config["Gemini:ApiKey"];
+        var geminiEnabled = _config.GetValue<bool>("AiEnrichment:GeminiEnabled", false);
+
+        if (string.IsNullOrWhiteSpace(geminiKey) || !geminiEnabled)
+        {
+            return Task.FromResult(false);
+        }
+
+        return Task.FromResult(!IsCircuitBreakerOpen());
+    }
+
     [GeneratedRegex(@"\s+")]
     private static partial Regex WhitespaceRegex();
 
@@ -112,6 +160,27 @@ public partial class ArticleEnrichmentService(
 
         _logger.LogInformation("Processing enrichment for batch of {Count} articles", unenrichedArticles.Count);
 
+        var geminiKey = _config["Gemini:ApiKey"];
+        var geminiEnabled = _config.GetValue<bool>("AiEnrichment:GeminiEnabled", false);
+
+        // Pre-flight check: determine whether Cloud AI is eligible for this batch
+        bool useCloudAi = !string.IsNullOrWhiteSpace(geminiKey) && geminiEnabled && !IsCircuitBreakerOpen();
+
+        if (geminiEnabled && !string.IsNullOrWhiteSpace(geminiKey) && IsCircuitBreakerOpen())
+        {
+            _logger.LogInformation(
+                "Batch enrichment: Cloud AI circuit breaker is ACTIVE (cooldown until {Cooldown:u}). Processing entire batch with local ML (TextRank).",
+                _circuitBreakerUntilUtc);
+        }
+        else if (useCloudAi)
+        {
+            _logger.LogInformation("Batch enrichment: Cloud AI is ENABLED. Probing availability with batch.");
+        }
+        else
+        {
+            _logger.LogInformation("Batch enrichment: Cloud AI is disabled or unconfigured. Processing batch with local ML (TextRank).");
+        }
+
         int count = 0;
         foreach (var article in unenrichedArticles)
         {
@@ -122,13 +191,26 @@ public partial class ArticleEnrichmentService(
                     .Select(at => at.Topic!.Name)
                     .ToList();
 
+                // If useCloudAi is false (either unconfigured, circuit breaker already active, or tripped by a previous article in this batch),
+                // pass skipCloudAi: true to directly use TextRank with 0 network calls.
                 var result = await GenerateEnrichmentAsync(
                     article.Title,
                     article.Summary,
                     article.Content,
                     article.Category,
                     knownEntities,
+                    skipCloudAi: !useCloudAi,
                     cancellationToken);
+
+                // If Cloud AI was attempted on this article but failed and returned TextRank-Extractive,
+                // that means Cloud AI is unavailable! Flip useCloudAi = false for the entire remainder of the batch!
+                if (useCloudAi && result.Engine == "TextRank-Extractive")
+                {
+                    _logger.LogWarning(
+                        "Batch enrichment: Cloud AI failed for article '{ArticleId}'. Tripping circuit breaker and falling back to local ML for all remaining {Remaining} articles in batch.",
+                        article.Id, unenrichedArticles.Count - count - 1);
+                    useCloudAi = false;
+                }
 
                 var enrichment = new ArticleEnrichment
                 {
@@ -169,28 +251,42 @@ public partial class ArticleEnrichmentService(
             article.Content,
             article.Category,
             entities,
+            skipCloudAi: false,
             cancellationToken);
     }
 
-    public async Task<ArticleEnrichmentResult> GenerateEnrichmentAsync(
+    public Task<ArticleEnrichmentResult> GenerateEnrichmentAsync(
         string title,
         string? summary,
         string? content,
         string? category,
         IEnumerable<string>? knownEntities = null,
         CancellationToken cancellationToken = default)
+        => GenerateEnrichmentAsync(title, summary, content, category, knownEntities, skipCloudAi: false, cancellationToken);
+
+    public async Task<ArticleEnrichmentResult> GenerateEnrichmentAsync(
+        string title,
+        string? summary,
+        string? content,
+        string? category,
+        IEnumerable<string>? knownEntities,
+        bool skipCloudAi,
+        CancellationToken cancellationToken = default)
     {
-        // 1. Check optional Gemini enhancement
+        // 1. Check optional Gemini enhancement if not explicitly skipped and circuit breaker is closed
         var geminiKey = _config["Gemini:ApiKey"];
         var geminiEnabled = _config.GetValue<bool>("AiEnrichment:GeminiEnabled", false);
 
-        if (!string.IsNullOrWhiteSpace(geminiKey) && geminiEnabled)
+        if (!skipCloudAi && !IsCircuitBreakerOpen() && !string.IsNullOrWhiteSpace(geminiKey) && geminiEnabled)
         {
             var geminiResult = await TryEnrichWithGeminiAsync(title, summary, content, category, geminiKey, cancellationToken);
             if (geminiResult != null)
             {
                 return geminiResult;
             }
+
+            // Cloud AI failed or timed out: trip the circuit breaker immediately
+            TripCircuitBreaker("Gemini enrichment failed, timed out, or returned an error status", _logger);
         }
 
         // 2. Default Zero-API-Key Local Extractive Engine (TextRank / LexRank)
@@ -614,10 +710,19 @@ public partial class ArticleEnrichmentService(
                     }
                 }
             }
+            else
+            {
+                _logger.LogWarning("Gemini enrichment returned non-success HTTP {StatusCode} ({Reason})",
+                    (int)response.StatusCode, response.ReasonPhrase);
+            }
         }
-        catch (Exception ex) when (ex is not OperationCanceledException)
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
-            _logger.LogWarning(ex, "Gemini enrichment failed or timed out. Falling back to local TextRank.");
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Gemini enrichment failed or timed out: {Message}. Falling back to local TextRank.", ex.Message);
         }
 
         return null;

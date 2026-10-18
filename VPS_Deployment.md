@@ -95,8 +95,9 @@ docker compose version
    GEMINI_API_KEY=AIzaSy...YOUR_GOOGLE_AI_STUDIO_KEY
    AiEnrichment__GeminiEnabled=true
 
-   # Search Engines & Telemetry
+   # Search Engines, Scraper Concurrency & Telemetry
    INDEXNOW_KEY=3a7b9c1d2e4f5a6b7c8d9e0f1a2b3c4d
+   SCRAPER_MAX_CONCURRENCY=4
    YOUTUBE_API_KEY=
    GCP_TTS_API_KEY=
 
@@ -108,9 +109,11 @@ docker compose version
    ```
 
 3. **Verify docker-compose.yml port bindings**:
-   Ensure ports are bound locally to `127.0.0.1` so they are shielded behind the reverse proxy:
+   Ports are bound locally to `127.0.0.1` in `docker-compose.yml` so they are shielded behind the Caddy reverse proxy:
+   - `127.0.0.1:5432:5432` for `postgres`
    - `127.0.0.1:5000:8080` for `news-api`
    - `127.0.0.1:5001:8080` for `admin-dashboard`
+   - `127.0.0.1:3000:3000` for `news-web` (optional self-hosted SSR container when not using Vercel)
 
 4. **Build and Launch Containers**:
    ```bash

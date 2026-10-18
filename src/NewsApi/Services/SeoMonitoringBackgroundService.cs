@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using NewsApi.Models;
 
 namespace NewsApi.Services;
@@ -127,26 +128,27 @@ public class SeoMonitoringBackgroundService(
         }
 
         // 4. Evaluate individual queries for decay and CTR opportunity
+        var db = scope.ServiceProvider.GetRequiredService<NewsApi.Data.NewsDbContext>();
         foreach (var q in performance.TopQueries.Take(15))
         {
-            var matchingPage = performance.TopPages.FirstOrDefault(p => p.Page.Contains(q.Query, StringComparison.OrdinalIgnoreCase))?.Page
-                ?? "/news";
+            var matchingPage = ResolveMatchingPage(q.Query, performance.TopPages.Select(p => p.Page)) ?? "/news";
+            var (currentTitle, category, hasEnrichment) = await ResolveArticleContextAsync(db, matchingPage, q.Query, ct);
 
             var opp = await anomalyEngine.EvaluateCtrOpportunityAsync(
                 query: q.Query,
                 pageUrl: matchingPage,
-                currentTitle: q.Query,
-                category: "general",
+                currentTitle: currentTitle,
+                category: category,
                 position: q.Position,
                 actualCtr: q.Ctr,
                 impressions: q.Impressions,
-                hasEnrichment: true,
+                hasEnrichment: hasEnrichment,
                 ct: ct);
 
             if (opp is not null)
             {
                 // Invoke generative AI feedback loop for headline alternatives
-                var (titles, faqs) = await feedbackLoop.GenerateOptimizationsAsync(q.Query, q.Query, matchingPage, "general", ct);
+                var (titles, faqs) = await feedbackLoop.GenerateOptimizationsAsync(q.Query, currentTitle, matchingPage, category, ct);
                 opp.AiHeadlineSuggestions = titles;
                 opp.SuggestedFaqPairs = faqs;
                 opportunities.Add(opp);
@@ -172,23 +174,86 @@ public class SeoMonitoringBackgroundService(
 
         // 6. Autonomous Self-Healing: Backfill missing enrichments if needed
         var autoRemediation = await feedbackLoop.ExecuteRemediationAsync("BackfillEnrichment", null, ct);
-        _recentRemediations.Insert(0, autoRemediation);
-        if (_recentRemediations.Count > 20)
-        {
-            _recentRemediations.RemoveAt(_recentRemediations.Count - 1);
-        }
 
         scorecard.ActiveAlerts = alerts;
         scorecard.CtrOpportunities = opportunities;
-        scorecard.RecentRemediations = [.. _recentRemediations];
 
         lock (_scorecardLock)
         {
+            _recentRemediations.Insert(0, autoRemediation);
+            if (_recentRemediations.Count > 20)
+            {
+                _recentRemediations.RemoveAt(_recentRemediations.Count - 1);
+            }
+            scorecard.RecentRemediations = [.. _recentRemediations];
             _cachedScorecard = scorecard;
         }
 
         _logger.LogInformation(
             "SeoMonitoringBackgroundService cycle complete. Score: {Score}/100 ({Grade}), Alerts: {Alerts}, Opportunities: {Opps}",
             scorecard.OverallScore, scorecard.Grade, alerts.Count, opportunities.Count);
+    }
+
+    /// <summary>
+    /// Picks the ranking page whose URL slug shares the most tokens with the query
+    /// (falls back to a direct substring match). Returns null when nothing overlaps.
+    /// </summary>
+    internal static string? ResolveMatchingPage(string query, IEnumerable<string> pages)
+    {
+        if (string.IsNullOrWhiteSpace(query)) return null;
+
+        var tokens = query.ToLowerInvariant()
+            .Split([' ', '-', '_', ',', '.', '?', '!', '\'', '"'], StringSplitOptions.RemoveEmptyEntries)
+            .Where(t => t.Length > 2)
+            .Distinct()
+            .ToArray();
+
+        string? best = null;
+        var bestScore = 0;
+        foreach (var page in pages)
+        {
+            if (string.IsNullOrWhiteSpace(page)) continue;
+            var lower = page.ToLowerInvariant();
+            if (lower.Contains(query.Trim().ToLowerInvariant().Replace(' ', '-'))) return page;
+
+            var score = tokens.Count(lower.Contains);
+            if (score > bestScore)
+            {
+                bestScore = score;
+                best = page;
+            }
+        }
+
+        return bestScore >= Math.Min(2, Math.Max(1, tokens.Length)) ? best : null;
+    }
+
+    private static async Task<(string Title, string Category, bool HasEnrichment)> ResolveArticleContextAsync(
+        NewsApi.Data.NewsDbContext db,
+        string pageUrl,
+        string fallbackTitle,
+        CancellationToken ct)
+    {
+        const string marker = "/news/";
+        var idx = pageUrl.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
+        if (idx < 0) return (fallbackTitle, "general", false);
+
+        var slug = pageUrl[(idx + marker.Length)..].Split('?', '#', '/')[0];
+        if (string.IsNullOrWhiteSpace(slug)) return (fallbackTitle, "general", false);
+
+        var article = await db.Articles
+            .AsNoTracking()
+            .Where(a => a.Slug == slug)
+            .Select(a => new
+            {
+                a.Title,
+                a.SeoTitle,
+                a.Category,
+                HasEnrichment = a.Enrichment != null
+            })
+            .FirstOrDefaultAsync(ct);
+
+        return article is null
+            ? (fallbackTitle, "general", false)
+            : (article.SeoTitle ?? article.Title, article.Category ?? "general", article.HasEnrichment);
     }
 }

@@ -27,19 +27,22 @@
                 
                 <!-- Back button -->
                 <Button Grid.Column="0"
-                        Text="← Back"
+                        Text="Back"
+                        ImageSource="ic_back.png"
+                        ContentLayout="Left,5"
                         Clicked="OnBackClicked"
                         Padding="10,0"
                         HeightRequest="36"
                         MinimumHeightRequest="36"
-                        MinimumWidthRequest="62"
+                        MinimumWidthRequest="68"
                         FontSize="12"
                         FontAttributes="Bold"
                         CornerRadius="10"
                         BorderWidth="1.5"
                         BorderColor="{AppThemeBinding Light={StaticResource ButtonBorderLight}, Dark={StaticResource ButtonBorderDark}}"
                         BackgroundColor="{AppThemeBinding Light={StaticResource ButtonBgLight}, Dark={StaticResource ButtonSecondaryBgDark}}"
-                        TextColor="{AppThemeBinding Light={StaticResource ButtonTextLight}, Dark={StaticResource ButtonTextDark}}" />
+                        TextColor="{AppThemeBinding Light={StaticResource ButtonTextLight}, Dark={StaticResource ButtonTextDark}}"
+                        SemanticProperties.Description="Back" />
 
                 <!-- Publisher / Source Info (compact single line) -->
                 <Label Grid.Column="1"
@@ -85,37 +88,73 @@
         </Border>
 
         <!-- ══════════════════════════════════════════════
-             SPONSORED ARTICLE DISCLOSURE BAR
+             SPONSOR DISCLOSURE & IN-ARTICLE HEADER SPONSOR BAR
         ══════════════════════════════════════════════ -->
-        <Border Grid.Row="1"
-                x:Name="SponsoredDisclosureBanner"
-                IsVisible="{Binding IsSponsored}"
-                Padding="12,6"
-                BackgroundColor="{AppThemeBinding Light=#FFF8E1, Dark=#2A2300}"
-                StrokeShape="RoundRectangle 0"
-                StrokeThickness="0,0,0,1"
-                Stroke="{AppThemeBinding Light=#FFE082, Dark=#FFE082}">
-            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8" VerticalOptions="Center">
-                <Label Grid.Column="0" Text="✨" FontSize="12" VerticalOptions="Center" />
-                <Label Grid.Column="1"
-                       x:Name="SponsoredDisclosureLabel"
-                       Text="{Binding DisplaySponsor, StringFormat='SPONSORED CONTENT • Presented by {0}'}"
-                       FontSize="11"
-                       FontAttributes="Bold"
-                       TextColor="{AppThemeBinding Light=#B78103, Dark=#FFE082}"
-                       VerticalOptions="Center" />
-                <Border Grid.Column="2"
-                        Padding="6,2"
-                        BackgroundColor="{AppThemeBinding Light=#B78103, Dark=#FFE082}"
-                        StrokeShape="RoundRectangle 4"
-                        StrokeThickness="0">
-                    <Label Text="PARTNER"
-                           FontSize="9"
+        <VerticalStackLayout Grid.Row="1" Spacing="0">
+            <!-- Sponsored Article Disclosure (Direct sponsored article) -->
+            <Border x:Name="SponsoredDisclosureBanner"
+                    IsVisible="{Binding IsSponsored}"
+                    Padding="12,6"
+                    BackgroundColor="{AppThemeBinding Light=#FFF8E1, Dark=#2A2300}"
+                    StrokeShape="RoundRectangle 0"
+                    StrokeThickness="0,0,0,1"
+                    Stroke="{AppThemeBinding Light=#FFE082, Dark=#FFE082}">
+                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8" VerticalOptions="Center">
+                    <Label Grid.Column="0" Text="✨" FontSize="12" VerticalOptions="Center" />
+                    <Label Grid.Column="1"
+                           x:Name="SponsoredDisclosureLabel"
+                           Text="{Binding DisplaySponsor, StringFormat='SPONSORED CONTENT • Presented by {0}'}"
+                           FontSize="11"
                            FontAttributes="Bold"
-                           TextColor="{AppThemeBinding Light=White, Dark=Black}" />
-                </Border>
-            </Grid>
-        </Border>
+                           TextColor="{AppThemeBinding Light=#B78103, Dark=#FFE082}"
+                           VerticalOptions="Center" />
+                    <Border Grid.Column="2"
+                            Padding="6,2"
+                            BackgroundColor="{AppThemeBinding Light=#B78103, Dark=#FFE082}"
+                            StrokeShape="RoundRectangle 4"
+                            StrokeThickness="0">
+                        <Label Text="PARTNER"
+                               FontSize="9"
+                               FontAttributes="Bold"
+                               TextColor="{AppThemeBinding Light=White, Dark=Black}" />
+                    </Border>
+                </Grid>
+            </Border>
+
+            <!-- In-Article Top Header Sponsor Bar (InArticle_Header) -->
+            <Border IsVisible="{Binding HasHeaderSponsor}"
+                    Padding="12,6"
+                    BackgroundColor="{AppThemeBinding Light=#FFFDF5, Dark=#1E1B13}"
+                    StrokeShape="RoundRectangle 0"
+                    StrokeThickness="0,0,0,1"
+                    Stroke="{AppThemeBinding Light=#FDE68A, Dark=#78350F}">
+                <Border.GestureRecognizers>
+                    <TapGestureRecognizer Command="{Binding OpenInArticleSponsorCommand}"
+                                          CommandParameter="{Binding HeaderSponsor}" />
+                </Border.GestureRecognizers>
+                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8" VerticalOptions="Center">
+                    <Label Grid.Column="0" Text="✨" FontSize="12" VerticalOptions="Center" />
+                    <Label Grid.Column="1"
+                           Text="{Binding HeaderSponsor.SponsorName, StringFormat='READER SPONSOR • Presented by {0}'}"
+                           FontSize="11"
+                           FontAttributes="Bold"
+                           TextColor="{AppThemeBinding Light=#B45309, Dark=#FDE68A}"
+                           VerticalOptions="Center"
+                           MaxLines="1"
+                           LineBreakMode="TailTruncation" />
+                    <Border Grid.Column="2"
+                            Padding="6,2"
+                            BackgroundColor="{AppThemeBinding Light=#FEF3C7, Dark=#78350F}"
+                            StrokeShape="RoundRectangle 4"
+                            StrokeThickness="0">
+                        <Label Text="LEARN MORE →"
+                               FontSize="9"
+                               FontAttributes="Bold"
+                               TextColor="{AppThemeBinding Light=#B45309, Dark=#FDE68A}" />
+                    </Border>
+                </Grid>
+            </Border>
+        </VerticalStackLayout>
 
         <!-- Loading Progress Bar -->
         <ProgressBar Grid.Row="2"
@@ -300,6 +339,73 @@
                         </Border>
 
                         <!-- ══════════════════════════════════════════════════════════
+                             ZONE 2: IN-ARTICLE MID-CONTENT SPONSOR BREAKOUT BOX
+                        ══════════════════════════════════════════════════════════ -->
+                        <Border IsVisible="{Binding HasMidContentSponsor}"
+                                Padding="16,14"
+                                BackgroundColor="{AppThemeBinding Light=#FFFDF5, Dark=#1E1B13}"
+                                StrokeShape="RoundRectangle 12"
+                                StrokeThickness="1.5"
+                                Stroke="{AppThemeBinding Light=#FDE68A, Dark=#78350F}">
+                            <Border.GestureRecognizers>
+                                <TapGestureRecognizer Command="{Binding OpenInArticleSponsorCommand}"
+                                                      CommandParameter="{Binding MidContentSponsor}" />
+                            </Border.GestureRecognizers>
+                            <VerticalStackLayout Spacing="8">
+                                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="6" VerticalOptions="Center">
+                                    <Border Grid.Column="0"
+                                            Padding="6,2"
+                                            BackgroundColor="{AppThemeBinding Light=#FEF3C7, Dark=#78350F}"
+                                            StrokeShape="RoundRectangle 6"
+                                            StrokeThickness="0">
+                                        <Label Text="✨ SPONSORED PERSPECTIVE"
+                                               FontSize="9"
+                                               FontAttributes="Bold"
+                                               TextColor="{AppThemeBinding Light=#B45309, Dark=#FDE68A}" />
+                                    </Border>
+                                    <Label Grid.Column="1"
+                                           Text="{Binding MidContentSponsor.SponsorName, FallbackValue='Partner'}"
+                                           FontSize="11"
+                                           FontAttributes="Bold"
+                                           TextColor="{AppThemeBinding Light={StaticResource Gray700}, Dark={StaticResource DarkTextSecondary}}"
+                                           MaxLines="1"
+                                           VerticalOptions="Center" />
+                                    <Border Grid.Column="2"
+                                            Padding="5,1"
+                                            BackgroundColor="{AppThemeBinding Light=#E2E8F0, Dark=#334155}"
+                                            StrokeShape="RoundRectangle 4"
+                                            StrokeThickness="0">
+                                        <Label Text="AD"
+                                               FontSize="8"
+                                               FontAttributes="Bold"
+                                               TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray300}}" />
+                                    </Border>
+                                </Grid>
+
+                                <Label Text="{Binding MidContentSponsor.Title}"
+                                       FontFamily="LegacySerifBold"
+                                       FontSize="15"
+                                       FontAttributes="Bold"
+                                       LineHeight="1.25"
+                                       TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource DarkTextPrimary}}" />
+
+                                <Label Text="{Binding MidContentSponsor.Summary}"
+                                       FontFamily="LegacySansBook"
+                                       FontSize="12"
+                                       LineHeight="1.3"
+                                       MaxLines="3"
+                                       LineBreakMode="TailTruncation"
+                                       TextColor="{AppThemeBinding Light={StaticResource Gray700}, Dark={StaticResource DarkTextSecondary}}" />
+
+                                <Label Text="Learn More →"
+                                       FontFamily="LegacySansBold"
+                                       FontSize="11"
+                                       TextColor="{StaticResource AccentBlue}"
+                                       Margin="0,2,0,0" />
+                            </VerticalStackLayout>
+                        </Border>
+
+                        <!-- ══════════════════════════════════════════════════════════
                              OUTBOUND FULL STORY ACTION (Copyright & Fair Use Guardrail)
                         ══════════════════════════════════════════════════════════ -->
                         <Border Padding="16,14"
@@ -352,7 +458,9 @@
                                     <!-- Top Row: WhatsApp Share & 𝕏 Share -->
                                     <Button Grid.Row="0"
                                             Grid.Column="0"
-                                            Text="💬 WhatsApp"
+                                            Text="WhatsApp"
+                                            ImageSource="ic_whatsapp.png"
+                                            ContentLayout="Left,8"
                                             Command="{Binding ShareOnWhatsAppCommand}"
                                             HeightRequest="42"
                                             MinimumHeightRequest="42"
@@ -409,6 +517,70 @@
                                             BorderColor="{AppThemeBinding Light={StaticResource ButtonBorderLight}, Dark={StaticResource ButtonBorderDark}}"
                                             SemanticProperties.Hint="Share this article" />
                                 </Grid>
+                            </VerticalStackLayout>
+                        </Border>
+
+                        <!-- ══════════════════════════════════════════════════════════
+                             ZONE 3: IN-ARTICLE FOOTER PARTNER CALLOUT
+                        ══════════════════════════════════════════════════════════ -->
+                        <Border Margin="0,16,0,0"
+                                IsVisible="{Binding HasFooterSponsor}"
+                                Padding="16,14"
+                                BackgroundColor="{AppThemeBinding Light=#F0FDF4, Dark=#052E16}"
+                                StrokeShape="RoundRectangle 12"
+                                StrokeThickness="1.5"
+                                Stroke="{AppThemeBinding Light=#BBF7D0, Dark=#14532D}">
+                            <Border.GestureRecognizers>
+                                <TapGestureRecognizer Command="{Binding OpenInArticleSponsorCommand}"
+                                                      CommandParameter="{Binding FooterSponsor}" />
+                            </Border.GestureRecognizers>
+                            <VerticalStackLayout Spacing="8">
+                                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="6" VerticalOptions="Center">
+                                    <Border Grid.Column="0"
+                                            Padding="6,2"
+                                            BackgroundColor="{AppThemeBinding Light=#DCFCE7, Dark=#14532D}"
+                                            StrokeShape="RoundRectangle 6"
+                                            StrokeThickness="0">
+                                        <Label Text="🤝 PARTNER PERSPECTIVE"
+                                               FontSize="9"
+                                               FontAttributes="Bold"
+                                               TextColor="{AppThemeBinding Light=#15803D, Dark=#86EFAC}" />
+                                    </Border>
+                                    <Label Grid.Column="1"
+                                           Text="{Binding FooterSponsor.SponsorName, FallbackValue='Partner Showcase'}"
+                                           FontSize="11"
+                                           FontAttributes="Bold"
+                                           TextColor="{AppThemeBinding Light={StaticResource Gray700}, Dark={StaticResource DarkTextSecondary}}"
+                                           MaxLines="1"
+                                           VerticalOptions="Center" />
+                                </Grid>
+
+                                <Label Text="{Binding FooterSponsor.Title}"
+                                       FontFamily="LegacySerifBold"
+                                       FontSize="15"
+                                       FontAttributes="Bold"
+                                       LineHeight="1.25"
+                                       TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource DarkTextPrimary}}" />
+
+                                <Label Text="{Binding FooterSponsor.Summary}"
+                                       FontFamily="LegacySansBook"
+                                       FontSize="12"
+                                       LineHeight="1.3"
+                                       MaxLines="3"
+                                       LineBreakMode="TailTruncation"
+                                       TextColor="{AppThemeBinding Light={StaticResource Gray700}, Dark={StaticResource DarkTextSecondary}}" />
+
+                                <Button Text="Explore Partner Story ↗"
+                                        Command="{Binding OpenInArticleSponsorCommand}"
+                                        CommandParameter="{Binding FooterSponsor}"
+                                        HeightRequest="38"
+                                        MinimumHeightRequest="38"
+                                        FontSize="12"
+                                        FontAttributes="Bold"
+                                        CornerRadius="8"
+                                        BackgroundColor="{AppThemeBinding Light=#16A34A, Dark=#15803D}"
+                                        TextColor="White"
+                                        Margin="0,4,0,0" />
                             </VerticalStackLayout>
                         </Border>
 

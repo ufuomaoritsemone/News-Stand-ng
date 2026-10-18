@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
 using NewsApi.Data;
@@ -144,5 +145,122 @@ public class StoryClusteringTests
         Assert.Equal(0, count);
         var clusters = await db.StoryClusters.ToListAsync();
         Assert.Empty(clusters);
+    }
+
+    [Fact]
+    public async Task FindRelatedArticlesAsync_UsesVectorProjectionAndCachesResults()
+    {
+        using var db = CreateInMemoryDb();
+        using var cache = new MemoryCache(new MemoryCacheOptions());
+        var embeddingProvider = new LocalFallbackEmbeddingProvider();
+        var slugService = new SlugService();
+        var config = new ConfigurationBuilder().Build();
+
+        var service = new StoryClusteringService(
+            db,
+            embeddingProvider,
+            slugService,
+            config,
+            NullLogger<StoryClusteringService>.Instance,
+            cache);
+
+        var now = DateTime.UtcNow;
+        var target = new Article
+        {
+            Id = "rel-target",
+            Title = "CBN raises monetary policy rate to combat inflation in Nigeria",
+            Summary = "The Central Bank of Nigeria increased benchmark interest rates.",
+            Category = "Business",
+            PublishedAt = now.AddHours(-1),
+            Slug = "cbn-raises-mpr-nigeria"
+        };
+
+        var sim1 = new Article
+        {
+            Id = "rel-1",
+            Title = "Central Bank of Nigeria hikes interest rates to curb inflation",
+            Summary = "CBN monetary policy committee raised the benchmark rate today.",
+            Category = "Business",
+            PublishedAt = now.AddHours(-2),
+            Slug = "cbn-hikes-interest-rates"
+        };
+
+        var sim2 = new Article
+        {
+            Id = "rel-2",
+            Title = "Nigerian monetary policy rate raised by Central Bank to tackle inflation",
+            Summary = "Interest rate hike announced by CBN Governor in Abuja.",
+            Category = "Business",
+            PublishedAt = now.AddHours(-3),
+            Slug = "nigerian-mpr-raised-cbn"
+        };
+
+        var sim3 = new Article
+        {
+            Id = "rel-3",
+            Title = "CBN benchmark interest rate hike impacts commercial lending in Nigeria",
+            Summary = "The Central Bank of Nigeria raised interest rates to fight inflation.",
+            Category = "Business",
+            PublishedAt = now.AddHours(-4),
+            Slug = "cbn-benchmark-interest-rate-lending"
+        };
+
+        db.Articles.AddRange(target, sim1, sim2, sim3);
+        await db.SaveChangesAsync();
+
+        await service.RunClusteringAsync();
+
+        var relatedFirst = await service.FindRelatedArticlesAsync("rel-target", limit: 3);
+        Assert.Equal(3, relatedFirst.Count);
+
+        // Remove articles from DB to prove second call hits IMemoryCache
+        db.Articles.RemoveRange(sim1, sim2, sim3);
+        await db.SaveChangesAsync();
+
+        var relatedCached = await service.FindRelatedArticlesAsync("rel-target", limit: 3);
+        Assert.Equal(3, relatedCached.Count);
+    }
+
+    [Fact]
+    public async Task RunClustering_FormsCluster_WithDefaultConfig_WhenCrossPublisherStoriesShareEvent()
+    {
+        using var db = CreateInMemoryDb();
+        var embeddingProvider = new LocalFallbackEmbeddingProvider();
+        var slugService = new SlugService();
+        var config = new ConfigurationBuilder().Build(); // Default threshold (no manual override)
+
+        var service = new StoryClusteringService(
+            db,
+            embeddingProvider,
+            slugService,
+            config,
+            NullLogger<StoryClusteringService>.Instance);
+
+        var now = DateTime.UtcNow;
+        db.Articles.AddRange(
+            new Article
+            {
+                Id = "def-1",
+                Title = "CBN Governor Cardoso announces new Naira foreign exchange rules for banks",
+                Summary = "Central Bank of Nigeria introduces updated FX market guidelines.",
+                Source = "BusinessDay",
+                Category = "Business",
+                PublishedAt = now.AddHours(-2),
+                Slug = "cbn-cardoso-naira-fx-rules"
+            },
+            new Article
+            {
+                Id = "def-2",
+                Title = "Cardoso unveils fresh CBN foreign exchange guidelines to stabilize Naira",
+                Summary = "New circular from the apex bank targets liquidity in the FX market.",
+                Source = "Premium Times",
+                Category = "Business",
+                PublishedAt = now.AddHours(-1),
+                Slug = "cardoso-unveils-cbn-fx-guidelines"
+            });
+        await db.SaveChangesAsync();
+
+        var count = await service.RunClusteringAsync();
+        Assert.Equal(1, count);
     }
 }

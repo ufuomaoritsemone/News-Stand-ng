@@ -1,0 +1,389 @@
+@page
+@model AdminDashboard.Pages.SystemHealthModel
+@{
+    ViewData["Title"] = "System Health & Service Heartbeats | News Stand NG";
+    var report = Model.HealthReport;
+    var isHealthy = report?.Status == "Healthy" && Model.LivenessProbeSuccess && Model.ReadinessProbeSuccess;
+}
+
+<div class="container-fluid px-4 py-3">
+
+    <!-- SaaS Page Header -->
+    <div class="saas-page-header">
+        <div>
+            <div class="d-flex align-items-center gap-3">
+                <h1 class="saas-page-title mb-0"><i class="bi bi-heart-pulse-fill text-danger"></i> System Health &amp; Telemetry</h1>
+                @if (isHealthy)
+                {
+                    <span class="badge bg-success rounded-pill px-3 py-1" style="font-size: 0.75rem; letter-spacing: 0.5px;">
+                        <i class="bi bi-check-circle-fill me-1"></i> ALL SYSTEMS HEALTHY
+                    </span>
+                }
+                else if (report?.Status == "Degraded" || !Model.ReadinessProbeSuccess)
+                {
+                    <span class="badge bg-warning text-dark rounded-pill px-3 py-1" style="font-size: 0.75rem; letter-spacing: 0.5px;">
+                        <i class="bi bi-exclamation-triangle-fill me-1"></i> ATTENTION NEEDED
+                    </span>
+                }
+                else
+                {
+                    <span class="badge bg-danger rounded-pill px-3 py-1" style="font-size: 0.75rem; letter-spacing: 0.5px;">
+                        <i class="bi bi-x-circle-fill me-1"></i> CRITICAL INCIDENT
+                    </span>
+                }
+                <span class="badge bg-secondary rounded-pill px-3 py-1" style="font-size: 0.72rem;">@(report?.Environment ?? "Production")</span>
+            </div>
+            <p class="saas-page-desc mt-1">Live telemetry, container probes, database responsiveness, background workers, and storage telemetry.</p>
+        </div>
+        <div class="saas-toolbar">
+            <a href="/SystemHealth" class="btn btn-saas-primary btn-sm"><i class="bi bi-arrow-clockwise me-1"></i> Refresh Probes</a>
+        </div>
+    </div>
+
+    <!-- Action Feedback Toast/Alert -->
+    @if (!string.IsNullOrEmpty(Model.ActionFeedback))
+    {
+        <div class="alert alert-@(Model.ActionFeedbackType ?? "info") alert-dismissible fade show glass-card border-@(Model.ActionFeedbackType ?? "info") text-white mb-4" role="alert">
+            <i class="bi bi-info-circle-fill me-2"></i> @Model.ActionFeedback
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show glass-card border-danger text-white mb-4" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2 text-danger"></i> @Model.ErrorMessage
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    <!-- Hero Operational Status Banner -->
+    <div class="card glass-card hero-status-card border-0 mb-4 shadow-sm">
+        <div class="card-body p-4">
+            <div class="row align-items-center g-3">
+                <div class="col-lg-7">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="rounded-circle p-3 d-flex align-items-center justify-content-center"
+                             style="width: 58px; height: 58px; background: @(isHealthy ? "rgba(16, 185, 129, 0.15)" : "rgba(239, 68, 68, 0.15)");">
+                            <i class="bi @(isHealthy ? "bi-shield-check text-success" : "bi-shield-exclamation text-warning") fs-2"></i>
+                        </div>
+                        <div>
+                            <h3 class="h4 mb-1 text-main fw-bold">
+                                @(isHealthy ? "All Microservices Operational" : (report?.Status == "Degraded" ? "System Degraded — Some Subsystems Slower Than Usual" : "Operational Disruptions Detected"))
+                            </h3>
+                            <div class="d-flex align-items-center gap-3 text-muted small flex-wrap">
+                                <span><i class="bi bi-clock me-1"></i> Server Time: <strong class="text-main">@(report?.ServerTimeUtc.ToString("yyyy-MM-dd HH:mm:ss") ?? DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss")) UTC</strong></span>
+                                <span>•</span>
+                                <span><i class="bi bi-hourglass-split me-1"></i> Uptime: <strong class="text-main">@(report?.Process.UptimeFormatted ?? "N/A")</strong></span>
+                                <span>•</span>
+                                <span><i class="bi bi-hdd-network me-1"></i> Host: <strong class="text-main">@(report?.Process.OsDescription ?? "Linux / Docker")</strong></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-5">
+                    <div class="d-flex align-items-center justify-content-lg-end gap-2 flex-wrap">
+                        <form method="post" asp-page-handler="PingDatabase" class="d-inline">
+                            <button type="submit" class="btn btn-outline-info btn-sm">
+                                <i class="bi bi-speedometer2 me-1"></i> Ping Database
+                            </button>
+                        </form>
+                        <form method="post" asp-page-handler="PurgeCache" class="d-inline" onsubmit="return confirm('Purge cached image files and flush in-memory settings cache?');">
+                            <button type="submit" class="btn btn-outline-warning btn-sm">
+                                <i class="bi bi-trash3 me-1"></i> Purge Caches
+                            </button>
+                        </form>
+                        <button type="button" class="btn btn-outline-light btn-sm" data-bs-toggle="modal" data-bs-target="#restartGuideModal">
+                            <i class="bi bi-terminal me-1"></i> Container Ops Guide
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Primary Service Cards Grid -->
+    <div class="row g-4 mb-4">
+
+        <!-- 1. NewsApi Web Process -->
+        <div class="col-md-6 col-xl-3">
+            <div class="card glass-card h-100 border-0 shadow-sm">
+                <div class="card-body p-4 d-flex flex-column justify-content-between">
+                    <div>
+                        <div class="d-flex align-items-center justify-content-between mb-3">
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="rounded p-2 bg-primary bg-opacity-10 text-primary">
+                                    <i class="bi bi-cpu-fill fs-5"></i>
+                                </span>
+                                <h5 class="card-title mb-0 text-white fw-bold">NewsApi Core</h5>
+                            </div>
+                            <span class="badge @(Model.LivenessProbeSuccess ? "bg-success" : "bg-danger") rounded-pill">
+                                @(Model.LivenessProbeSuccess ? "Active" : "Down")
+                            </span>
+                        </div>
+
+                        <div class="list-group list-group-flush bg-transparent small mb-3">
+                            <div class="list-group-item bg-transparent text-muted px-0 py-2 d-flex justify-content-between border-secondary border-opacity-25">
+                                <span>Liveness Probe:</span>
+                                <strong class="@(Model.LivenessProbeSuccess ? "text-success" : "text-danger")">
+                                    /healthz/liveness (@Model.LivenessStatusCode)
+                                </strong>
+                            </div>
+                            <div class="list-group-item bg-transparent text-muted px-0 py-2 d-flex justify-content-between border-secondary border-opacity-25">
+                                <span>Working Set RAM:</span>
+                                <strong class="text-white">@(report?.Process.WorkingSetMb ?? 0) MB</strong>
+                            </div>
+                            <div class="list-group-item bg-transparent text-muted px-0 py-2 d-flex justify-content-between border-secondary border-opacity-25">
+                                <span>GC Heap:</span>
+                                <strong class="text-white">@(report?.Process.GcAllocatedMb ?? 0) MB</strong>
+                            </div>
+                            <div class="list-group-item bg-transparent text-muted px-0 py-2 d-flex justify-content-between border-secondary border-opacity-25">
+                                <span>Runtime / Arch:</span>
+                                <span class="text-white-50">.NET @(report?.Process.DotNetVersion?.Split('+')[0] ?? "10.0") (@(report?.Process.Architecture ?? "x64"))</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="pt-2 border-top border-secondary border-opacity-25 text-muted small">
+                        <i class="bi bi-fingerprint me-1"></i> PID: @(report?.Process.ProcessId ?? 0) · Process isolation intact
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. Database Subsystem -->
+        <div class="col-md-6 col-xl-3">
+            <div class="card glass-card h-100 border-0 shadow-sm">
+                <div class="card-body p-4 d-flex flex-column justify-content-between">
+                    <div>
+                        <div class="d-flex align-items-center justify-content-between mb-3">
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="rounded p-2 bg-success bg-opacity-10 text-success">
+                                    <i class="bi bi-database-fill fs-5"></i>
+                                </span>
+                                <h5 class="card-title mb-0 text-white fw-bold">Database Store</h5>
+                            </div>
+                            <span class="badge @(Model.ReadinessProbeSuccess ? "bg-success" : "bg-danger") rounded-pill">
+                                @(report?.Database.Provider ?? "SQLite")
+                            </span>
+                        </div>
+
+                        <div class="list-group list-group-flush bg-transparent small mb-3">
+                            <div class="list-group-item bg-transparent text-muted px-0 py-2 d-flex justify-content-between border-secondary border-opacity-25">
+                                <span>Readiness Probe:</span>
+                                <strong class="@(Model.ReadinessProbeSuccess ? "text-success" : "text-danger")">
+                                    /healthz/readiness (@Model.ReadinessStatusCode)
+                                </strong>
+                            </div>
+                            <div class="list-group-item bg-transparent text-muted px-0 py-2 d-flex justify-content-between border-secondary border-opacity-25">
+                                <span>Roundtrip Latency:</span>
+                                <strong class="@((report?.Database.LatencyMs ?? 0) < 50 ? "text-success" : "text-warning")">
+                                    @(report?.Database.LatencyMs ?? 0) ms
+                                </strong>
+                            </div>
+                            <div class="list-group-item bg-transparent text-muted px-0 py-2 d-flex justify-content-between border-secondary border-opacity-25">
+                                <span>Articles Ingested:</span>
+                                <strong class="text-white">@((report?.Database.TotalArticles ?? 0).ToString("N0"))</strong>
+                            </div>
+                            <div class="list-group-item bg-transparent text-muted px-0 py-2 d-flex justify-content-between border-secondary border-opacity-25">
+                                <span>Sources / Outlets:</span>
+                                <strong class="text-white">@(report?.Database.TotalSources ?? 0) active</strong>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="pt-2 border-top border-secondary border-opacity-25 text-muted small">
+                        <i class="bi bi-chat-dots me-1"></i> @((report?.Database.TotalComments ?? 0).ToString("N0")) comments · @((report?.Database.TotalFeedbacks ?? 0).ToString("N0")) feedbacks
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. News Scraper & Ingestion Worker -->
+        <div class="col-md-6 col-xl-3">
+            <div class="card glass-card h-100 border-0 shadow-sm">
+                <div class="card-body p-4 d-flex flex-column justify-content-between">
+                    <div>
+                        <div class="d-flex align-items-center justify-content-between mb-3">
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="rounded p-2 bg-info bg-opacity-10 text-info">
+                                    <i class="bi bi-robot fs-5"></i>
+                                </span>
+                                <h5 class="card-title mb-0 text-white fw-bold">Scraper Service</h5>
+                            </div>
+                            <span class="badge @(report?.Workers.ScraperStatus == "Active & Ingesting" ? "bg-success" : (report?.Workers.ScraperStatus?.Contains("Idle") == true ? "bg-info" : "bg-warning text-dark")) rounded-pill">
+                                @(report?.Workers.ScraperStatus ?? "Monitoring")
+                            </span>
+                        </div>
+
+                        <div class="list-group list-group-flush bg-transparent small mb-3">
+                            <div class="list-group-item bg-transparent text-muted px-0 py-2 d-flex justify-content-between border-secondary border-opacity-25">
+                                <span>Worker Status:</span>
+                                <strong class="text-white">@(report?.Workers.ScraperStatus ?? "Normal")</strong>
+                            </div>
+                            <div class="list-group-item bg-transparent text-muted px-0 py-2 d-flex justify-content-between border-secondary border-opacity-25">
+                                <span>Latest Article:</span>
+                                <strong class="text-white">
+                                    @(report?.Workers.LatestArticleAt?.ToString("HH:mm:ss") ?? "None")
+                                </strong>
+                            </div>
+                            <div class="list-group-item bg-transparent text-muted px-0 py-2 d-flex flex-column border-secondary border-opacity-25">
+                                <span class="mb-1">Last Story Ingested:</span>
+                                <span class="text-white-50 text-truncate" title="@(report?.Workers.LatestArticleTitle ?? "N/A")">
+                                    @(report?.Workers.LatestArticleTitle ?? "Waiting for feed cycle...")
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="pt-2 border-top border-secondary border-opacity-25 text-muted small">
+                        <i class="bi bi-activity me-1"></i> Continuous multi-outlet RSS & Sitemap poll
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. Background Workers & Storage Telemetry -->
+        <div class="col-md-6 col-xl-3">
+            <div class="card glass-card h-100 border-0 shadow-sm">
+                <div class="card-body p-4 d-flex flex-column justify-content-between">
+                    <div>
+                        <div class="d-flex align-items-center justify-content-between mb-3">
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="rounded p-2 bg-warning bg-opacity-10 text-warning">
+                                    <i class="bi bi-cassette-fill fs-5"></i>
+                                </span>
+                                <h5 class="card-title mb-0 text-white fw-bold">TTS & FX Storage</h5>
+                            </div>
+                            <span class="badge bg-primary rounded-pill">
+                                Trackers
+                            </span>
+                        </div>
+
+                        <div class="list-group list-group-flush bg-transparent small mb-3">
+                            <div class="list-group-item bg-transparent text-muted px-0 py-2 d-flex justify-content-between border-secondary border-opacity-25">
+                                <span>Daily FX Sync:</span>
+                                <strong class="text-white">
+                                    @(report?.Workers.FxLastUpdated?.ToString("yyyy-MM-dd HH:mm") ?? "Active")
+                                </strong>
+                            </div>
+                            <div class="list-group-item bg-transparent text-muted px-0 py-2 d-flex justify-content-between border-secondary border-opacity-25">
+                                <span>Image Proxy Cache:</span>
+                                <strong class="text-white">
+                                    @(report?.Storage.ImageProxyCache.FileCount ?? 0) files (@(report?.Storage.ImageProxyCache.SizeMb ?? 0) MB)
+                                </strong>
+                            </div>
+                            <div class="list-group-item bg-transparent text-muted px-0 py-2 d-flex justify-content-between border-secondary border-opacity-25">
+                                <span>TTS Audio Briefings:</span>
+                                <strong class="text-white">
+                                    @(report?.Storage.AudioStorage.FileCount ?? 0) files (@(report?.Storage.AudioStorage.SizeMb ?? 0) MB)
+                                </strong>
+                            </div>
+                            <div class="list-group-item bg-transparent text-muted px-0 py-2 d-flex justify-content-between border-secondary border-opacity-25">
+                                <span>Streaming Mode:</span>
+                                <span class="text-success fw-semibold">HTTP 206 Partial</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="pt-2 border-top border-secondary border-opacity-25 text-muted small">
+                        <i class="bi bi-mic me-1"></i> Edge TTS + Neural2 Audio Worker
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Architectural Deep-Dive & Container Restarts Explanation -->
+    <div class="card glass-card border-0 mb-4 shadow-sm">
+        <div class="card-header bg-transparent border-secondary border-opacity-25 d-flex align-items-center justify-content-between py-3">
+            <div class="d-flex align-items-center gap-2">
+                <i class="bi bi-shield-lock-fill text-warning fs-5"></i>
+                <h5 class="mb-0 text-white fw-bold">Service Lifecycle & Restart Architecture Note</h5>
+            </div>
+            <span class="badge bg-secondary">System Architecture Standard</span>
+        </div>
+        <div class="card-body p-4">
+            <div class="row g-4 align-items-center">
+                <div class="col-lg-7">
+                    <h6 class="text-white fw-bold mb-2">Why aren't Docker containers restarted via a web button?</h6>
+                    <p class="text-muted small mb-2">
+                        In enterprise web architecture, web application processes intentionally run with <strong>restricted privileges</strong> without access to host Docker daemon sockets (<code class="text-info">/var/run/docker.sock</code>) or root <code class="text-info">systemctl</code> controls. This adheres strictly to the <strong>Principle of Least Privilege</strong> and prevents remote execution container escapes.
+                    </p>
+                    <p class="text-muted small mb-0">
+                        Furthermore, if a service terminates its own host container over an HTTP call, it cannot revive itself if initialization errors occur. Instead, <strong>Docker Compose self-healing</strong> (<code class="text-success">restart: unless-stopped</code>) automatically restores unhealthy containers via the <code class="text-info">/healthz/liveness</code> probe.
+                    </p>
+                </div>
+                <div class="col-lg-5">
+                    <div class="p-3 rounded border border-secondary border-opacity-25" style="background: rgba(15, 23, 42, 0.6);">
+                        <div class="d-flex align-items-center justify-content-between mb-2">
+                            <span class="text-muted small fw-bold"><i class="bi bi-terminal me-1"></i> Safe VPS Commands (via SSH)</span>
+                            <span class="badge bg-dark text-info">Ubuntu Terminal</span>
+                        </div>
+                        <pre class="mb-0 text-white-50 small" style="font-family: monospace; white-space: pre-wrap; word-break: break-all;">
+# Restart NewsApi container
+docker compose restart news-api
+
+# Restart background scraper
+docker compose restart news-scraper-service
+
+# Stream live container logs
+docker compose logs -f news-api --tail=50</pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- Modal: Container Operations Guide -->
+<div class="modal fade" id="restartGuideModal" tabindex="-1" aria-labelledby="restartGuideModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content glass-card border-secondary border-opacity-50 text-white" style="background: #1e293b;">
+            <div class="modal-header border-secondary border-opacity-25">
+                <h5 class="modal-title fw-bold" id="restartGuideModalLabel">
+                    <i class="bi bi-terminal-fill text-info me-2"></i> VPS Service Management Cheatsheet
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <p class="text-muted small">
+                    When deploying on a Linux VPS (as documented in <a href="https://github.com/ufuomaoritsemone/News-Stand-ng/blob/main/VPS_Deployment.md" target="_blank" class="text-info">VPS_Deployment.md</a>), run these commands inside your project directory (<code class="text-light">/opt/newsstand</code>):
+                </p>
+
+                <div class="mb-3">
+                    <label class="form-label text-white small fw-bold">1. Check Status of All Containers</label>
+                    <div class="bg-black bg-opacity-50 p-2 rounded border border-secondary border-opacity-25">
+                        <code class="text-success">docker compose ps</code>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label text-white small fw-bold">2. Graceful Service Restarts</label>
+                    <div class="bg-black bg-opacity-50 p-2 rounded border border-secondary border-opacity-25">
+                        <code class="text-info">docker compose restart news-api news-scraper-service tts-worker</code>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label text-white small fw-bold">3. Rebuild & Apply Latest Code Without Downtime</label>
+                    <div class="bg-black bg-opacity-50 p-2 rounded border border-secondary border-opacity-25">
+                        <code class="text-warning">docker compose up -d --build news-api</code>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="form-label text-white small fw-bold">4. Live Log Tail</label>
+                    <div class="bg-black bg-opacity-50 p-2 rounded border border-secondary border-opacity-25">
+                        <code class="text-white">docker compose logs -f --tail=100 news-api</code>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-secondary border-opacity-25">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>

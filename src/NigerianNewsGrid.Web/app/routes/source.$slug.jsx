@@ -3,6 +3,7 @@ import { useLoaderData, Link } from "react-router";
 import { api, getOptimizedImageUrl } from "../../src/services/api";
 import { formatTimeAgo, cleanEditorialSummary } from "../../src/services/timeUtils";
 import Footer from "../../src/components/Footer";
+import { DEFAULT_OG_IMAGE, paginatedUrl, paginationLinks, buildArticleItemList } from "../utils/seo";
 import {
   ArrowLeft,
   Globe,
@@ -22,15 +23,17 @@ export function meta({ data }) {
     ];
   }
 
-  const { source } = data;
+  const { source, page = 1, total = 0, pageSize = 24 } = data;
   const title = `${source.name} News, Headlines & Latest Reports | News Stand NG`;
   const description =
     source.description ||
     `Read verified headlines and aggregated news reports from ${source.name} on News Stand NG.`;
-  const canonicalUrl = `https://newsstand.ng/source/${source.slug}`;
+  const sourcePath = `/source/${source.slug}`;
+  const canonicalUrl = paginatedUrl(sourcePath, page);
+  const totalPages = Math.ceil((total || 0) / (pageSize || 24));
 
   return [
-    { title },
+    { title: page > 1 ? `${title} — Page ${page}` : title },
     { name: "description", content: description },
     { tagName: "link", rel: "canonical", href: canonicalUrl },
     { name: "robots", content: "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" },
@@ -39,11 +42,12 @@ export function meta({ data }) {
     { property: "og:title", content: title },
     { property: "og:description", content: description },
     { property: "og:url", content: canonicalUrl },
-    { property: "og:image", content: "https://newsstand.ng/newsstand-masthead.png" },
+    { property: "og:image", content: DEFAULT_OG_IMAGE },
     { name: "twitter:card", content: "summary_large_image" },
     { name: "twitter:title", content: title },
     { name: "twitter:description", content: description },
-    { name: "twitter:image", content: "https://newsstand.ng/newsstand-masthead.png" },
+    { name: "twitter:image", content: DEFAULT_OG_IMAGE },
+    ...paginationLinks(sourcePath, page, totalPages),
   ];
 }
 
@@ -106,12 +110,15 @@ export default function SourceHubPage() {
     }
   };
 
+  const sourceItemList = buildArticleItemList(articles, (page - 1) * pageSize + 1, pageSize);
+
   const collectionPageJsonLd = {
     "@context": "https://schema.org",
     "@type": "CollectionPage",
     "name": `${source.name} Coverage & Headlines`,
     "description": source.description || `Latest verified reports from ${source.name}.`,
-    "url": `https://newsstand.ng/source/${source.slug}`,
+    "url": paginatedUrl(`/source/${source.slug}`, page),
+    ...(sourceItemList ? { "mainEntity": sourceItemList } : {}),
     "publisher": {
       "@type": "NewsMediaOrganization",
       "name": "News Stand NG",

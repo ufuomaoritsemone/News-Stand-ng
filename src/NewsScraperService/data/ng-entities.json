@@ -504,6 +504,139 @@
     "aliases": ["NNPP", "New Nigeria Peoples Party", "Kwankwasiyya"]
   },
   {
+    "name": "African Action Congress",
+    "slug": "african-action-congress",
+    "type": "Organization",
+    "description": "Recognized political party under INEC Nigeria.",
+    "aliases": ["African Action Congress", "AAC", "AAC Party"]
+  },
+  {
+    "name": "African Democratic Congress",
+    "slug": "african-democratic-congress",
+    "type": "Organization",
+    "description": "Recognized political party under INEC Nigeria.",
+    "aliases": ["African Democratic Congress", "ADC", "ADC Party"]
+  },
+  {
+    "name": "All Progressives Grand Alliance",
+    "slug": "all-progressives-grand-alliance",
+    "type": "Organization",
+    "description": "Statutory political party registered under INEC Nigeria.",
+    "aliases": ["All Progressives Grand Alliance", "APGA", "APGA Party"]
+  },
+  {
+    "name": "Social Democratic Party",
+    "slug": "social-democratic-party",
+    "type": "Organization",
+    "description": "Recognized political party under INEC Nigeria.",
+    "aliases": ["Social Democratic Party", "SDP", "SDP Party"]
+  },
+  {
+    "name": "Young Progressives Party",
+    "slug": "young-progressives-party",
+    "type": "Organization",
+    "description": "Recognized political party under INEC Nigeria.",
+    "aliases": ["Young Progressives Party", "YPP", "YPP Party"]
+  },
+  {
+    "name": "Accord",
+    "slug": "accord-party",
+    "type": "Organization",
+    "description": "Recognized political party under INEC Nigeria.",
+    "aliases": ["Accord", "Accord Party"]
+  },
+  {
+    "name": "Action Alliance",
+    "slug": "action-alliance",
+    "type": "Organization",
+    "description": "Recognized political party under INEC Nigeria.",
+    "aliases": ["Action Alliance", "AA Party"]
+  },
+  {
+    "name": "Action Democratic Party",
+    "slug": "action-democratic-party",
+    "type": "Organization",
+    "description": "Recognized political party under INEC Nigeria.",
+    "aliases": ["Action Democratic Party", "ADP", "ADP Party"]
+  },
+  {
+    "name": "Action Peoples Party",
+    "slug": "action-peoples-party",
+    "type": "Organization",
+    "description": "Recognized political party under INEC Nigeria.",
+    "aliases": ["Action Peoples Party", "APP", "APP Party"]
+  },
+  {
+    "name": "Allied Peoples Movement",
+    "slug": "allied-peoples-movement",
+    "type": "Organization",
+    "description": "Recognized political party under INEC Nigeria.",
+    "aliases": ["Allied Peoples Movement", "APM", "APM Party"]
+  },
+  {
+    "name": "Boot Party",
+    "slug": "boot-party",
+    "type": "Organization",
+    "description": "Recognized political party under INEC Nigeria.",
+    "aliases": ["Boot Party", "BP Party"]
+  },
+  {
+    "name": "Democratic Leadership Alliance",
+    "slug": "democratic-leadership-alliance",
+    "type": "Organization",
+    "description": "Recognized political party under INEC Nigeria.",
+    "aliases": ["Democratic Leadership Alliance", "DLA", "DLA Party"]
+  },
+  {
+    "name": "National Democratic Party",
+    "slug": "national-democratic-party",
+    "type": "Organization",
+    "description": "Recognized political party under INEC Nigeria.",
+    "aliases": ["National Democratic Party", "NDP", "NDP Party"]
+  },
+  {
+    "name": "National Rescue Movement",
+    "slug": "national-rescue-movement",
+    "type": "Organization",
+    "description": "Recognized political party under INEC Nigeria.",
+    "aliases": ["National Rescue Movement", "NRM", "NRM Party"]
+  },
+  {
+    "name": "Nigeria Democratic Congress",
+    "slug": "nigeria-democratic-congress",
+    "type": "Organization",
+    "description": "Recognized political party under INEC Nigeria.",
+    "aliases": ["Nigeria Democratic Congress", "NDC", "NDC Party"]
+  },
+  {
+    "name": "Peoples Redemption Party",
+    "slug": "peoples-redemption-party",
+    "type": "Organization",
+    "description": "Recognized political party under INEC Nigeria.",
+    "aliases": ["Peoples Redemption Party", "PRP", "PRP Party"]
+  },
+  {
+    "name": "Youth Party",
+    "slug": "youth-party",
+    "type": "Organization",
+    "description": "Recognized political party under INEC Nigeria.",
+    "aliases": ["Youth Party", "YP Party"]
+  },
+  {
+    "name": "Zenith Labour Party",
+    "slug": "zenith-labour-party",
+    "type": "Organization",
+    "description": "Recognized political party under INEC Nigeria.",
+    "aliases": ["Zenith Labour Party", "ZLP", "ZLP Party"]
+  },
+  {
+    "name": "Omoyele Sowore",
+    "slug": "omoyele-sowore",
+    "type": "Person",
+    "description": "Human rights activist, Sahara Reporters founder, and presidential candidate of the African Action Congress (AAC).",
+    "aliases": ["Omoyele Sowore", "Sowore"]
+  },
+  {
     "name": "Federal Inland Revenue Service",
     "slug": "firs-nigeria",
     "type": "Organization",

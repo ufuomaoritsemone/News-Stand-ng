@@ -90,8 +90,9 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<DiscoverViewModel>();
         services.AddSingleton<SettingsViewModel>();
 
-        // ArticleViewModel stays Transient — each article page is an independent reading session.
+        // ArticleViewModel and StoryClusterViewModel stay Transient — each page is an independent session.
         services.AddTransient<ArticleViewModel>();
+        services.AddTransient<StoryClusterViewModel>();
         return services;
     }
 
@@ -99,6 +100,7 @@ public static class ServiceCollectionExtensions
     {
         services.AddTransient<MainPage>();
         services.AddTransient<ArticleWebPage>();
+        services.AddTransient<StoryClusterPage>();
         services.AddTransient<BookmarksPage>();
         services.AddTransient<DiscoverPage>();
         services.AddTransient<SettingsPage>();

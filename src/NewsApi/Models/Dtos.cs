@@ -37,6 +37,8 @@ public class ArticleDto
     public int ClickCount { get; set; }
     public double ClickThroughRate => ImpressionCount > 0 ? Math.Round(((double)ClickCount / ImpressionCount) * 100, 2) : 0;
     public bool IsActive => IsSponsored && (CampaignExpiresAt == null || CampaignExpiresAt > DateTime.UtcNow);
+    public string PlacementZone { get; set; } = "MainPage_InFeed";
+    public string TargetPlatform { get; set; } = "All";
 
     // AI Enrichment / Summary Metadata
     public bool HasAiSummary { get; set; }
@@ -79,6 +81,12 @@ public class CreateSponsoredArticleRequest
     public int? TargetPosition { get; set; }
 
     public int PriorityWeight { get; set; } = 1;
+
+    [MaxLength(50)]
+    public string PlacementZone { get; set; } = "MainPage_InFeed";
+
+    [MaxLength(20)]
+    public string TargetPlatform { get; set; } = "All";
 }
 
 public class UpdateSponsoredArticleRequest
@@ -115,6 +123,12 @@ public class UpdateSponsoredArticleRequest
     public int? TargetPosition { get; set; }
 
     public int? PriorityWeight { get; set; }
+
+    [MaxLength(50)]
+    public string? PlacementZone { get; set; }
+
+    [MaxLength(20)]
+    public string? TargetPlatform { get; set; }
 }
 
 public class PagedResponse<T>
@@ -228,6 +242,8 @@ public class ArticleDetailDto
     public bool IsSponsored { get; set; }
     public string? SponsorName { get; set; }
     public string? SponsorUrl { get; set; }
+    public string PlacementZone { get; set; } = "MainPage_InFeed";
+    public string TargetPlatform { get; set; } = "All";
     public string? RedirectSlug { get; set; }
     public List<TopicDto> Topics { get; set; } = [];
     public List<ArticleDto> RelatedArticles { get; set; } = [];
@@ -364,6 +380,29 @@ public class StoryClusterListResponse
     public List<StoryClusterDto> Stories { get; set; } = [];
 }
 
+public class TrendingStoryDto
+{
+    public string Id { get; set; } = string.Empty;
+    public string Slug { get; set; } = string.Empty;
+    public string Title { get; set; } = string.Empty;
+    public string? Summary { get; set; }
+    public string? ImageUrl { get; set; }
+    public string Category { get; set; } = "General";
+    public int ArticleCount { get; set; }
+    public int SourceCount { get; set; }
+    public List<string> Sources { get; set; } = [];
+    public double TrendingScore { get; set; }
+    public DateTime CreatedAt { get; set; }
+    public DateTime UpdatedAt { get; set; }
+    public List<string> Topics { get; set; } = [];
+}
+
+public class TrendingStoryListResponse
+{
+    public int TotalCount { get; set; }
+    public List<TrendingStoryDto> Stories { get; set; } = [];
+}
+
 // ── Phase 8: Data Pages & State Hubs DTOs ─────────────────────────────────
 
 public class MarketDataDto
@@ -379,6 +418,20 @@ public class MarketDataDto
     public DateTime LastUpdated { get; set; } = DateTime.UtcNow;
     public List<MarketDataPointDto> HistoricalPoints { get; set; } = [];
     public List<FaqItemDto> Faqs { get; set; } = [];
+    public Dictionary<string, FxCurrencyRateDto>? Currencies { get; set; }
+}
+
+public class FxCurrencyRateDto
+{
+    public string Code { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
+    public string Symbol { get; set; } = string.Empty;
+    public double ParallelBuy { get; set; }
+    public double ParallelSell { get; set; }
+    public double OfficialRate { get; set; }
+    public double? OfficialBuy { get; set; }
+    public double? OfficialSell { get; set; }
+    public string? Change24h { get; set; }
 }
 
 public class MarketDataPointDto

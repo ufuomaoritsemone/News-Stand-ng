@@ -97,22 +97,41 @@ public class SeoFeedbackLoopService(
                     }
                 }
 
-                // Otherwise, find the latest unenriched article
-                var enrichedIds = await _db.ArticleEnrichments.Select(e => e.ArticleId).ToListAsync(ct);
+                // Otherwise, enrich a batch of the most recent unenriched, non-sponsored articles.
+                var batchSize = Math.Clamp(_config.GetValue("Seo:BackfillBatchSize", 10), 1, 50);
                 var unenriched = await _db.Articles
-                    .Where(a => !a.IsSponsored && !enrichedIds.Contains(a.Id))
+                    .AsNoTracking()
+                    .Where(a => !a.IsSponsored && !_db.ArticleEnrichments.Any(e => e.ArticleId == a.Id))
                     .OrderByDescending(a => a.PublishedAt)
-                    .FirstOrDefaultAsync(ct);
+                    .Select(a => new { a.Id, a.Slug, a.Title })
+                    .Take(batchSize)
+                    .ToListAsync(ct);
 
-                if (unenriched is not null)
+                if (unenriched.Count > 0)
                 {
-                    var enriched = await _enrichmentService.EnrichArticleAsync(unenriched.Id, ct);
+                    var succeeded = 0;
+                    foreach (var candidate in unenriched)
+                    {
+                        ct.ThrowIfCancellationRequested();
+                        try
+                        {
+                            if (await _enrichmentService.EnrichArticleAsync(candidate.Id, ct) is not null)
+                            {
+                                succeeded++;
+                            }
+                        }
+                        catch (Exception ex) when (ex is not OperationCanceledException)
+                        {
+                            _logger.LogWarning(ex, "Backfill enrichment failed for article {ArticleId}.", candidate.Id);
+                        }
+                    }
+
                     return new AutomatedRemediationLogDto
                     {
                         ActionType = "BackfillEnrichment",
-                        Target = unenriched.Slug ?? unenriched.Id,
-                        Status = "Completed",
-                        Details = $"Enriched article '{unenriched.Title}' with key takeaways and FAQ schema."
+                        Target = unenriched.Count == 1 ? (unenriched[0].Slug ?? unenriched[0].Id) : $"{unenriched.Count} articles",
+                        Status = succeeded > 0 ? "Completed" : "Failed",
+                        Details = $"Enriched {succeeded}/{unenriched.Count} recent articles with key takeaways and FAQ schema."
                     };
                 }
 

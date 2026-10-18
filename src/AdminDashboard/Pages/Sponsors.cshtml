@@ -6,30 +6,20 @@
 
 <div class="container-fluid px-4 py-3">
 
-    <!-- Top Dashboard Header -->
-    <div class="dashboard-header d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
+    <!-- SaaS Page Header -->
+    <div class="saas-page-header">
         <div>
             <div class="d-flex align-items-center gap-3">
-                <h1 class="h2 mb-0 text-white brand-font">🤝 Sponsored Campaigns &amp; PR</h1>
+                <h1 class="saas-page-title mb-0"><i class="bi bi-megaphone-fill text-warning"></i> Sponsored Campaigns &amp; PR</h1>
                 <span class="badge bg-success rounded-pill px-3 py-1 text-uppercase" style="font-size: 0.72rem; letter-spacing: 0.5px;">
                     <i class="bi bi-currency-exchange me-1"></i> DIRECT MONETIZATION
                 </span>
             </div>
-            <p class="text-muted mb-0 mt-1">Manage, schedule, and track direct corporate press releases and sponsor campaigns</p>
+            <p class="saas-page-desc mt-1">Manage, schedule, and track direct corporate press releases and sponsor campaigns</p>
         </div>
-        <div class="d-flex align-items-center gap-2 flex-wrap">
-            <a href="/Index" class="btn btn-outline-light btn-sm"><i class="bi bi-arrow-left"></i> Dashboard</a>
-            <a href="/Videos" class="btn btn-outline-danger btn-sm"><i class="bi bi-youtube me-1"></i> Videos</a>
-            <a href="/Socials" class="btn btn-outline-info btn-sm"><i class="bi bi-twitter-x me-1"></i> Socials</a>
-            <a href="/Analytics" class="btn btn-outline-success btn-sm"><i class="bi bi-bar-chart-fill me-1"></i> Analytics</a>
-            <a href="/Feedback" class="btn btn-outline-primary btn-sm"><i class="bi bi-chat-heart me-1"></i> Feedback</a>
-            <a href="/Categorizer" class="btn btn-outline-purple btn-sm"><i class="bi bi-cpu-fill me-1"></i> ML Categorizer</a>
-            <button type="button" class="theme-toggle-btn" onclick="toggleAdminTheme()" title="Toggle Light / Dark Theme">
-                <i class="bi bi-moon-stars-fill theme-icon-dark"></i>
-                <i class="bi bi-sun-fill theme-icon-light"></i>
-                <span class="theme-toggle-label">Dark</span>
-            </button>
-            <button type="button" class="btn btn-gradient btn-sm" data-bs-toggle="modal" data-bs-target="#createCampaignModal">
+        <div class="saas-toolbar">
+            <a href="/Sponsors" class="btn btn-saas-secondary btn-sm"><i class="bi bi-arrow-clockwise me-1"></i> Refresh</a>
+            <button type="button" class="btn btn-saas-primary btn-sm" data-bs-toggle="modal" data-bs-target="#createCampaignModal">
                 <i class="bi bi-plus-circle-fill me-1"></i> New Sponsored Article
             </button>
         </div>
@@ -106,7 +96,7 @@
         else
         {
             <div class="table-responsive">
-                <table class="table table-dark table-hover align-middle mb-0" style="background: transparent;">
+                <table class="table table-hover align-middle mb-0" style="background: transparent;">
                     <thead>
                         <tr class="text-muted small text-uppercase border-secondary">
                             <th>Sponsor / Article</th>
@@ -153,22 +143,14 @@
                                     </div>
                                 </td>
                                 <td>
-                                    @if (c.IsSpecialPlacement)
-                                    {
-                                        <span class="badge bg-warning text-dark font-weight-bold">
-                                            <i class="bi bi-star-fill me-1"></i>@c.PlacementDisplay
+                                    <div class="d-flex flex-column gap-1">
+                                        <span class="badge @(c.IsSpecialPlacement ? "bg-warning text-dark font-weight-bold" : "bg-primary")">
+                                            @c.PlacementDisplay
                                         </span>
-                                    }
-                                    else if (c.TargetPosition.HasValue)
-                                    {
-                                        <span class="badge bg-primary">
-                                            <i class="bi bi-geo-alt-fill me-1"></i>@c.PlacementDisplay
+                                        <span class="badge bg-dark border border-secondary text-info small" style="width: fit-content;">
+                                            @c.PlatformDisplay
                                         </span>
-                                    }
-                                    else
-                                    {
-                                        <span class="badge bg-secondary">Auto In-Feed</span>
-                                    }
+                                    </div>
                                 </td>
                                 <td>
                                     <span class="badge bg-secondary">@c.Category</span>
@@ -218,6 +200,11 @@
                                 </td>
                                 <td class="text-end">
                                     <div class="d-flex justify-content-end gap-1">
+                                        <!-- Edit Placement Modal Trigger -->
+                                        <button type="button" class="btn btn-outline-info btn-sm" data-bs-toggle="modal" data-bs-target="#editPlacementModal_@c.Id" title="Edit Placement Zone & Platform">
+                                            <i class="bi bi-sliders"></i>
+                                        </button>
+
                                         <!-- Pin / Unpin Toggle -->
                                         <form method="post" asp-page-handler="TogglePin" class="d-inline">
                                             <input type="hidden" name="id" value="@c.Id" />
@@ -243,6 +230,66 @@
                                                 <i class="bi bi-trash"></i>
                                             </button>
                                         </form>
+                                    </div>
+
+                                    <!-- Quick Edit Placement Modal -->
+                                    <div class="modal fade text-start" id="editPlacementModal_@c.Id" tabindex="-1" aria-hidden="true">
+                                        <div class="modal-dialog modal-dialog-centered">
+                                            <div class="modal-content glass-card border-secondary text-white" style="background: rgba(22, 27, 34, 0.98);">
+                                                <form method="post" asp-page-handler="UpdatePlacement">
+                                                    <input type="hidden" name="id" value="@c.Id" />
+                                                    <div class="modal-header border-secondary">
+                                                        <h6 class="modal-title text-warning">
+                                                            <i class="bi bi-sliders me-2"></i>Configure Placement: @c.Title
+                                                        </h6>
+                                                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                                    </div>
+                                                    <div class="modal-body">
+                                                        <div class="mb-3">
+                                                            <label class="form-label small text-muted text-uppercase font-weight-bold">Target Platform</label>
+                                                            <select name="targetPlatform" class="form-select form-control-glass">
+                                                                <option value="All" selected="@(c.TargetPlatform == "All")">🌐 All Platforms (Web &amp; Mobile)</option>
+                                                                <option value="Web" selected="@(c.TargetPlatform == "Web")">💻 Web Only</option>
+                                                                <option value="Mobile" selected="@(c.TargetPlatform == "Mobile")">📱 Mobile Only</option>
+                                                            </select>
+                                                        </div>
+                                                        <div class="mb-3">
+                                                            <label class="form-label small text-muted text-uppercase font-weight-bold">Placement Zone</label>
+                                                            <select name="placementZone" class="form-select form-control-glass">
+                                                                <optgroup label="🏠 Main Page Placements">
+                                                                    <option value="MainPage_HeroSpotlight" selected="@(c.PlacementZone == "MainPage_HeroSpotlight")">🌟 Top Hero / Masthead Spotlight Banner</option>
+                                                                    <option value="MainPage_InFeed" selected="@(c.PlacementZone == "MainPage_InFeed")">📰 Native In-Feed Story Card</option>
+                                                                    <option value="MainPage_PartnerShelf" selected="@(c.PlacementZone == "MainPage_PartnerShelf")">🤝 Partner Perspectives Shelf</option>
+                                                                </optgroup>
+                                                                <optgroup label="📖 In-Article Placements">
+                                                                    <option value="InArticle_Header" selected="@(c.PlacementZone == "InArticle_Header")">🏷️ In-Article Header ("Presented by")</option>
+                                                                    <option value="InArticle_MidContent" selected="@(c.PlacementZone == "InArticle_MidContent")">📖 In-Article Mid-Body Breakout Box</option>
+                                                                    <option value="InArticle_Footer" selected="@(c.PlacementZone == "InArticle_Footer")">🎯 In-Article Footer Partner Callout</option>
+                                                                </optgroup>
+                                                            </select>
+                                                        </div>
+                                                        <div class="row g-2 mb-3">
+                                                            <div class="col-8">
+                                                                <label class="form-label small text-muted text-uppercase font-weight-bold">In-Feed Slot # (If in-feed)</label>
+                                                                <input type="number" name="targetPosition" value="@(c.TargetPosition ?? 3)" min="1" max="50" class="form-control form-control-glass" />
+                                                            </div>
+                                                            <div class="col-4">
+                                                                <label class="form-label small text-muted text-uppercase font-weight-bold">Priority</label>
+                                                                <select name="priorityWeight" class="form-select form-control-glass">
+                                                                    <option value="1" selected="@(c.PriorityWeight == 1)">Normal (1)</option>
+                                                                    <option value="5" selected="@(c.PriorityWeight == 5)">High (5)</option>
+                                                                    <option value="10" selected="@(c.PriorityWeight == 10)">Top (10)</option>
+                                                                </select>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="modal-footer border-secondary">
+                                                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                                                        <button type="submit" class="btn btn-primary btn-sm">Save Placement</button>
+                                                    </div>
+                                                </form>
+                                            </div>
+                                        </div>
                                     </div>
                                 </td>
                             </tr>
@@ -316,22 +363,50 @@
                             <textarea name="NewCampaign.Content" rows="5" class="form-control form-control-glass" placeholder="Full press release text for in-app reading view..."></textarea>
                         </div>
 
+                        <!-- Placement Zone & Target Platform -->
+                        <div class="col-md-6">
+                            <label class="form-label small text-uppercase font-weight-bold text-muted">
+                                Target Platform
+                            </label>
+                            <select name="NewCampaign.TargetPlatform" class="form-select form-control-glass">
+                                <option value="All" selected>🌐 All Platforms (Web &amp; Mobile)</option>
+                                <option value="Web">💻 Web Only</option>
+                                <option value="Mobile">📱 Mobile Only</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small text-uppercase font-weight-bold text-muted">
+                                Sponsored Placement Zone
+                            </label>
+                            <select name="NewCampaign.PlacementZone" class="form-select form-control-glass">
+                                <optgroup label="🏠 Main Page Placements">
+                                    <option value="MainPage_HeroSpotlight">🌟 Top Hero / Masthead Spotlight Banner</option>
+                                    <option value="MainPage_InFeed" selected>📰 Native In-Feed Story Card</option>
+                                    <option value="MainPage_PartnerShelf">🤝 Partner Perspectives Showcase Shelf</option>
+                                </optgroup>
+                                <optgroup label="📖 In-Article Placements">
+                                    <option value="InArticle_Header">🏷️ In-Article Header ("Presented by")</option>
+                                    <option value="InArticle_MidContent">📖 In-Article Mid-Body Breakout Box</option>
+                                    <option value="InArticle_Footer">🎯 In-Article Bottom Partner Callout</option>
+                                </optgroup>
+                            </select>
+                        </div>
+
                         <!-- Target Feed Position & Priority Weight -->
                         <div class="col-md-8">
                             <label class="form-label small text-uppercase font-weight-bold text-muted">
-                                Feed Placement Slot
+                                In-Feed Slot Position (If In-Feed Zone Chosen)
                             </label>
                             <select name="NewCampaign.TargetPosition" class="form-select form-control-glass">
-                                <optgroup label="🌟 Core Strategic Placements (buletin Web & Mobile)">
+                                <optgroup label="🌟 Core Strategic Placements">
                                     @{
                                         var occupied = Model.GetOccupiedSlots();
                                     }
-                                    <option value="3" selected>Placement 1: In-Feed Slot #3 ("The Sweet Spot") @(occupied.ContainsKey(3) ? $"(Occupied: {occupied[3]})" : "(Recommended)")</option>
-                                    <option value="1">Placement 2: Partner Perspectives Shelf (Primary Spotlight) @(occupied.ContainsKey(1) ? $"(Occupied: {occupied[1]})" : "(Available)")</option>
-                                    <option value="2">Placement 2: Partner Perspectives Shelf (Secondary) @(occupied.ContainsKey(2) ? $"(Occupied: {occupied[2]})" : "(Available)")</option>
-                                    <option value="4">Placement 3: In-Article / Reader Drawer Footer Callout @(occupied.ContainsKey(4) ? $"(Occupied: {occupied[4]})" : "(Available)")</option>
+                                    <option value="3" selected>In-Feed Slot #3 ("The Sweet Spot") @(occupied.ContainsKey(3) ? $"(Occupied: {occupied[3]})" : "(Recommended)")</option>
+                                    <option value="1">Hero / Pinned Slot #1 @(occupied.ContainsKey(1) ? $"(Occupied: {occupied[1]})" : "(Available)")</option>
+                                    <option value="2">Secondary Slot #2 @(occupied.ContainsKey(2) ? $"(Occupied: {occupied[2]})" : "(Available)")</option>
                                 </optgroup>
-                                <optgroup label="📰 In-Feed Deep Scroll Placements (5th to 30th Position)">
+                                <optgroup label="📰 Deep Scroll Placements (5th to 30th Position)">
                                     @for (int slot = 5; slot <= 30; slot++)
                                     {
                                         var isOcc = occupied.ContainsKey(slot);
@@ -342,7 +417,7 @@
                                 </optgroup>
                             </select>
                             <div class="form-text text-muted" style="font-size: 0.72rem;">
-                                In-feed placement #3 inserts the sponsored card seamlessly into the news grid, while Partner Perspectives showcases brand cards directly beneath the hero carousel.
+                                Determines where the sponsored card appears inside the main article feed.
                             </div>
                         </div>
 
@@ -354,7 +429,7 @@
                                 <option value="10">Premium (10)</option>
                             </select>
                             <div class="form-text text-muted" style="font-size: 0.72rem;">
-                                Tie-breaker when two campaigns target the same slot.
+                                Tie-breaker when two campaigns target the same zone or slot.
                             </div>
                         </div>
 

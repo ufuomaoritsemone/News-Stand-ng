@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using NewsApi.Data;
@@ -15,20 +16,33 @@ public class StoryClusteringService : IStoryClusteringService
     private readonly ISlugService _slugService;
     private readonly IConfiguration _config;
     private readonly ILogger<StoryClusteringService> _logger;
+    private readonly IMemoryCache? _cache;
 
     public StoryClusteringService(
         NewsDbContext db,
         IEmbeddingProvider embeddingProvider,
         ISlugService slugService,
         IConfiguration config,
-        ILogger<StoryClusteringService> logger)
+        ILogger<StoryClusteringService> logger,
+        IMemoryCache? cache = null)
     {
         _db = db;
         _embeddingProvider = embeddingProvider;
         _slugService = slugService;
         _config = config;
         _logger = logger;
+        _cache = cache;
     }
+
+    private static readonly HashSet<string> StopWords = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "about", "after", "again", "against", "amid", "among", "around", "because", "before",
+        "between", "breaking", "could", "despite", "during", "every", "first", "from", "government",
+        "have", "into", "lagos", "more", "most", "news", "nigeria", "nigerian", "nigerians",
+        "other", "over", "report", "reports", "says", "said", "should", "since", "state", "states",
+        "their", "there", "these", "they", "this", "through", "today", "under", "until", "update",
+        "what", "when", "where", "which", "while", "with", "within", "would", "year", "years"
+    };
 
     public async Task<int> RunClusteringAsync(CancellationToken cancellationToken = default)
     {
@@ -46,29 +60,47 @@ public class StoryClusteringService : IStoryClusteringService
             select new { Article = art, Embedding = emb }
         ).ToListAsync(cancellationToken);
 
+        // Fallback to a 14-day window if recent 72h articles are sparse
+        if (articlePairs.Count < 4)
+        {
+            cutoff = DateTime.UtcNow.AddDays(-14);
+            await EnsureEmbeddingsAsync(cutoff, cancellationToken);
+            articlePairs = await (
+                from art in _db.Articles
+                join emb in _db.ArticleEmbeddings on art.Id equals emb.ArticleId
+                where art.PublishedAt >= cutoff
+                select new { Article = art, Embedding = emb }
+            ).ToListAsync(cancellationToken);
+        }
+
         if (articlePairs.Count < 2)
         {
             _logger.LogInformation("StoryClusteringService: Insufficient articles with embeddings ({Count}) to form clusters.", articlePairs.Count);
             return 0;
         }
 
-        var threshold = _config.GetValue<float>("Clustering:SimilarityThreshold", 0.80f);
+        var defaultThreshold = _embeddingProvider is LocalFallbackEmbeddingProvider
+            ? 0.48f
+            : 0.58f;
+        var threshold = _config.GetValue<float>("Clustering:SimilarityThreshold", defaultThreshold);
         _logger.LogInformation("Clustering {Count} articles with cosine threshold {Threshold}", articlePairs.Count, threshold);
 
-        // 3. Cluster articles using Greedy Leader clustering
+        // 3. Cluster articles using Greedy Leader clustering with title-token overlap boost
         var candidates = new List<ClusterCandidate>();
 
         foreach (var item in articlePairs)
         {
             var vector = item.Embedding.Vector;
-            if (vector.Length == 0) continue;
+            if (vector.Length == 0 || item.Article == null) continue;
 
             ClusterCandidate? bestCandidate = null;
             float bestSim = 0f;
 
             foreach (var cand in candidates)
             {
-                var sim = VectorMath.CosineSimilarity(vector, cand.Centroid);
+                var cosineSim = VectorMath.CosineSimilarity(vector, cand.Centroid);
+                var keywordBoost = ComputeTitleKeywordBoost(item.Article.Title, cand.Items[0].Article.Title);
+                var sim = Math.Min(1.0f, cosineSim + keywordBoost);
                 if (sim >= threshold && sim > bestSim)
                 {
                     bestSim = sim;
@@ -78,11 +110,11 @@ public class StoryClusteringService : IStoryClusteringService
 
             if (bestCandidate != null)
             {
-                bestCandidate.Add(item.Article!, vector, bestSim);
+                bestCandidate.Add(item.Article, vector, bestSim);
             }
             else
             {
-                var newCand = new ClusterCandidate(item.Article!, vector);
+                var newCand = new ClusterCandidate(item.Article, vector);
                 candidates.Add(newCand);
             }
         }
@@ -191,44 +223,92 @@ public class StoryClusteringService : IStoryClusteringService
 
     public async Task<List<Article>> FindRelatedArticlesAsync(string articleId, int limit = 6, CancellationToken cancellationToken = default)
     {
-        var targetEmbedding = await _db.ArticleEmbeddings
-            .AsNoTracking()
-            .FirstOrDefaultAsync(ae => ae.ArticleId == articleId, cancellationToken);
+        if (string.IsNullOrWhiteSpace(articleId)) return [];
 
-        if (targetEmbedding != null && targetEmbedding.Vector.Length > 0)
+        var effectiveLimit = Math.Clamp(limit, 1, 20);
+        var cacheKey = $"related_articles_v1_{articleId}_{effectiveLimit}";
+
+        if (_cache != null && _cache.TryGetValue(cacheKey, out List<Article>? cached) && cached is { Count: > 0 })
         {
-            var targetVector = targetEmbedding.Vector;
+            return cached;
+        }
+
+        var result = await ComputeRelatedArticlesCoreAsync(articleId, effectiveLimit, cancellationToken);
+
+        if (_cache != null && result.Count > 0)
+        {
+            _cache.Set(cacheKey, result, new MemoryCacheEntryOptions
+            {
+                SlidingExpiration = TimeSpan.FromMinutes(10),
+                AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(15)
+            });
+        }
+
+        return result;
+    }
+
+    private async Task<List<Article>> ComputeRelatedArticlesCoreAsync(string articleId, int limit, CancellationToken cancellationToken)
+    {
+        var targetBlob = await _db.ArticleEmbeddings
+            .AsNoTracking()
+            .Where(ae => ae.ArticleId == articleId)
+            .Select(ae => ae.VectorBlob)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (targetBlob is { Length: > 0 })
+        {
+            var targetVector = new float[targetBlob.Length / sizeof(float)];
+            Buffer.BlockCopy(targetBlob, 0, targetVector, 0, targetBlob.Length);
+
             var windowCutoff = DateTime.UtcNow.AddDays(-14);
 
-            var candidates = await _db.ArticleEmbeddings
+            // Project ONLY ArticleId + VectorBlob (without full Article Content bodies) bounded to top 500 recent embeddings
+            var candidateVectors = await _db.ArticleEmbeddings
                 .AsNoTracking()
-                .Include(ae => ae.Article)
                 .Where(ae => ae.ArticleId != articleId && ae.Article != null && ae.Article.PublishedAt >= windowCutoff)
+                .OrderByDescending(ae => ae.Article!.PublishedAt)
+                .Take(500)
+                .Select(ae => new { ae.ArticleId, ae.VectorBlob })
                 .ToListAsync(cancellationToken);
 
-            var scored = new List<(Article Article, float Score)>();
-            foreach (var cand in candidates)
+            var scoredIds = new List<(string ArticleId, float Score)>();
+            var scratchVector = new float[targetVector.Length];
+
+            foreach (var cand in candidateVectors)
             {
-                var vec = cand.Vector;
-                if (vec.Length == targetVector.Length)
+                if (cand.VectorBlob is null || cand.VectorBlob.Length != targetBlob.Length)
+                    continue;
+
+                Buffer.BlockCopy(cand.VectorBlob, 0, scratchVector, 0, cand.VectorBlob.Length);
+                var sim = VectorMath.CosineSimilarity(targetVector, scratchVector);
+                if (sim >= 0.45f)
                 {
-                    var sim = VectorMath.CosineSimilarity(targetVector, vec);
-                    if (sim >= 0.45f)
-                    {
-                        scored.Add((cand.Article!, sim));
-                    }
+                    scoredIds.Add((cand.ArticleId, sim));
                 }
             }
 
-            var topSimilar = scored
+            var topMatches = scoredIds
                 .OrderByDescending(s => s.Score)
                 .Take(limit)
-                .Select(s => s.Article)
                 .ToList();
 
-            if (topSimilar.Count >= Math.Min(limit, 3))
+            if (topMatches.Count >= Math.Min(limit, 3))
             {
-                return topSimilar;
+                var topIds = topMatches.Select(m => m.ArticleId).ToList();
+                var matchedArticles = await _db.Articles
+                    .AsNoTracking()
+                    .Where(a => topIds.Contains(a.Id))
+                    .ToDictionaryAsync(a => a.Id, cancellationToken);
+
+                var orderedArticles = topIds
+                    .Where(matchedArticles.ContainsKey)
+                    .Select(id => matchedArticles[id])
+                    .ToList();
+
+                if (orderedArticles.Count >= Math.Min(limit, 3))
+                {
+                    return orderedArticles;
+                }
             }
         }
 
@@ -281,10 +361,9 @@ public class StoryClusteringService : IStoryClusteringService
 
     private async Task EnsureEmbeddingsAsync(DateTime cutoff, CancellationToken cancellationToken)
     {
-        var existingEmbeddingIds = await _db.ArticleEmbeddings.Select(ae => ae.ArticleId).ToListAsync(cancellationToken);
         var unEmbedded = await _db.Articles
             .AsNoTracking()
-            .Where(a => a.PublishedAt >= cutoff && !existingEmbeddingIds.Contains(a.Id))
+            .Where(a => a.PublishedAt >= cutoff && !_db.ArticleEmbeddings.Any(ae => ae.ArticleId == a.Id))
             .OrderByDescending(a => a.PublishedAt)
             .Take(100)
             .ToListAsync(cancellationToken);
@@ -314,13 +393,64 @@ public class StoryClusteringService : IStoryClusteringService
                 ArticleId = art.Id,
                 Dimensions = vec.Length,
                 Vector = vec,
-                Model = "gemini-embedding-001",
+                Model = _embeddingProvider is LocalFallbackEmbeddingProvider ? "local-murmur3-768" : "gemini-embedding-001",
                 CreatedAt = DateTime.UtcNow
             };
             _db.ArticleEmbeddings.Add(embedding);
         }
 
         await _db.SaveChangesAsync(cancellationToken);
+    }
+
+    private static float ComputeTitleKeywordBoost(string? titleA, string? titleB)
+    {
+        if (string.IsNullOrWhiteSpace(titleA) || string.IsNullOrWhiteSpace(titleB))
+            return 0f;
+
+        var tokensA = ExtractSignificantTokens(titleA);
+        var tokensB = ExtractSignificantTokens(titleB);
+        if (tokensA.Count == 0 || tokensB.Count == 0)
+            return 0f;
+
+        int overlap = 0;
+        foreach (var t in tokensA)
+        {
+            if (tokensB.Contains(t))
+                overlap++;
+        }
+
+        if (overlap >= 3) return 0.28f;
+        if (overlap == 2) return 0.16f;
+        return 0f;
+    }
+
+    private static HashSet<string> ExtractSignificantTokens(string text)
+    {
+        var set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var span = text.AsSpan();
+        int start = -1;
+        for (int i = 0; i <= span.Length; i++)
+        {
+            bool isAlphaNum = i < span.Length && char.IsLetterOrDigit(span[i]);
+            if (isAlphaNum)
+            {
+                if (start < 0) start = i;
+            }
+            else if (start >= 0)
+            {
+                int len = i - start;
+                if (len >= 3)
+                {
+                    var token = span.Slice(start, len).ToString();
+                    if (!StopWords.Contains(token))
+                    {
+                        set.Add(token);
+                    }
+                }
+                start = -1;
+            }
+        }
+        return set;
     }
 
     private sealed class ClusterCandidate

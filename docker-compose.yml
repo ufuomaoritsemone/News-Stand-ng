@@ -3,15 +3,15 @@ services:
     image: postgres:16-alpine
     container_name: nigeriannewsgrid-postgres
     environment:
-      - POSTGRES_DB=newsgrid
-      - POSTGRES_USER=newsuser
-      - POSTGRES_PASSWORD=newspassword123!
+      - POSTGRES_DB=${POSTGRES_DB:-newsgrid}
+      - POSTGRES_USER=${POSTGRES_USER:-newsuser}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U newsuser -d newsgrid"]
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-newsuser} -d $${POSTGRES_DB:-newsgrid}"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -24,16 +24,20 @@ services:
       context: .
       dockerfile: src/NewsApi/Dockerfile
     ports:
-      - "5000:8080"
+      - "127.0.0.1:5000:8080"
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
-      - ConnectionStrings__NewsDb=Host=postgres;Port=5432;Database=newsgrid;Username=newsuser;Password=newspassword123!
+      - ConnectionStrings__NewsDb=Host=postgres;Port=5432;Database=${POSTGRES_DB:-newsgrid};Username=${POSTGRES_USER:-newsuser};Password=${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
       - DbProvider=postgres
-      - ApiKey=${API_KEY:-AIzaSyAh7soVCbg-JfW-gUKVZIQkbd0sdlE34QI}
+      - ApiKey=${API_KEY:?Set API_KEY in .env}
       - YouTube__ApiKey=${YOUTUBE_API_KEY:-}
       - Gemini__ApiKey=${GEMINI_API_KEY:-}
-      - AiEnrichment__GeminiEnabled=true
+      - AiEnrichment__GeminiEnabled=${AiEnrichment__GeminiEnabled:-true}
+      - GoogleCloud__ApiKey=${GCP_TTS_API_KEY:-}
       - IndexNow__Key=${INDEXNOW_KEY:-3a7b9c1d2e4f5a6b7c8d9e0f1a2b3c4d}
+      - AllowedOrigins__0=${AllowedOrigins__0:-https://newsstand.ng}
+      - AllowedOrigins__1=${AllowedOrigins__1:-https://www.newsstand.ng}
+      - AllowedOrigins__2=${AllowedOrigins__2:-http://localhost:3000}
     volumes:
       - audio-data:/app/data/audio
     depends_on:
@@ -53,12 +57,31 @@ services:
       context: .
       dockerfile: src/AdminDashboard/Dockerfile
     ports:
-      - "5001:8080"
+      - "127.0.0.1:5001:8080"
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
       - ApiBaseUrl=http://news-api:8080
       - NewsApi__BaseUrl=http://news-api:8080
-      - ApiKey=${API_KEY:-AIzaSyAh7soVCbg-JfW-gUKVZIQkbd0sdlE34QI}
+      - ApiKey=${API_KEY:?Set API_KEY in .env}
+    depends_on:
+      news-api:
+        condition: service_healthy
+    restart: unless-stopped
+
+  news-web:
+    image: nigeriannewsgrid-web:latest
+    build:
+      context: src/NigerianNewsGrid.Web
+      dockerfile: Dockerfile
+    ports:
+      - "127.0.0.1:3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - API_BASE_URL=http://news-api:8080
+      - NEWS_API_URL=http://news-api:8080
+      - VITE_API_BASE=${VITE_API_BASE:-/api/v1}
+      - INDEXNOW_KEY=${INDEXNOW_KEY:-3a7b9c1d2e4f5a6b7c8d9e0f1a2b3c4d}
     depends_on:
       news-api:
         condition: service_healthy
@@ -74,7 +97,8 @@ services:
       - ApiBaseUrl=http://news-api:8080
       - NewsApi__BaseUrl=http://news-api:8080
       - Scraper__IntervalMinutes=15
-      - ApiKey=${API_KEY:-AIzaSyAh7soVCbg-JfW-gUKVZIQkbd0sdlE34QI}
+      - Scraper__MaxConcurrency=${SCRAPER_MAX_CONCURRENCY:-4}
+      - ApiKey=${API_KEY:?Set API_KEY in .env}
     depends_on:
       news-api:
         condition: service_healthy
@@ -91,7 +115,7 @@ services:
       - NewsApi__BaseUrl=http://news-api:8080
       - Tts__AudioStoragePath=/app/data/audio
       - GoogleCloud__ApiKey=${GCP_TTS_API_KEY:-}
-      - ApiKey=${API_KEY:-AIzaSyAh7soVCbg-JfW-gUKVZIQkbd0sdlE34QI}
+      - ApiKey=${API_KEY:?Set API_KEY in .env}
     volumes:
       - audio-data:/app/data/audio
     depends_on:

@@ -23,6 +23,7 @@ jobs:
           dotnet restore src/NewsScraperService/NewsScraperService.csproj
           dotnet restore src/TtsWorker/TtsWorker.csproj
           dotnet restore tests/NewsApiClient.Tests/NewsApiClient.Tests.csproj
+          dotnet restore tests/NewsApi.Tests/NewsApi.Tests.csproj
       - name: Build NewsApi
         run: dotnet build src/NewsApi/NewsApi.csproj -c Release --no-restore
       - name: Build AdminDashboard
@@ -32,6 +33,21 @@ jobs:
       - name: Build TtsWorker
         run: dotnet build src/TtsWorker/TtsWorker.csproj -c Release --no-restore
       - name: Build Tests
-        run: dotnet build tests/NewsApiClient.Tests/NewsApiClient.Tests.csproj -c Release --no-restore
+        run: |
+          dotnet build tests/NewsApiClient.Tests/NewsApiClient.Tests.csproj -c Release --no-restore
+          dotnet build tests/NewsApi.Tests/NewsApi.Tests.csproj -c Release --no-restore
       - name: Run Unit Tests
-        run: dotnet test tests/NewsApiClient.Tests/NewsApiClient.Tests.csproj -c Release --no-build --verbosity normal
+        run: |
+          dotnet test tests/NewsApiClient.Tests/NewsApiClient.Tests.csproj -c Release --no-build --verbosity normal
+          dotnet test tests/NewsApi.Tests/NewsApi.Tests.csproj -c Release --no-build --verbosity normal
+      - name: Setup Node.js for Web SSR Build
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: src/NigerianNewsGrid.Web/package-lock.json
+      - name: Build NigerianNewsGrid.Web (SSR)
+        working-directory: src/NigerianNewsGrid.Web
+        run: |
+          npm ci
+          npm run build

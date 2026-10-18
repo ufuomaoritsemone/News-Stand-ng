@@ -26,6 +26,8 @@ public class BriefingItemDto
     public bool IsPinned { get; set; }
     public int? TargetPosition { get; set; }
     public int PriorityWeight { get; set; } = 1;
+    public string PlacementZone { get; set; } = "MainPage_InFeed";
+    public string TargetPlatform { get; set; } = "All";
 
     // AI Summary & Enrichment Fields for Mobile
     public bool HasAiSummary { get; set; }

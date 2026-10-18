@@ -7,36 +7,30 @@
 
 <div class="container-fluid px-4 py-3">
 
-    <!-- Header -->
-    <div class="dashboard-header d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
+    <!-- SaaS Page Header -->
+    <div class="saas-page-header">
         <div>
             <div class="d-flex align-items-center gap-3">
-                <h1 class="h2 mb-0 text-white brand-font">📰 News Stand NG</h1>
-                <span class="badge-live">USER ANALYTICS</span>
+                <h1 class="saas-page-title mb-0"><i class="bi bi-bar-chart-fill text-success"></i> User Analytics</h1>
+                <span class="badge bg-success bg-opacity-25 text-success border border-success border-opacity-50 px-3 py-1 rounded-pill" style="font-size:0.75rem;letter-spacing:.05em;">
+                    <i class="bi bi-activity me-1"></i> LIVE TELEMETRY
+                </span>
             </div>
-            <p class="text-muted mb-0 mt-1">Anonymised in-app behaviour &amp; widget adoption — no PII collected</p>
+            <p class="saas-page-desc mt-1">Anonymised in-app telemetry, readership engagement &amp; widget adoption</p>
         </div>
-        <div class="d-flex align-items-center gap-2 flex-wrap">
-            <a href="/" class="btn btn-outline-light btn-sm"><i class="bi bi-newspaper me-1"></i> Articles</a>
-            <a href="/Videos" class="btn btn-outline-danger btn-sm"><i class="bi bi-youtube me-1"></i> Videos</a>
-            <a href="/Socials" class="btn btn-outline-info btn-sm"><i class="bi bi-twitter-x me-1"></i> Socials</a>
-            <a href="/Sponsors" class="btn btn-outline-warning btn-sm"><i class="bi bi-megaphone me-1"></i> Sponsored</a>
-            <a href="/Feedback" class="btn btn-outline-primary btn-sm"><i class="bi bi-chat-heart me-1"></i> Feedback</a>
-            <a href="/Categorizer" class="btn btn-outline-purple btn-sm"><i class="bi bi-cpu-fill me-1"></i> ML Categorizer</a>
-            <a href="/SearchConsole" class="btn btn-outline-success btn-sm"><i class="bi bi-google me-1"></i> Search Console</a>
-            <button type="button" class="theme-toggle-btn" onclick="toggleAdminTheme()" title="Toggle Light / Dark Theme">
-                <i class="bi bi-moon-stars-fill theme-icon-dark"></i>
-                <i class="bi bi-sun-fill theme-icon-light"></i>
-                <span class="theme-toggle-label">Dark</span>
-            </button>
+        <div class="saas-toolbar">
             <!-- Period filter -->
-            <form method="get" class="d-flex gap-2">
-                <select name="days" class="form-select form-control-glass form-select-sm" onchange="this.form.submit()" style="width:160px;">
-                    <option value="7" selected="@(Model.Days == 7)">Last 7 days</option>
-                    <option value="30" selected="@(Model.Days == 30)">Last 30 days</option>
-                    <option value="90" selected="@(Model.Days == 90)">Last 90 days</option>
-                </select>
+            <form method="get" class="d-flex align-items-center gap-2">
+                <div class="input-group input-group-sm">
+                    <span class="input-group-text bg-transparent border-glass text-muted"><i class="bi bi-calendar3"></i></span>
+                    <select name="days" class="form-select form-control-glass form-select-sm" onchange="this.form.submit()" style="width:160px;">
+                        <option value="7" selected="@(Model.Days == 7)">Last 7 days</option>
+                        <option value="30" selected="@(Model.Days == 30)">Last 30 days</option>
+                        <option value="90" selected="@(Model.Days == 90)">Last 90 days</option>
+                    </select>
+                </div>
             </form>
+            <a href="/Analytics?days=@Model.Days" class="btn btn-saas-secondary btn-sm"><i class="bi bi-arrow-clockwise"></i> Refresh</a>
         </div>
     </div>
 
@@ -321,7 +315,7 @@
                 @if (s?.TopArticles?.Any() == true)
                 {
                     <div class="table-responsive">
-                        <table class="table table-dark table-hover table-sm mb-0" style="font-size:0.82rem;">
+                        <table class="table table-hover table-sm mb-0" style="font-size:0.82rem;">
                             <thead class="text-muted text-uppercase" style="font-size:0.72rem;">
                                 <tr>
                                     <th>#</th>
