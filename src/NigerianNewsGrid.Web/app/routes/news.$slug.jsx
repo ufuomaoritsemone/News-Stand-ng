@@ -440,8 +440,8 @@ export default function ArticleLandingPage() {
                     <span>AI Executive Briefing</span>
                   </div>
                   <span className="briefing-engine-tag">
-                    {article.enrichment.engine === "Gemini-1.5-Flash" || article.enrichment.engine === "gemini-1.5-flash"
-                      ? "Gemini 1.5 Flash"
+                    {article.enrichment.engine?.toLowerCase().includes("gemini")
+                      ? "Gemini Flash AI"
                       : "Verified Synthesis"}
                   </span>
                   <span className="briefing-reading-time">
@@ -572,7 +572,7 @@ export default function ArticleLandingPage() {
                   <span>Key Takeaways</span>
                 </div>
                 <span className="takeaways-engine-tag">
-                  {article.enrichment.engine === "gemini-1.5-flash" ? "AI Summary" : "Verified Extract"}
+                  {article.enrichment.engine?.toLowerCase().includes("gemini") ? "AI Summary" : "Verified Extract"}
                 </span>
               </div>
               <ul className="takeaways-list">

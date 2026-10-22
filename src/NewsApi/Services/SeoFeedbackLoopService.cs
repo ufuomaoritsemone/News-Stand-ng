@@ -33,9 +33,12 @@ public class SeoFeedbackLoopService(
         CancellationToken ct = default)
     {
         // Try Gemini generative AI if API key is provided
-        var apiKey = _config["Google:ApiKey"]
+        var apiKey = Environment.GetEnvironmentVariable("GEMINI_API_KEY")
             ?? _config["Gemini:ApiKey"]
-            ?? Environment.GetEnvironmentVariable("GEMINI_API_KEY");
+            ?? _config["Gemini__ApiKey"]
+            ?? _config["Google:ApiKey"]
+            ?? _config["ApiKey"]
+            ?? Environment.GetEnvironmentVariable("API_KEY");
 
         if (!string.IsNullOrWhiteSpace(apiKey))
         {
@@ -98,7 +101,10 @@ public class SeoFeedbackLoopService(
                 }
 
                 // Otherwise, enrich a batch of the most recent unenriched, non-sponsored articles.
-                var batchSize = Math.Clamp(_config.GetValue("Seo:BackfillBatchSize", 10), 1, 50);
+                var rawBatchSize = _config?["Seo:BackfillBatchSize"];
+                var batchSize = int.TryParse(rawBatchSize, out var parsedBatchSize)
+                    ? Math.Clamp(parsedBatchSize, 1, 50)
+                    : 10;
                 var unenriched = await _db.Articles
                     .AsNoTracking()
                     .Where(a => !a.IsSponsored && !_db.ArticleEnrichments.Any(e => e.ArticleId == a.Id))
@@ -131,7 +137,9 @@ public class SeoFeedbackLoopService(
                         ActionType = "BackfillEnrichment",
                         Target = unenriched.Count == 1 ? (unenriched[0].Slug ?? unenriched[0].Id) : $"{unenriched.Count} articles",
                         Status = succeeded > 0 ? "Completed" : "Failed",
-                        Details = $"Enriched {succeeded}/{unenriched.Count} recent articles with key takeaways and FAQ schema."
+                        Details = unenriched.Count == 1
+                            ? $"Enriched article '{unenriched[0].Title}' with key takeaways and FAQ schema."
+                            : $"Enriched {succeeded}/{unenriched.Count} recent articles with key takeaways and FAQ schema."
                     };
                 }
 
@@ -280,7 +288,8 @@ public class SeoFeedbackLoopService(
             }
         };
 
-        var url = $"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={apiKey}";
+        var model = _config["Gemini:Model"] ?? "gemini-3.8-flash";
+        var url = $"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={apiKey}";
         var response = await client.PostAsJsonAsync(url, requestBody, ct);
         if (response.IsSuccessStatusCode)
         {

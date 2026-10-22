@@ -23,6 +23,70 @@ Projects:
 
 ## Updates
 
+### October 21, 2026 — Decoupled API Keys from appsettings; Single Source of Truth via .env
+Decoupled backend services from hardcoded API keys in configuration files, establishing root `.env` as the sole source of truth for runtime secrets:
+- **[Zero-Dependency .env Auto-Loader (`EnvLoader.cs`)]**:
+  - Implemented `NigerianNewsGrid.Client.EnvLoader` to automatically discover and parse the repository's `.env` file upon process boot, traversing directory ancestors.
+  - Automatically loads and maps `API_KEY` (into `ApiKey`) and `GEMINI_API_KEY` (into `Gemini__ApiKey` / `Gemini:ApiKey`) into the process environment before ASP.NET Core `WebApplication.CreateBuilder` and Worker `Host.CreateDefaultBuilder` instantiate.
+- **[Decoupled appsettings Configuration Files]**:
+  - Removed all hardcoded `ApiKey` and `Gemini:ApiKey` strings from `src/NewsApi/appsettings.json`, `src/NewsApi/appsettings.Development.json`, `src/NewsScraperService/appsettings.json`, `src/TtsWorker/appsettings.json`, and `src/AdminDashboard/appsettings.json`.
+- **[Prioritized Environment Resolution Across Services]**:
+  - Updated `ApiKeyMiddleware.cs`, `GeminiEmbeddingProvider.cs`, `ArticleEnrichmentService.cs`, `SeoFeedbackLoopService.cs`, `LlmEntityExtractor.cs`, `ScraperWorker.cs`, and `Service.cs` to prioritize `GEMINI_API_KEY` and `API_KEY` from environment variables before any fallback.
+- **[Verification]**:
+  - Verified 100% test pass rates across `NewsApi.Tests` (91/91 passing) and `NewsApiClient.Tests` (311/311 passing).
+
+### October 21, 2026 — AI Generative Summary Review, Gemini Model Currency & Key Resolution Upgrade
+Reviewed the Generative AI summary architecture across backend microservices, web drawer components, and mobile endpoints:
+- **[Gemini Model Currency Upgrade (`gemini-3.8-flash`)]**:
+  - Identified that Google Generative Language API v1beta returned HTTP 404 for legacy `gemini-1.5-flash` (`"models/gemini-1.5-flash is not found for API version v1beta, or is not supported for generateContent"`), and retired `gemini-2.5-flash` for new users.
+  - Upgraded generative endpoints across `ArticleEnrichmentService.cs`, `SeoFeedbackLoopService.cs`, and `LlmEntityExtractor.cs` to default to `gemini-3.8-flash` while enabling dynamic model configuration via `_config["Gemini:Model"]`.
+- **[Multi-Source Key & Dynamic Setting Resolution (`ArticleEnrichmentService.cs`)]**:
+  - Integrated `ISystemSettingsService` and fallback environment variable resolution (`GEMINI_API_KEY`, `GoogleCloud:ApiKey`, `ApiKey`, `Gemini__ApiKey`) into `ArticleEnrichmentService`.
+  - Added dynamic check for `AiEnrichment:GeminiEnabled` (falling back to database settings or environment variables), ensuring toggles from the Admin Dashboard take effect immediately.
+  - Synchronized `appsettings.json` and `appsettings.Development.json` with the active Gemini configuration.
+- **[Fault-Tolerant Circuit Breaker & Zero-Cost Extractive Fallback (`TextRank-Extractive`)]**:
+  - Verified that if Cloud AI credits are depleted (HTTP 402 `RESOURCE_EXHAUSTED`) or network timeouts occur, the built-in 10-minute circuit breaker trips safely without bubbling errors to callers.
+  - The zero-cost local extractive ML engine (`TextRank-Extractive`) immediately generates structured `FullSummary` (`executiveOverview`, `contextAndBackground`, `keyFiguresAndEntities`, `outlookOrNextSteps`), `keyTakeaways`, `timelineFacts`, and `faqs` with 0% hallucination.
+- **[Web UI / ReaderDrawer Engine Badge Currency (`ReaderDrawer.jsx`, `news.$slug.jsx`)]**:
+  - Updated frontend badge rendering in `ReaderDrawer.jsx` and `news.$slug.jsx` to dynamically recognize all Gemini engine variants (`Gemini-3.8-Flash`, `Gemini-Flash`, etc.) alongside `TextRank-Extractive`.
+- **[Verification]**:
+  - All 91 unit and integration tests in `NewsApi.Tests` pass with 0 errors (`dotnet test tests/NewsApi.Tests`).
+
+### October 21, 2026 — Google Cloud Application Default Credentials (ADC) & Vertex AI Support
+Configured keyless authentication and Application Default Credentials (ADC) support across the backend to comply with organizational "API Keys are Disallowed" security policies (`constraints/iam.disableApiKeyCreation`):
+- **[Gemini Embedding Provider ADC Integration (`GeminiEmbeddingProvider.cs`)]**:
+  - Enhanced `GetClient()` to inspect `GOOGLE_APPLICATION_CREDENTIALS`, `GOOGLE_GENAI_USE_VERTEXAI`, and default gcloud user credentials (`%APPDATA%\gcloud\application_default_credentials.json`).
+  - Added support for parameterless `new Client()` initialization in the `Google.GenAI` SDK to automatically authenticate via ADC when API keys are disallowed or blank.
+- **[Environment & Docker Compose Forwarding (`.env`, `docker-compose.yml`)]**:
+  - Configured project-wide environment variables for ADC: `GOOGLE_APPLICATION_CREDENTIALS`, `GCP_PROJECT_ID`, `GOOGLE_CLOUD_PROJECT`, `GCP_LOCATION`, and `GOOGLE_GENAI_USE_VERTEXAI=true`.
+  - Added ADC variable forwarding into `news-api` in `docker-compose.yml`.
+  - Persisted user-level Windows environment variables for seamless local development across Visual Studio and CLI test runners.
+- **[Verification]**:
+  - Verified full test suite passes with 0 failures across 91 unit and integration tests (`dotnet test tests/NewsApi.Tests/NewsApi.Tests.csproj`).
+Documented the root cause of Microsoft Edge Neural TTS gateway failures and updated the WebSocket client protocol:
+- **[Microsoft Edge Read Aloud DRM & Protocol Changes (`EdgeNeuralTtsSynthesizer.cs`)]**:
+  - Identified that Microsoft permanently decommissioned the legacy `wss://speech.platform.bing.com/consumer/speech/synthesize/readaheadedge/v1` endpoint (returning HTTP 400 Bad Request) and transitioned to `wss://speech.platform.bing.com/consumer/speech/synthesize/readaloud/edge/v1`.
+  - Analyzed Microsoft's rolling anti-abuse token mechanisms (`Sec-MS-GEC` and `Sec-MS-GEC-Version`): Microsoft periodically rotates from v1 single-hash tokens to v2 composite digests (`<16-char-hex>-<64-char-hex>`) with browser fingerprinting (`MUID` cookies and Edge browser version alignment), returning HTTP 403 Forbidden to non-browser / third-party clients whenever the token algorithm or Edge version evolves.
+  - Implemented dynamic 5-minute windowed Windows NT file time ticks and SHA-256 HMAC generation, updated required request headers (`User-Agent`, `Origin`, `Pragma`, `Cache-Control`), and formatted UTC `X-Timestamp` message headers.
+- **[Tri-Tier TTS Architectural Resilience (`CompositeTtsSynthesizer.cs`, `LocalFallbackTtsSynthesizer.cs`)]**:
+  - Re-validated that `CompositeTtsSynthesizer` smoothly handles upstream Edge network/gateway 403 or handshake errors without crashing or bubbling exceptions to calling callers, falling back seamlessly to `Tier 3 (LocalFallbackTtsSynthesizer)` to generate valid RIFF WAV audio.
+  - Verified 100% test coverage across both `NewsApi.Tests` (91/91 passing) and `NewsApiClient.Tests` (311/311 passing).
+
+### October 18, 2026 — CI Test Suite Uniqueness & Null-Config Regression Fixes
+Resolved the GitHub Actions CI test suite failures in `tests/NewsApi.Tests/NewsApi.Tests.csproj`:
+- **[Database Seeding Idempotency & Process Lock (`DataSeeder.cs`, `DbInitializer.cs`)]**:
+  - Added a process-wide `SemaphoreSlim _initLock` to `DbInitializer.InitializeAsync` to synchronize concurrent database migrations and data seeding when multiple `WebApplicationFactory<Program>` instances or test classes execute simultaneously.
+  - Made `DataSeeder.SeedSourcesAsync` and `DataSeeder.SeedArticlesAsync` strictly idempotent by verifying non-existence per entity ID/Slug before insertion (`!AnyAsync(...)`), eliminating `UNIQUE constraint failed: Articles.Slug` and `UNIQUE constraint failed: Sources.Id` exceptions.
+  - Initialized `usedSlugs` in `DataSeeder.EnsureArticleSlugsBackfilledAsync` with existing database slugs to prevent collision when backfilling slugs for initial articles.
+- **[Shared Integration Test Collection (`IntegrationTestCollection.cs`, `SystemHealthEndpointTests.cs`, `ImageProxyEndpointTests.cs`)]**:
+  - Created `IntegrationTestCollection` (`[CollectionDefinition("NewsApiIntegration")]`) and attributed `SystemHealthEndpointTests` and `ImageProxyEndpointTests` to share a single collection fixture. This prevents xUnit from spinning up duplicate parallel ASP.NET Core test hosts against the same SQLite database file.
+  - Hermetic test execution for `ImageProxyEndpointTests` via a mock `HttpMessageHandler` returning valid image bytes, eliminating flakiness from external CDN network dependencies.
+- **[Null-Safe SEO Remediation Configuration & Detail Formatting (`SeoFeedbackLoopService.cs`)]**:
+  - Replaced `_config.GetValue("Seo:BackfillBatchSize", 10)` with safe string indexing (`_config?["Seo:BackfillBatchSize"]`) and `int.TryParse` with a fallback default of 10, preventing `NullReferenceException` when configuration providers or mock instances do not define the section.
+  - Adjusted remediation log details to preserve the single-article format (`$"Enriched article '{title}' with key takeaways and FAQ schema."`) expected by unit tests while retaining batch summary formatting for multi-article backfills.
+- **[Verification]**:
+  - All 91 tests in `NewsApi.Tests` now pass with exit code 0 (`dotnet test tests/NewsApi.Tests/NewsApi.Tests.csproj -c Release --no-build`).
+
 ### October 18, 2026 — End-to-End Technical & News SEO Enhancements
 Completed an audit and implementation of technical and News SEO improvements across `NewsApi` and `NigerianNewsGrid.Web`:
 - **[Sitemap Hygiene & Indexation Alignment (`SeoController.cs`)]**:

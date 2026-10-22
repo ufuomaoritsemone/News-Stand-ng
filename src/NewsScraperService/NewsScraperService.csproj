@@ -15,6 +15,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\NigerianNewsGrid.Client\NigerianNewsGrid.Client.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
     <None Update="Models\categorizer_model.zip">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>

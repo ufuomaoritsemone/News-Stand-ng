@@ -161,13 +161,17 @@ public class GeminiEmbeddingProvider : IEmbeddingProvider
     private Client? GetClient()
     {
         var apiKey = GetApiKey();
-        if (string.IsNullOrWhiteSpace(apiKey)) return null;
+        var hasAdc = !string.IsNullOrWhiteSpace(System.Environment.GetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS"))
+            || !string.IsNullOrWhiteSpace(System.Environment.GetEnvironmentVariable("GOOGLE_GENAI_USE_VERTEXAI"))
+            || System.IO.File.Exists(System.IO.Path.Combine(System.Environment.GetFolderPath(System.Environment.SpecialFolder.ApplicationData), "gcloud", "application_default_credentials.json"));
+
+        if (string.IsNullOrWhiteSpace(apiKey) && !hasAdc) return null;
 
         lock (_clientLock)
         {
             if (_client == null || _cachedApiKey != apiKey)
             {
-                _client = new Client(apiKey: apiKey);
+                _client = !string.IsNullOrWhiteSpace(apiKey) ? new Client(apiKey: apiKey) : new Client();
                 _cachedApiKey = apiKey;
             }
         }
@@ -192,10 +196,12 @@ public class GeminiEmbeddingProvider : IEmbeddingProvider
             catch { }
         }
 
-        return _config["Gemini:ApiKey"]
+        return System.Environment.GetEnvironmentVariable("GEMINI_API_KEY")
+            ?? _config["Gemini:ApiKey"]
+            ?? _config["Gemini__ApiKey"]
             ?? _config["GoogleCloud:ApiKey"]
             ?? _config["Embeddings:ApiKey"]
             ?? _config["ApiKey"]
-            ?? System.Environment.GetEnvironmentVariable("GEMINI_API_KEY");
+            ?? System.Environment.GetEnvironmentVariable("API_KEY");
     }
 }

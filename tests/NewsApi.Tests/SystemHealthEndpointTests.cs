@@ -5,7 +5,8 @@ using Xunit;
 
 namespace NewsApi.Tests;
 
-public class SystemHealthEndpointTests : IClassFixture<WebApplicationFactory<Program>>
+[Collection("NewsApiIntegration")]
+public class SystemHealthEndpointTests
 {
     private readonly WebApplicationFactory<Program> _factory;
 

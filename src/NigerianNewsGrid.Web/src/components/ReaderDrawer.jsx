@@ -510,8 +510,8 @@ export default function ReaderDrawer({
                     <span>⚡ Quick Read</span>
                   </div>
                   <span className="briefing-engine-tag">
-                    {enrichment.engine === "Gemini-1.5-Flash" || enrichment.engine === "gemini-1.5-flash"
-                      ? "Gemini 1.5 Flash"
+                    {enrichment.engine?.toLowerCase().includes("gemini")
+                      ? "Gemini Flash AI"
                       : "Verified AI Summary"}
                   </span>
                   <span className="briefing-reading-time">
@@ -637,7 +637,7 @@ export default function ReaderDrawer({
                   <span>Key Takeaways</span>
                 </div>
                 <span className="takeaways-engine-tag">
-                  {enrichment.engine === "gemini-1.5-flash" || enrichment.engine === "Gemini-1.5-Flash" ? "AI Verified" : "Key Facts"}
+                  {enrichment.engine?.toLowerCase().includes("gemini") ? "AI Verified" : "Key Facts"}
                 </span>
               </div>
               <ul className="takeaways-list">

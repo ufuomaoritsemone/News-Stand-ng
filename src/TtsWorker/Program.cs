@@ -1,6 +1,10 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using NigerianNewsGrid.Client;
 using TtsWorker.Synthesizers;
+
+// Automatically load .env environment variables
+EnvLoader.Load();
 
 // ── Nigerian News Grid - TtsWorker Entry Point ──────────────────────────────────
 // Background worker service responsible for generating high-definition audio news briefings

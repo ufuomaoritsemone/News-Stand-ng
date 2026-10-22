@@ -40,7 +40,13 @@ public class LlmEntityExtractor : IEntityExtractor
         }
 
         // 2. Tier 2 LLM Extraction
-        var apiKey = _config["Gemini:ApiKey"] ?? _config["GoogleCloud:ApiKey"] ?? _config["LlmEntityExtraction:ApiKey"];
+        var apiKey = Environment.GetEnvironmentVariable("GEMINI_API_KEY")
+            ?? _config["Gemini:ApiKey"]
+            ?? _config["Gemini__ApiKey"]
+            ?? _config["GoogleCloud:ApiKey"]
+            ?? _config["LlmEntityExtraction:ApiKey"]
+            ?? _config["ApiKey"]
+            ?? Environment.GetEnvironmentVariable("API_KEY");
         if (string.IsNullOrWhiteSpace(apiKey))
         {
             _logger.LogDebug("Tier 2 LLM entity extraction skipped: No API key configured.");
@@ -85,7 +91,8 @@ public class LlmEntityExtractor : IEntityExtractor
             Story Summary: {{summary}}
             """;
 
-        var endpoint = $"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={apiKey}";
+        var model = _config["Gemini:Model"] ?? "gemini-3.8-flash";
+        var endpoint = $"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={apiKey}";
         var payload = new
         {
             contents = new[]

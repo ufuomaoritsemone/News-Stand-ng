@@ -33,6 +33,11 @@ services:
       - YouTube__ApiKey=${YOUTUBE_API_KEY:-}
       - Gemini__ApiKey=${GEMINI_API_KEY:-}
       - AiEnrichment__GeminiEnabled=${AiEnrichment__GeminiEnabled:-true}
+      - GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS:-}
+      - GCP_PROJECT_ID=${GCP_PROJECT_ID:-}
+      - GOOGLE_CLOUD_PROJECT=${GOOGLE_CLOUD_PROJECT:-}
+      - GCP_LOCATION=${GCP_LOCATION:-us-central1}
+      - GOOGLE_GENAI_USE_VERTEXAI=${GOOGLE_GENAI_USE_VERTEXAI:-false}
       - GoogleCloud__ApiKey=${GCP_TTS_API_KEY:-}
       - IndexNow__Key=${INDEXNOW_KEY:-3a7b9c1d2e4f5a6b7c8d9e0f1a2b3c4d}
       - AllowedOrigins__0=${AllowedOrigins__0:-https://newsstand.ng}

@@ -47,7 +47,9 @@ public class ApiKeyMiddleware
             return;
         }
 
-        var configuredKey = config["ApiKey"];
+        var configuredKey = config["ApiKey"]
+            ?? config["API_KEY"]
+            ?? Environment.GetEnvironmentVariable("API_KEY");
 
         // Hardening Step 3: Fail-closed in Staging / Production if ApiKey is missing
         if (string.IsNullOrWhiteSpace(configuredKey))

@@ -2,6 +2,10 @@ using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using NewsApi.Extensions;
 using NewsApi.Infrastructure;
 using NewsApi.Middleware;
+using NigerianNewsGrid.Client;
+
+// Automatically load .env environment variables before builder initialization
+EnvLoader.Load();
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -80,7 +84,9 @@ using (var scope = app.Services.CreateScope())
     var logger        = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
 
     // Startup Security Configuration Guard (Hardening Step 1)
-    var configuredApiKey = app.Configuration["ApiKey"];
+    var configuredApiKey = app.Configuration["ApiKey"] 
+        ?? app.Configuration["API_KEY"] 
+        ?? Environment.GetEnvironmentVariable("API_KEY");
     var ytApiKey = app.Configuration["YouTube:ApiKey"] ?? Environment.GetEnvironmentVariable("YOUTUBE_API_KEY");
 
     if (string.IsNullOrWhiteSpace(configuredApiKey))

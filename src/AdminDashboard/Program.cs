@@ -7,6 +7,9 @@ public class Program
 {
     public static void Main(string[] args)
     {
+        // Automatically load .env environment variables
+        NigerianNewsGrid.Client.EnvLoader.Load();
+
         var builder = WebApplication.CreateBuilder(args);
 
         // Fix #7: Configure Cookie Authentication for Admin Portal

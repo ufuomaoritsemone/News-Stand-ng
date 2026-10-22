@@ -21,35 +21,44 @@ public class DbInitializer(
     IDataSeeder? dataSeeder = null) : IDbInitializer
 {
     private readonly IDataSeeder _dataSeeder = dataSeeder ?? new DataSeeder(db, logger, slugService);
+    private static readonly SemaphoreSlim _initLock = new(1, 1);
 
     public async Task InitializeAsync(CancellationToken cancellationToken = default)
     {
-        await BaselineLegacyDatabaseIfNeededAsync(cancellationToken);
-
+        await _initLock.WaitAsync(cancellationToken);
         try
         {
-            // Run EF Core migrations (creates schema if missing, applies pending migrations)
-            await db.Database.MigrateAsync(cancellationToken);
-            logger.LogInformation("Database schema migrated successfully via EF Core Migrations.");
-        }
-        catch (Exception ex)
-        {
-            logger.LogWarning(ex, "MigrateAsync failed. Falling back to EnsureCreatedAsync.");
+            await BaselineLegacyDatabaseIfNeededAsync(cancellationToken);
+
             try
             {
-                await db.Database.EnsureCreatedAsync(cancellationToken);
+                // Run EF Core migrations (creates schema if missing, applies pending migrations)
+                await db.Database.MigrateAsync(cancellationToken);
+                logger.LogInformation("Database schema migrated successfully via EF Core Migrations.");
             }
-            catch (Exception innerEx)
+            catch (Exception ex)
             {
-                logger.LogError(innerEx, "Database initialization failed completely.");
-                throw;
+                logger.LogWarning(ex, "MigrateAsync failed. Falling back to EnsureCreatedAsync.");
+                try
+                {
+                    await db.Database.EnsureCreatedAsync(cancellationToken);
+                }
+                catch (Exception innerEx)
+                {
+                    logger.LogError(innerEx, "Database initialization failed completely.");
+                    throw;
+                }
             }
-        }
 
-        await EnsureTablesExistAsync(cancellationToken);
-        await EnsureSchemaColumnsUpdatedAsync(cancellationToken);
-        await EnsureFullTextSearchCreatedAsync(db, logger, cancellationToken);
-        await _dataSeeder.SeedAsync(cancellationToken);
+            await EnsureTablesExistAsync(cancellationToken);
+            await EnsureSchemaColumnsUpdatedAsync(cancellationToken);
+            await EnsureFullTextSearchCreatedAsync(db, logger, cancellationToken);
+            await _dataSeeder.SeedAsync(cancellationToken);
+        }
+        finally
+        {
+            _initLock.Release();
+        }
     }
 
     // ── Legacy Database Baselining ───────────────────────────────────────────

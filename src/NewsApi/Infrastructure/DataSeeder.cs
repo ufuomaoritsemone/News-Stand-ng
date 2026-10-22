@@ -70,7 +70,8 @@ public class DataSeeder : IDataSeeder
             return;
         }
 
-        _db.Sources.AddRange(
+        var defaultSources = new[]
+        {
             new Source { Id = "punch",        Name = "Punch Newspaper",       RssUrl = "https://punchng.com/feed/" },
             new Source { Id = "guardian",     Name = "The Guardian Nigeria",  SitemapUrl = "https://guardian.ng/news-sitemap.xml",          RssUrl = "https://news.google.com/rss/search?q=site:guardian.ng&hl=en-NG&gl=NG&ceid=NG:en", ScraperType = "Hybrid" },
             new Source { Id = "premiumtimes", Name = "Premium Times",         RssUrl = "https://www.premiumtimesng.com/feed" },
@@ -78,9 +79,23 @@ public class DataSeeder : IDataSeeder
             new Source { Id = "nairametrics", Name = "Nairametrics",          SitemapUrl = "https://nairametrics.com/news-sitemap.xml",     RssUrl = "https://nairametrics.com/feed/",      ScraperType = "Hybrid" },
             new Source { Id = "businessday",  Name = "BusinessDay Nigeria",   RssUrl = "https://businessday.ng/feed/",                      ScraperType = "Rss" },
             new Source { Id = "lindaikeji",   Name = "Linda Ikeji's Blog",    RssUrl = "https://www.lindaikejisblog.com/feed",             ScraperType = "Rss" }
-        );
-        await _db.SaveChangesAsync(ct);
-        _logger.LogInformation("Default news sources seeded.");
+        };
+
+        bool anyAdded = false;
+        foreach (var source in defaultSources)
+        {
+            if (!await _db.Sources.AnyAsync(s => s.Id == source.Id, ct))
+            {
+                _db.Sources.Add(source);
+                anyAdded = true;
+            }
+        }
+
+        if (anyAdded)
+        {
+            await _db.SaveChangesAsync(ct);
+            _logger.LogInformation("Default news sources seeded.");
+        }
     }
 
     private async Task EnsureChannelsTvAsync(CancellationToken ct)
@@ -302,15 +317,30 @@ public class DataSeeder : IDataSeeder
     {
         if (await _db.Articles.AnyAsync(ct)) return;
 
-        _db.Articles.AddRange(
+        var sampleArticles = new[]
+        {
             new Article { Id = Guid.NewGuid().ToString("N"), Title = "Federal Government Unveils New Digital Economy Roadmap",   Slug = "fg-unveils-digital-economy-roadmap-seed01",   Excerpt = "The Ministry of Communications and Digital Economy announced a strategic initiative.", Summary = "The Ministry of Communications and Digital Economy announced a strategic initiative.", Url = "https://punchng.com/news/digital-roadmap",               Source = "Punch Newspaper",        Category = "Politics",     PublishedAt = DateTime.UtcNow },
             new Article { Id = Guid.NewGuid().ToString("N"), Title = "Super Eagles Prepare for Upcoming International Friendly", Slug = "super-eagles-prepare-friendly-match-seed02", Excerpt = "Coaching staff confirm full squad training ahead of weekend clash.",               Summary = "Coaching staff confirm full squad training ahead of weekend clash.",               Url = "https://guardian.ng/sports/super-eagles-friendly",         Source = "The Guardian Nigeria",   Category = "Sports",       PublishedAt = DateTime.UtcNow.AddHours(-2) },
             new Article { Id = Guid.NewGuid().ToString("N"), Title = "Central Bank Highlights Monetary Policy Outlook for Q3",  Slug = "cbn-monetary-policy-outlook-q3-seed03",      Excerpt = "Key indicators show steady stabilization across foreign exchange markets.",          Summary = "Key indicators show steady stabilization across foreign exchange markets.",          Url = "https://www.premiumtimesng.com/business/cbn-monetary-policy", Source = "Premium Times",        Category = "Business",     PublishedAt = DateTime.UtcNow.AddHours(-4) },
             new Article { Id = Guid.NewGuid().ToString("N"), Title = "Tech Hub Ecosystem Grows Across Lagos and Abuja",         Slug = "tech-hub-ecosystem-lagos-abuja-seed04",       Excerpt = "Venture investments in Nigerian fintech startups reach record highs this quarter.",  Summary = "Venture investments in Nigerian fintech startups reach record highs this quarter.",  Url = "https://punchng.com/tech/startup-growth",                  Source = "Punch Newspaper",        Category = "Technology",   PublishedAt = DateTime.UtcNow.AddHours(-6) },
             new Article { Id = Guid.NewGuid().ToString("N"), Title = "United Nations Security Council Convenes Summit on Global Diplomatic Treaties", Slug = "un-security-council-global-summit-seed05", Excerpt = "World leaders and international envoys assemble at UN headquarters to negotiate multilateral regional agreements.", Summary = "World leaders and international envoys assemble at UN headquarters to negotiate multilateral regional agreements.", Url = "https://guardian.ng/news/un-global-security-summit", Source = "The Guardian Nigeria", Category = "International", PublishedAt = DateTime.UtcNow.AddHours(-8) }
-        );
-        await _db.SaveChangesAsync(ct);
-        _logger.LogInformation("Default sample articles seeded.");
+        };
+
+        bool anyAdded = false;
+        foreach (var article in sampleArticles)
+        {
+            if (!await _db.Articles.AnyAsync(a => a.Slug == article.Slug, ct))
+            {
+                _db.Articles.Add(article);
+                anyAdded = true;
+            }
+        }
+
+        if (anyAdded)
+        {
+            await _db.SaveChangesAsync(ct);
+            _logger.LogInformation("Default sample articles seeded.");
+        }
     }
 
     // ── Sponsored Articles (Direct Monetization) ──────────────────────────────
@@ -484,17 +514,27 @@ public class DataSeeder : IDataSeeder
 
             if (articlesNeedingSeo.Count > 0)
             {
-                var usedSlugs = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                var existingSlugs = await _db.Articles
+                    .Where(a => !string.IsNullOrEmpty(a.Slug))
+                    .Select(a => a.Slug!)
+                    .ToListAsync(ct);
+                var usedSlugs = new HashSet<string>(existingSlugs, StringComparer.OrdinalIgnoreCase);
+
                 foreach (var a in articlesNeedingSeo)
                 {
                     if (string.IsNullOrWhiteSpace(a.Slug))
                     {
                         var slug = _slugService.GenerateArticleSlug(a.Title, a.Id);
                         int attempts = 0;
-                        while (usedSlugs.Contains(slug) && attempts < 5)
+                        while (usedSlugs.Contains(slug))
                         {
                             slug = _slugService.GenerateArticleSlug(a.Title, null);
                             attempts++;
+                            if (attempts > 5)
+                            {
+                                slug = $"{slug}-{Guid.NewGuid():N}"[..Math.Min(80, slug.Length + 8)];
+                                break;
+                            }
                         }
                         a.Slug = slug;
                         usedSlugs.Add(slug);

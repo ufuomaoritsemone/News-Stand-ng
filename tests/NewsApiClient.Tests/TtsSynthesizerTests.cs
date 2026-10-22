@@ -99,6 +99,7 @@ public class TtsSynthesizerTests : IClassFixture<WebApplicationFactory<Program>>
         Assert.Equal("EdgeNeural", edgeSynthesizer.ProviderName);
     }
 
+
     [Fact]
     public async Task CompositeTtsSynthesizer_SeamlesslyFallsBackToLocal_WhenNetworkFails()
     {

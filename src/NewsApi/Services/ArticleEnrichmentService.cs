@@ -12,13 +12,65 @@ public partial class ArticleEnrichmentService(
     IEmbeddingProvider embeddingProvider,
     IConfiguration config,
     IHttpClientFactory httpClientFactory,
-    ILogger<ArticleEnrichmentService> logger) : IArticleEnrichmentService
+    ILogger<ArticleEnrichmentService> logger,
+    ISystemSettingsService? systemSettings = null) : IArticleEnrichmentService
 {
     private readonly NewsDbContext _db = db;
     private readonly IEmbeddingProvider _embeddingProvider = embeddingProvider;
     private readonly IConfiguration _config = config;
     private readonly IHttpClientFactory _httpClientFactory = httpClientFactory;
     private readonly ILogger<ArticleEnrichmentService> _logger = logger;
+    private readonly ISystemSettingsService? _systemSettings = systemSettings;
+
+    private async Task<string?> ResolveGeminiApiKeyAsync(CancellationToken ct = default)
+    {
+        if (_systemSettings != null)
+        {
+            try
+            {
+                var dyn = await _systemSettings.GetSettingAsync("Gemini:ApiKey", null, ct);
+                if (!string.IsNullOrWhiteSpace(dyn)) return dyn;
+            }
+            catch { }
+        }
+
+        return Environment.GetEnvironmentVariable("GEMINI_API_KEY")
+            ?? _config["Gemini:ApiKey"]
+            ?? _config["Gemini__ApiKey"]
+            ?? _config["GoogleCloud:ApiKey"]
+            ?? _config["ApiKey"]
+            ?? Environment.GetEnvironmentVariable("API_KEY");
+    }
+
+    private async Task<bool> IsGeminiEnabledAsync(CancellationToken ct = default)
+    {
+        if (_systemSettings != null)
+        {
+            try
+            {
+                var dyn = await _systemSettings.GetSettingAsync("AiEnrichment:GeminiEnabled", null, ct);
+                if (!string.IsNullOrWhiteSpace(dyn) && bool.TryParse(dyn, out bool isDynEnabled))
+                {
+                    return isDynEnabled;
+                }
+            }
+            catch { }
+        }
+
+        var envVal = Environment.GetEnvironmentVariable("AiEnrichment__GeminiEnabled")
+            ?? Environment.GetEnvironmentVariable("AiEnrichment:GeminiEnabled");
+        if (!string.IsNullOrWhiteSpace(envVal) && bool.TryParse(envVal, out bool isEnvEnabled))
+        {
+            return isEnvEnabled;
+        }
+
+        return _config.GetValue<bool>("AiEnrichment:GeminiEnabled", false);
+    }
+
+    private string GetGeminiModel()
+    {
+        return _config["Gemini:Model"] ?? "gemini-3.8-flash";
+    }
 
     // In-memory circuit breaker state: if Cloud AI fails, all subsequent articles in the batch
     // and subsequent requests skip Cloud AI and immediately use local ML (TextRank) until cooldown expires.
@@ -55,17 +107,17 @@ public partial class ArticleEnrichmentService(
         }
     }
 
-    public Task<bool> IsCloudAiAvailableAsync(CancellationToken cancellationToken = default)
+    public async Task<bool> IsCloudAiAvailableAsync(CancellationToken cancellationToken = default)
     {
-        var geminiKey = _config["Gemini:ApiKey"];
-        var geminiEnabled = _config.GetValue<bool>("AiEnrichment:GeminiEnabled", false);
+        var geminiKey = await ResolveGeminiApiKeyAsync(cancellationToken);
+        var geminiEnabled = await IsGeminiEnabledAsync(cancellationToken);
 
         if (string.IsNullOrWhiteSpace(geminiKey) || !geminiEnabled)
         {
-            return Task.FromResult(false);
+            return false;
         }
 
-        return Task.FromResult(!IsCircuitBreakerOpen());
+        return !IsCircuitBreakerOpen();
     }
 
     [GeneratedRegex(@"\s+")]
@@ -160,8 +212,8 @@ public partial class ArticleEnrichmentService(
 
         _logger.LogInformation("Processing enrichment for batch of {Count} articles", unenrichedArticles.Count);
 
-        var geminiKey = _config["Gemini:ApiKey"];
-        var geminiEnabled = _config.GetValue<bool>("AiEnrichment:GeminiEnabled", false);
+        var geminiKey = await ResolveGeminiApiKeyAsync(cancellationToken);
+        var geminiEnabled = await IsGeminiEnabledAsync(cancellationToken);
 
         // Pre-flight check: determine whether Cloud AI is eligible for this batch
         bool useCloudAi = !string.IsNullOrWhiteSpace(geminiKey) && geminiEnabled && !IsCircuitBreakerOpen();
@@ -274,8 +326,8 @@ public partial class ArticleEnrichmentService(
         CancellationToken cancellationToken = default)
     {
         // 1. Check optional Gemini enhancement if not explicitly skipped and circuit breaker is closed
-        var geminiKey = _config["Gemini:ApiKey"];
-        var geminiEnabled = _config.GetValue<bool>("AiEnrichment:GeminiEnabled", false);
+        var geminiKey = await ResolveGeminiApiKeyAsync(cancellationToken);
+        var geminiEnabled = await IsGeminiEnabledAsync(cancellationToken);
 
         if (!skipCloudAi && !IsCircuitBreakerOpen() && !string.IsNullOrWhiteSpace(geminiKey) && geminiEnabled)
         {
@@ -615,8 +667,9 @@ public partial class ArticleEnrichmentService(
             using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             cts.CancelAfter(TimeSpan.FromSeconds(12));
 
+            var model = GetGeminiModel();
             var client = _httpClientFactory.CreateClient();
-            var url = $"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={apiKey}";
+            var url = $"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={apiKey}";
 
             var promptText = $$"""
                 You are a senior news intelligence editor for Nigerian News Stand NG.
@@ -700,11 +753,18 @@ public partial class ArticleEnrichmentService(
                                 ReadingTimeSeconds = 40
                             };
 
+                            var engineName = model switch
+                            {
+                                var m when m.Contains("3.8") => "Gemini-3.8-Flash",
+                                var m when m.Contains("2.5") => "Gemini-2.5-Flash",
+                                _ => "Gemini-Flash"
+                            };
+
                             return new ArticleEnrichmentResult(
                                 parsed.KeyTakeaways,
                                 parsed.TimelineFacts,
                                 parsed.Faqs,
-                                "Gemini-1.5-Flash",
+                                engineName,
                                 fullSummary);
                         }
                     }
