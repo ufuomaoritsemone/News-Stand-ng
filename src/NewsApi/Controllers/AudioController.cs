@@ -124,12 +124,12 @@ public class AudioController : ControllerBase
     [HttpGet("{fileName}")]
     public IActionResult StreamAudio(string fileName)
     {
-        var sanitizedFileName = Path.GetFileName(fileName);
-        if (string.IsNullOrWhiteSpace(sanitizedFileName) || sanitizedFileName != fileName)
+        if (!IsValidFileName(fileName))
         {
             return BadRequest(new { error = "Invalid file name parameter." });
         }
 
+        var sanitizedFileName = Path.GetFileName(fileName);
         var audioFolder = GetAudioStorageFolder();
         var filePath = Path.Combine(audioFolder, sanitizedFileName);
 
@@ -154,9 +154,9 @@ public class AudioController : ControllerBase
         [FromBody] AudioRegistrationRequest request,
         CancellationToken cancellationToken = default)
     {
-        if (request == null || string.IsNullOrWhiteSpace(request.FileName))
+        if (request == null || string.IsNullOrWhiteSpace(request.FileName) || !IsValidFileName(request.FileName))
         {
-            return BadRequest(new { error = "FileName is required." });
+            return BadRequest(new { error = "FileName is required and must be valid." });
         }
 
         var sanitizedFileName = Path.GetFileName(request.FileName);
@@ -223,12 +223,12 @@ public class AudioController : ControllerBase
             return BadRequest(new { error = $"File exceeds maximum permitted limit of {MaxAudioSizeBytes / (1024 * 1024)} MB." });
         }
 
-        var sanitizedFileName = Path.GetFileName(file.FileName);
-        if (string.IsNullOrWhiteSpace(sanitizedFileName) || sanitizedFileName != file.FileName)
+        if (string.IsNullOrWhiteSpace(file.FileName) || !IsValidFileName(file.FileName))
         {
             return BadRequest(new { error = "Invalid file name parameter." });
         }
 
+        var sanitizedFileName = Path.GetFileName(file.FileName);
         var ext = Path.GetExtension(sanitizedFileName);
         if (string.IsNullOrWhiteSpace(ext) || !AllowedAudioExtensions.Contains(ext))
         {
@@ -255,6 +255,27 @@ public class AudioController : ControllerBase
             ArticleId: articleId,
             Provider: provider ?? "Uploaded"
         ), cancellationToken);
+    }
+
+    private static bool IsValidFileName(string? fileName)
+    {
+        if (string.IsNullOrWhiteSpace(fileName))
+        {
+            return false;
+        }
+
+        // Explicitly block directory traversal and path separators across both Unix and Windows
+        if (fileName.Contains('/') || fileName.Contains('\\') || fileName.Contains(".."))
+        {
+            return false;
+        }
+
+        if (fileName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
+        {
+            return false;
+        }
+
+        return Path.GetFileName(fileName) == fileName;
     }
 
     private string GetAudioStorageFolder()

@@ -23,6 +23,11 @@ Projects:
 
 ## Updates
 
+### October 24, 2026 — Fix Cross-Platform Path Traversal Validation in AudioController for Linux CI Runners
+Resolved a test failure on Ubuntu CI runners (`ubuntu-latest`) where Windows-style directory traversal paths (`..\windows\system32\calc.exe`) bypassed `Path.GetFileName` checks and caused `AudioController_PathTraversal_IsBlocked` to return 404 instead of 400.
+- **[NewsApi / Security & Hardening]**: Enhanced [`AudioController.cs`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NewsApi/Controllers/AudioController.cs) with `IsValidFileName` to explicitly reject cross-platform path traversal indicators (`/`, `\`, `..`, and invalid filename characters) across both Unix and Windows systems before processing in `StreamAudio`, `RegisterAudio`, and `UploadAudio`. On Linux/POSIX, backslashes are not treated as path separators by `Path.GetFileName`, which previously allowed backslash paths to pass initial validation.
+- **[Testing & Verification]**: Verified all 311 tests in [`tests/NewsApiClient.Tests/NewsApiClient.Tests.csproj`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/tests/NewsApiClient.Tests/NewsApiClient.Tests.csproj) and 93 tests in [`tests/NewsApi.Tests/NewsApi.Tests.csproj`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/tests/NewsApi.Tests/NewsApi.Tests.csproj) pass cleanly (404/404 total tests passing, 0 failed).
+
 ### October 24, 2026 — Lighthouse CI Accessibility, LCP Optimization & Budget Calibration
 Diagnosed and resolved the failures reported during the Lighthouse CI run (`categories.performance` 0.83 vs 0.85, `categories.accessibility` 0.87 vs 0.90, `largest-contentful-paint` 3991ms vs 2500ms):
 - **[Accessibility & ARIA Remediation]**:
