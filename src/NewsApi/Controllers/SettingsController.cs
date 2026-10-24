@@ -78,13 +78,17 @@ public class SettingsController(
                 cancellationToken: ct
             );
 
-            var first = response?.Embeddings?.FirstOrDefault();
-            if (first?.Values != null && first.Values.Count > 0)
-            {
-                return Ok(new TestConnectionResponseDto(true, $"Successfully connected to Google Gemini! Generated {first.Values.Count}-dim test vector embedding."));
-            }
+            var model = await _settingsService.GetSettingAsync("Gemini:Model", "gemini-3.1-flash-lite", ct) ?? "gemini-3.1-flash-lite";
+            var genResponse = await client.Models.GenerateContentAsync(
+                model: model,
+                contents: "Respond in 3 words: Ready",
+                cancellationToken: ct
+            );
+            var genText = genResponse?.Candidates?.FirstOrDefault()?.Content?.Parts?.FirstOrDefault()?.Text?.Trim() ?? "OK";
 
-            return Ok(new TestConnectionResponseDto(true, "Successfully authenticated with Google Gemini API."));
+            var first = response?.Embeddings?.FirstOrDefault();
+            var dimText = first?.Values != null && first.Values.Count > 0 ? $"{first.Values.Count}-dim vector embedding" : "embedding";
+            return Ok(new TestConnectionResponseDto(true, $"Successfully connected to Google Gemini! Generated {dimText} & verified model '{model}' (\"{genText}\")."));
         }
         catch (Exception ex)
         {

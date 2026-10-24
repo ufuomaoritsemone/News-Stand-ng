@@ -1,3 +1,5 @@
+using System.Diagnostics;
+
 namespace NewsApi.Services;
 
 /// <summary>
@@ -28,12 +30,23 @@ public class ArticleEnrichmentBackgroundService(
                 using var scope = _scopeFactory.CreateScope();
                 var enrichmentService = scope.ServiceProvider.GetRequiredService<IArticleEnrichmentService>();
 
-                _logger.LogInformation("ArticleEnrichmentBackgroundService: Checking for unenriched articles...");
+                _logger.LogInformation(
+                    "\n╔══════════════════════════════════════════════════════════════════════════════╗\n" +
+                    "║ 🚀 [ENRICHMENT BATCH ENGAGED] Scanning for Unenriched Articles               ║\n" +
+                    "║ Engine: Gemini Generative AI (Local TextRank ML Automatic Fallback)          ║\n" +
+                    "╚══════════════════════════════════════════════════════════════════════════════╝");
+
+                var sw = Stopwatch.StartNew();
                 int processed = await enrichmentService.ProcessUnenrichedBatchAsync(batchSize: 20, stoppingToken);
+                sw.Stop();
 
                 if (processed > 0)
                 {
-                    _logger.LogInformation("ArticleEnrichmentBackgroundService: Successfully enriched {Count} articles", processed);
+                    _logger.LogInformation(
+                        "\n╔══════════════════════════════════════════════════════════════════════════════╗\n" +
+                        "║ 🏁 [ENRICHMENT BATCH COMPLETED] Successfully enriched {Count} articles ({ElapsedMs} ms) ║\n" +
+                        "╚══════════════════════════════════════════════════════════════════════════════╝",
+                        processed, sw.ElapsedMilliseconds);
                 }
             }
             catch (Exception ex) when (ex is not OperationCanceledException)

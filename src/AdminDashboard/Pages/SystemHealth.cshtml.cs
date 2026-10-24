@@ -159,7 +159,17 @@ public record SystemHealthReportDto(
     ProcessHealthDto Process,
     DatabaseHealthDetailsDto Database,
     WorkersHealthDetailsDto Workers,
-    StorageHealthDetailsDto Storage
+    StorageHealthDetailsDto Storage,
+    AiEnrichmentHealthDto? AiEnrichment = null
+);
+
+public record AiEnrichmentHealthDto(
+    bool Configured,
+    bool CloudAiAvailable,
+    bool CircuitBreakerActive,
+    DateTime? CircuitBreakerUntilUtc,
+    string Model,
+    string FallbackEngine
 );
 
 public record ProcessHealthDto(

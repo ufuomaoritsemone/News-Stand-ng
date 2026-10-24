@@ -40,6 +40,20 @@ public interface IArticleEnrichmentService
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Pure computation: extracts 3 key takeaways, timeline facts, and structured FAQ pairs from the provided text and metadata,
+    /// with an explicit option to bypass Cloud AI and an optional articleId for audit tracing.
+    /// </summary>
+    Task<ArticleEnrichmentResult> GenerateEnrichmentAsync(
+        string title,
+        string? summary,
+        string? content,
+        string? category,
+        IEnumerable<string>? knownEntities,
+        bool skipCloudAi,
+        string? articleId,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Convenience overload extracting takeaways, timeline facts, and FAQs directly from an Article model.
     /// </summary>
     Task<ArticleEnrichmentResult> GenerateEnrichmentAsync(
@@ -55,6 +69,11 @@ public interface IArticleEnrichmentService
     /// Returns true if the Cloud AI circuit breaker is currently active (cooling down).
     /// </summary>
     bool IsCircuitBreakerActive { get; }
+
+    /// <summary>
+    /// Gets the UTC expiration timestamp of the active circuit breaker cooldown, or null if the circuit is healthy.
+    /// </summary>
+    DateTime? CircuitBreakerUntilUtc { get; }
 }
 
 public record ArticleEnrichmentResult(

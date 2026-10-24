@@ -25,7 +25,17 @@ NigerianNewGrid/
 reports/
 tests/
 docs/
+scratch/
+logs/
+*.log
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+**/node_modules/
 .mobiledesign/
 CodeMap.html
 run-services.bat
 run-services.ps1
+

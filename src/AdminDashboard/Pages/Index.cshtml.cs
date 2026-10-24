@@ -242,7 +242,7 @@ public class IndexModel : PageModel
                     success = true,
                     message = "AI Executive Summary generated successfully!",
                     fullSummary,
-                    engine = "Gemini-1.5-Flash"
+                    engine = (response.Headers.TryGetValues("X-AI-Engine", out var vals) ? vals.FirstOrDefault() : null) ?? "Gemini-3.1-Flash-Lite"
                 });
             }
 

@@ -42,8 +42,13 @@ public class GeminiEmbeddingProvider : IEmbeddingProvider
         {
             _circuitBreakerUntilUtc = DateTime.UtcNow.Add(CircuitBreakerCooldown);
         }
-        logger?.LogWarning("Gemini Embedding Circuit Breaker TRIPPED until {UntilUtc:u}: {Reason}. Falling back to local provider.",
-            _circuitBreakerUntilUtc, reason);
+        logger?.LogWarning(
+            "\n╔══════════════════════════════════════════════════════════════════════════════╗\n" +
+            "║ ⚡ [GEMINI EMBEDDING CIRCUIT BREAKER TRIPPED] Fallback to Local Embedding      ║\n" +
+            "║ Reason  : {Reason}\n" +
+            "║ Cooldown: Active until {CooldownUntilUtc:u} (10 min bypass)                  ║\n" +
+            "╚══════════════════════════════════════════════════════════════════════════════╝",
+            reason, _circuitBreakerUntilUtc);
     }
 
     public static void ResetCircuitBreaker()
@@ -87,6 +92,12 @@ public class GeminiEmbeddingProvider : IEmbeddingProvider
 
         try
         {
+            _logger.LogInformation(
+                "\n╔══════════════════════════════════════════════════════════════════════════════╗\n" +
+                "║ 🧠 [GEMINI EMBEDDING ENGAGED] Model: {Model} | Dimensions: {Dims}             ║\n" +
+                "╚══════════════════════════════════════════════════════════════════════════════╝",
+                DefaultModel, Dimensions);
+
             var response = await client.Models.EmbedContentAsync(
                 model: DefaultModel,
                 contents: text,
@@ -161,7 +172,27 @@ public class GeminiEmbeddingProvider : IEmbeddingProvider
     private Client? GetClient()
     {
         var apiKey = GetApiKey();
-        var hasAdc = !string.IsNullOrWhiteSpace(System.Environment.GetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS"))
+        var adcEnv = System.Environment.GetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS");
+        if (string.IsNullOrWhiteSpace(adcEnv) || !System.IO.File.Exists(adcEnv))
+        {
+            var userGcloudAdc = System.IO.Path.Combine(System.Environment.GetFolderPath(System.Environment.SpecialFolder.ApplicationData), "gcloud", "application_default_credentials.json");
+            if (System.IO.File.Exists(userGcloudAdc))
+            {
+                System.Environment.SetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS", userGcloudAdc);
+                adcEnv = userGcloudAdc;
+            }
+            else
+            {
+                var repoSecrets = System.IO.Path.GetFullPath(System.IO.Path.Combine(System.AppContext.BaseDirectory, "..", "..", "..", "..", "secrets", "gcp-service-account.json"));
+                if (System.IO.File.Exists(repoSecrets))
+                {
+                    System.Environment.SetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS", repoSecrets);
+                    adcEnv = repoSecrets;
+                }
+            }
+        }
+
+        var hasAdc = !string.IsNullOrWhiteSpace(adcEnv)
             || !string.IsNullOrWhiteSpace(System.Environment.GetEnvironmentVariable("GOOGLE_GENAI_USE_VERTEXAI"))
             || System.IO.File.Exists(System.IO.Path.Combine(System.Environment.GetFolderPath(System.Environment.SpecialFolder.ApplicationData), "gcloud", "application_default_credentials.json"));
 
@@ -171,7 +202,16 @@ public class GeminiEmbeddingProvider : IEmbeddingProvider
         {
             if (_client == null || _cachedApiKey != apiKey)
             {
-                _client = !string.IsNullOrWhiteSpace(apiKey) ? new Client(apiKey: apiKey) : new Client();
+                if (!string.IsNullOrWhiteSpace(apiKey))
+                {
+                    // Ensure Google AI Studio API key routes to generativelanguage.googleapis.com, not Vertex AI
+                    System.Environment.SetEnvironmentVariable("GOOGLE_GENAI_USE_VERTEXAI", null);
+                    _client = new Client(apiKey: apiKey);
+                }
+                else
+                {
+                    _client = new Client();
+                }
                 _cachedApiKey = apiKey;
             }
         }

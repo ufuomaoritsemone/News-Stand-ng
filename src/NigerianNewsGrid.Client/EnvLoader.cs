@@ -86,6 +86,13 @@ public static class EnvLoader
                         if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("Gemini:ApiKey")))
                             Environment.SetEnvironmentVariable("Gemini:ApiKey", value);
                     }
+                    else if (key.Equals("GEMINI_MODEL", StringComparison.OrdinalIgnoreCase))
+                    {
+                        if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("Gemini__Model")))
+                            Environment.SetEnvironmentVariable("Gemini__Model", value);
+                        if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("Gemini:Model")))
+                            Environment.SetEnvironmentVariable("Gemini:Model", value);
+                    }
                     else if (key.Equals("INDEXNOW_KEY", StringComparison.OrdinalIgnoreCase))
                     {
                         if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("IndexNow__Key")))

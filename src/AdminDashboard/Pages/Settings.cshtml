@@ -166,6 +166,31 @@
                                 <small class="text-muted">Obtain a free key at <a href="https://aistudio.google.com/" target="_blank" class="text-info text-decoration-none">Google AI Studio</a>. Leave masked to keep the existing key.</small>
                             </div>
 
+                            <div class="col-12 col-md-8 mt-3">
+                                <label class="form-label text-light small fw-semibold">Gemini Generative Model</label>
+                                @{
+                                    var currentModel = Model.GetVal("Gemini:Model", "gemini-3.1-flash-lite");
+                                    var isStandardModel = currentModel is "gemini-3.1-flash-lite" or "gemini-2.5-flash" or "gemini-3.8-flash";
+                                }
+                                <div class="input-group">
+                                    <span class="input-group-text bg-dark border-secondary text-muted"><i class="bi bi-cpu-fill"></i></span>
+                                    <select class="form-select form-control-glass text-light" id="geminiModelSelect" name="@(isStandardModel ? "FormInputs[Gemini:Model]" : "")" onchange="checkCustomGeminiModel(this)">
+                                        <option value="gemini-3.1-flash-lite" selected="@(currentModel == "gemini-3.1-flash-lite" ? "selected" : null)">⚡ gemini-3.1-flash-lite (Ultra-low latency, recommended)</option>
+                                        <option value="gemini-2.5-flash" selected="@(currentModel == "gemini-2.5-flash" ? "selected" : null)">🚀 gemini-2.5-flash (Standard speed)</option>
+                                        <option value="gemini-3.8-flash" selected="@(currentModel == "gemini-3.8-flash" ? "selected" : null)">🧠 gemini-3.8-flash (Extended reasoning)</option>
+                                        <option value="custom" selected="@(!isStandardModel ? "selected" : null)">✏️ Custom Model ID...</option>
+                                    </select>
+                                    <input type="text" 
+                                           id="customGeminiModelInput" 
+                                           name="@(!isStandardModel ? "FormInputs[Gemini:Model]" : "")"
+                                           class="form-control form-control-glass font-monospace text-light" 
+                                           style="display: @(!isStandardModel ? "block" : "none");"
+                                           placeholder="e.g. gemini-3.1-flash-lite" 
+                                           value="@currentModel" />
+                                </div>
+                                <small class="text-muted">Powers article executive briefings, continuous SERP FAQ generation, and named entity extraction. Hot-reloads across all AI endpoints.</small>
+                            </div>
+
                             <div class="col-12 col-md-4 d-flex align-items-end">
                                 <button type="submit" 
                                         formaction="?handler=TestGemini" 
@@ -504,6 +529,20 @@
                 icon.classList.remove('bi-eye-slash');
                 icon.classList.add('bi-eye');
             }
+        }
+    }
+
+    function checkCustomGeminiModel(selectEl) {
+        const customInput = document.getElementById('customGeminiModelInput');
+        if (selectEl.value === 'custom') {
+            customInput.style.display = 'block';
+            customInput.name = 'FormInputs[Gemini:Model]';
+            selectEl.name = '';
+            customInput.focus();
+        } else {
+            customInput.style.display = 'none';
+            customInput.name = '';
+            selectEl.name = 'FormInputs[Gemini:Model]';
         }
     }
 </script>

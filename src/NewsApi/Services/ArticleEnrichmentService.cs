@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
@@ -13,7 +14,8 @@ public partial class ArticleEnrichmentService(
     IConfiguration config,
     IHttpClientFactory httpClientFactory,
     ILogger<ArticleEnrichmentService> logger,
-    ISystemSettingsService? systemSettings = null) : IArticleEnrichmentService
+    ISystemSettingsService? systemSettings = null,
+    IAiAuditLogger? auditLogger = null) : IArticleEnrichmentService
 {
     private readonly NewsDbContext _db = db;
     private readonly IEmbeddingProvider _embeddingProvider = embeddingProvider;
@@ -21,6 +23,7 @@ public partial class ArticleEnrichmentService(
     private readonly IHttpClientFactory _httpClientFactory = httpClientFactory;
     private readonly ILogger<ArticleEnrichmentService> _logger = logger;
     private readonly ISystemSettingsService? _systemSettings = systemSettings;
+    private readonly IAiAuditLogger? _auditLogger = auditLogger;
 
     private async Task<string?> ResolveGeminiApiKeyAsync(CancellationToken ct = default)
     {
@@ -57,6 +60,12 @@ public partial class ArticleEnrichmentService(
             catch { }
         }
 
+        var configVal = _config["AiEnrichment:GeminiEnabled"] ?? _config["AiEnrichment__GeminiEnabled"];
+        if (!string.IsNullOrWhiteSpace(configVal) && bool.TryParse(configVal, out bool isConfigEnabled))
+        {
+            return isConfigEnabled;
+        }
+
         var envVal = Environment.GetEnvironmentVariable("AiEnrichment__GeminiEnabled")
             ?? Environment.GetEnvironmentVariable("AiEnrichment:GeminiEnabled");
         if (!string.IsNullOrWhiteSpace(envVal) && bool.TryParse(envVal, out bool isEnvEnabled))
@@ -64,21 +73,37 @@ public partial class ArticleEnrichmentService(
             return isEnvEnabled;
         }
 
-        return _config.GetValue<bool>("AiEnrichment:GeminiEnabled", false);
+        return false;
     }
 
-    private string GetGeminiModel()
+    private async Task<string> ResolveGeminiModelAsync(CancellationToken ct = default)
     {
-        return _config["Gemini:Model"] ?? "gemini-3.8-flash";
+        if (_systemSettings != null)
+        {
+            try
+            {
+                var dyn = await _systemSettings.GetSettingAsync("Gemini:Model", null, ct);
+                if (!string.IsNullOrWhiteSpace(dyn)) return dyn;
+            }
+            catch { }
+        }
+
+        return Environment.GetEnvironmentVariable("GEMINI_MODEL")
+            ?? _config["Gemini:Model"]
+            ?? _config["Gemini__Model"]
+            ?? "gemini-3.1-flash-lite";
     }
 
-    // In-memory circuit breaker state: if Cloud AI fails, all subsequent articles in the batch
-    // and subsequent requests skip Cloud AI and immediately use local ML (TextRank) until cooldown expires.
+    // In-memory circuit breaker state: if Cloud AI fails repeatedly, subsequent articles
+    // skip Cloud AI and use local ML (TextRank) until cooldown expires.
     private static DateTime _circuitBreakerUntilUtc = DateTime.MinValue;
-    private static readonly TimeSpan CircuitBreakerCooldown = TimeSpan.FromMinutes(10);
+    private static readonly TimeSpan CircuitBreakerCooldown = TimeSpan.FromMinutes(3);
     private static readonly object CircuitLock = new();
+    private static int _consecutiveFailures = 0;
+    private const int FailureThreshold = 2; // Trip circuit breaker after 2 consecutive failures
 
     public bool IsCircuitBreakerActive => IsCircuitBreakerOpen();
+    public DateTime? CircuitBreakerUntilUtc => IsCircuitBreakerOpen() ? _circuitBreakerUntilUtc : null;
 
     public static bool IsCircuitBreakerOpen()
     {
@@ -88,15 +113,62 @@ public partial class ArticleEnrichmentService(
         }
     }
 
-    public static void TripCircuitBreaker(string reason, ILogger logger)
+    public static void RecordSuccess()
     {
         lock (CircuitLock)
         {
+            _consecutiveFailures = 0;
+        }
+    }
+
+    public static void RecordFailure(string reason, ILogger logger, IAiAuditLogger? auditLogger = null)
+    {
+        lock (CircuitLock)
+        {
+            _consecutiveFailures++;
+            if (_consecutiveFailures >= FailureThreshold)
+            {
+                _circuitBreakerUntilUtc = DateTime.UtcNow.Add(CircuitBreakerCooldown);
+                logger.LogWarning(
+                    "\n╔══════════════════════════════════════════════════════════════════════════════╗\n" +
+                    "║ ⚡ [GEMINI CIRCUIT BREAKER TRIPPED] Fallback to Local TextRank ML              ║\n" +
+                    "║ Reason  : {Reason} ({Failures} consecutive failures)                         \n" +
+                    "║ Cooldown: Active until {CooldownUntilUtc:u} (3 min bypass)                   ║\n" +
+                    "╚══════════════════════════════════════════════════════════════════════════════╝",
+                    reason, _consecutiveFailures, _circuitBreakerUntilUtc);
+
+                if (auditLogger != null)
+                {
+                    _ = auditLogger.LogCircuitBreakerTrippedAsync(reason, _circuitBreakerUntilUtc);
+                }
+            }
+            else
+            {
+                logger.LogInformation("Gemini enrichment failed ({Failures}/{Threshold}): {Reason}. Circuit breaker not tripped yet.",
+                    _consecutiveFailures, FailureThreshold, reason);
+            }
+        }
+    }
+
+    public static void TripCircuitBreaker(string reason, ILogger logger, IAiAuditLogger? auditLogger = null)
+    {
+        lock (CircuitLock)
+        {
+            _consecutiveFailures = FailureThreshold;
             _circuitBreakerUntilUtc = DateTime.UtcNow.Add(CircuitBreakerCooldown);
         }
         logger.LogWarning(
-            "Cloud AI Circuit Breaker TRIPPED until {UntilUtc:u}: {Reason}. Falling back to local ML (TextRank) for batch and subsequent requests.",
-            _circuitBreakerUntilUtc, reason);
+            "\n╔══════════════════════════════════════════════════════════════════════════════╗\n" +
+            "║ ⚡ [GEMINI CIRCUIT BREAKER TRIPPED] Fallback to Local TextRank ML              ║\n" +
+            "║ Reason  : {Reason}\n" +
+            "║ Cooldown: Active until {CooldownUntilUtc:u} (3 min bypass)                   ║\n" +
+            "╚══════════════════════════════════════════════════════════════════════════════╝",
+            reason, _circuitBreakerUntilUtc);
+
+        if (auditLogger != null)
+        {
+            _ = auditLogger.LogCircuitBreakerTrippedAsync(reason, _circuitBreakerUntilUtc);
+        }
     }
 
     public static void ResetCircuitBreaker()
@@ -104,6 +176,7 @@ public partial class ArticleEnrichmentService(
         lock (CircuitLock)
         {
             _circuitBreakerUntilUtc = DateTime.MinValue;
+            _consecutiveFailures = 0;
         }
     }
 
@@ -156,7 +229,9 @@ public partial class ArticleEnrichmentService(
             article.Content,
             article.Category,
             knownEntities,
-            cancellationToken);
+            skipCloudAi: false,
+            articleId: article.Id,
+            cancellationToken: cancellationToken);
 
         if (article.Enrichment != null)
         {
@@ -184,7 +259,7 @@ public partial class ArticleEnrichmentService(
         }
 
         await _db.SaveChangesAsync(cancellationToken);
-        _logger.LogInformation("Successfully enriched article {ArticleId} ({Title}) using engine {Engine}",
+        _logger.LogInformation("✅ [ENRICHMENT PERSISTED] Article {ArticleId} ('{Title}') saved with engine '{Engine}'",
             article.Id, article.Title, result.Engine);
 
         return article.Enrichment;
@@ -252,12 +327,14 @@ public partial class ArticleEnrichmentService(
                     article.Category,
                     knownEntities,
                     skipCloudAi: !useCloudAi,
+                    articleId: article.Id,
                     cancellationToken);
 
                 // If Cloud AI was attempted on this article but failed and returned TextRank-Extractive,
-                // that means Cloud AI is unavailable! Flip useCloudAi = false for the entire remainder of the batch!
+                // that means Cloud AI is unavailable for this batch! Trip circuit breaker and flip useCloudAi = false for the remainder of the batch!
                 if (useCloudAi && result.Engine == "TextRank-Extractive")
                 {
+                    TripCircuitBreaker("Batch Cloud AI probe failed, falling back to local ML", _logger, _auditLogger);
                     _logger.LogWarning(
                         "Batch enrichment: Cloud AI failed for article '{ArticleId}'. Tripping circuit breaker and falling back to local ML for all remaining {Remaining} articles in batch.",
                         article.Id, unenrichedArticles.Count - count - 1);
@@ -304,7 +381,8 @@ public partial class ArticleEnrichmentService(
             article.Category,
             entities,
             skipCloudAi: false,
-            cancellationToken);
+            articleId: article.Id,
+            cancellationToken: cancellationToken);
     }
 
     public Task<ArticleEnrichmentResult> GenerateEnrichmentAsync(
@@ -314,7 +392,17 @@ public partial class ArticleEnrichmentService(
         string? category,
         IEnumerable<string>? knownEntities = null,
         CancellationToken cancellationToken = default)
-        => GenerateEnrichmentAsync(title, summary, content, category, knownEntities, skipCloudAi: false, cancellationToken);
+        => GenerateEnrichmentAsync(title, summary, content, category, knownEntities, skipCloudAi: false, articleId: null, cancellationToken);
+
+    public Task<ArticleEnrichmentResult> GenerateEnrichmentAsync(
+        string title,
+        string? summary,
+        string? content,
+        string? category,
+        IEnumerable<string>? knownEntities,
+        bool skipCloudAi,
+        CancellationToken cancellationToken = default)
+        => GenerateEnrichmentAsync(title, summary, content, category, knownEntities, skipCloudAi, articleId: null, cancellationToken);
 
     public async Task<ArticleEnrichmentResult> GenerateEnrichmentAsync(
         string title,
@@ -323,26 +411,47 @@ public partial class ArticleEnrichmentService(
         string? category,
         IEnumerable<string>? knownEntities,
         bool skipCloudAi,
+        string? articleId,
         CancellationToken cancellationToken = default)
     {
         // 1. Check optional Gemini enhancement if not explicitly skipped and circuit breaker is closed
         var geminiKey = await ResolveGeminiApiKeyAsync(cancellationToken);
         var geminiEnabled = await IsGeminiEnabledAsync(cancellationToken);
 
-        if (!skipCloudAi && !IsCircuitBreakerOpen() && !string.IsNullOrWhiteSpace(geminiKey) && geminiEnabled)
+        string mlReason = "Direct Local ML Processing";
+
+        if (skipCloudAi)
         {
-            var geminiResult = await TryEnrichWithGeminiAsync(title, summary, content, category, geminiKey, cancellationToken);
+            mlReason = "Cloud AI Bypassed (Batch Fallback or SkipCloudAi Flag)";
+        }
+        else if (IsCircuitBreakerOpen())
+        {
+            mlReason = $"Cloud AI Circuit Breaker Active (Cooldown until {_circuitBreakerUntilUtc:u})";
+        }
+        else if (string.IsNullOrWhiteSpace(geminiKey))
+        {
+            mlReason = "Gemini API Key Unconfigured or Missing";
+        }
+        else if (!geminiEnabled)
+        {
+            mlReason = "Gemini AI Enrichment Disabled in Settings";
+        }
+        else
+        {
+            var geminiResult = await TryEnrichWithGeminiAsync(title, summary, content, category, geminiKey, articleId, cancellationToken);
             if (geminiResult != null)
             {
+                RecordSuccess();
                 return geminiResult;
             }
 
-            // Cloud AI failed or timed out: trip the circuit breaker immediately
-            TripCircuitBreaker("Gemini enrichment failed, timed out, or returned an error status", _logger);
+            // Cloud AI failed or timed out: record failure (trips after threshold)
+            RecordFailure("Gemini enrichment failed, timed out, or returned an error status", _logger, _auditLogger);
+            mlReason = "Gemini AI Request Failed, Timed Out, or Incomplete (Fallback to Local ML)";
         }
 
         // 2. Default Zero-API-Key Local Extractive Engine (TextRank / LexRank)
-        return await EnrichWithLocalTextRankAsync(title, summary, content, category, knownEntities, cancellationToken);
+        return await EnrichWithLocalTextRankAsync(title, summary, content, category, knownEntities, mlReason, articleId, cancellationToken);
     }
 
     private async Task<ArticleEnrichmentResult> EnrichWithLocalTextRankAsync(
@@ -351,8 +460,15 @@ public partial class ArticleEnrichmentService(
         string? content,
         string? category,
         IEnumerable<string>? knownEntities,
+        string engagementReason,
+        string? articleId,
         CancellationToken cancellationToken)
     {
+        var sw = Stopwatch.StartNew();
+        _logger.LogInformation(
+            "📌 [LOCAL ML ENGAGED] Synthesized extractive summary via TextRank (MMR Centroid) for '{Title}' | Reason: {Reason}",
+            title, engagementReason);
+
         var entities = knownEntities?.ToList() ?? [];
 
         // 1. Gather text sources and split into sentences
@@ -384,6 +500,22 @@ public partial class ArticleEnrichmentService(
                 OutlookOrNextSteps = "Check publisher source for ongoing coverage.",
                 ReadingTimeSeconds = 20
             };
+
+            sw.Stop();
+            if (_auditLogger != null)
+            {
+                await _auditLogger.LogMlSummarizerEngagedAsync(
+                    articleId,
+                    title,
+                    category,
+                    $"{engagementReason} (Extremely short text fallback)",
+                    candidateSentences.Count,
+                    sw.ElapsedMilliseconds,
+                    1,
+                    fallbackSummary.ExecutiveOverview,
+                    cancellationToken);
+            }
+
             return new ArticleEnrichmentResult(
                 [CleanSentence(fallbackTakeaway)],
                 [],
@@ -538,6 +670,21 @@ public partial class ArticleEnrichmentService(
             ReadingTimeSeconds = Math.Max(25, candidateSentences.Count * 2)
         };
 
+        sw.Stop();
+        if (_auditLogger != null)
+        {
+            await _auditLogger.LogMlSummarizerEngagedAsync(
+                articleId,
+                title,
+                category,
+                engagementReason,
+                candidateSentences.Count,
+                sw.ElapsedMilliseconds,
+                keyTakeaways.Count,
+                localFullSummary.ExecutiveOverview,
+                cancellationToken);
+        }
+
         return new ArticleEnrichmentResult(keyTakeaways, timelineFacts, faqs, "TextRank-Extractive", localFullSummary);
     }
 
@@ -660,16 +807,27 @@ public partial class ArticleEnrichmentService(
         string? content,
         string? category,
         string apiKey,
+        string? articleId,
         CancellationToken cancellationToken)
     {
+        string model = "gemini-3.1-flash-lite";
+        var sw = Stopwatch.StartNew();
         try
         {
             using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            cts.CancelAfter(TimeSpan.FromSeconds(12));
+            cts.CancelAfter(TimeSpan.FromSeconds(35));
 
-            var model = GetGeminiModel();
+            model = await ResolveGeminiModelAsync(cts.Token);
             var client = _httpClientFactory.CreateClient();
             var url = $"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={apiKey}";
+
+            _logger.LogInformation(
+                "\n╔══════════════════════════════════════════════════════════════════════════════╗\n" +
+                "║ 🤖 [GEMINI AI ENGAGED] Summarization & Enrichment Dispatch                    ║\n" +
+                "║ Article : '{Title}'\n" +
+                "║ Model   : {Model} | Temperature: 0.2                                         ║\n" +
+                "╚══════════════════════════════════════════════════════════════════════════════╝",
+                title, model);
 
             var promptText = $$"""
                 You are a senior news intelligence editor for Nigerian News Stand NG.
@@ -719,12 +877,30 @@ public partial class ArticleEnrichmentService(
                 generationConfig = new
                 {
                     responseMimeType = "application/json",
-                    temperature = 0.2
+                    temperature = 0.2,
+                    thinkingConfig = new
+                    {
+                        thinkingBudget = 0
+                    }
                 }
             };
 
+            if (_auditLogger != null)
+            {
+                var promptPreview = promptText.Length > 200 ? promptText[..200] : promptText;
+                await _auditLogger.LogGeminiRequestAsync(
+                    articleId,
+                    title,
+                    model,
+                    promptPreview,
+                    promptText.Length,
+                    0.2,
+                    cts.Token);
+            }
+
             var jsonContent = new StringContent(JsonSerializer.Serialize(payload), System.Text.Encoding.UTF8, "application/json");
             var response = await client.PostAsync(url, jsonContent, cts.Token);
+            sw.Stop();
 
             if (response.IsSuccessStatusCode)
             {
@@ -755,10 +931,37 @@ public partial class ArticleEnrichmentService(
 
                             var engineName = model switch
                             {
+                                var m when m.Contains("3.1") => "Gemini-3.1-Flash-Lite",
                                 var m when m.Contains("3.8") => "Gemini-3.8-Flash",
                                 var m when m.Contains("2.5") => "Gemini-2.5-Flash",
-                                _ => "Gemini-Flash"
+                                var m when m.Contains("2.0") => "Gemini-2.0-Flash",
+                                var m when m.Contains("1.5-flash") => "Gemini-1.5-Flash",
+                                var m when m.Contains("1.5-pro") => "Gemini-1.5-Pro",
+                                _ => string.IsNullOrWhiteSpace(model) ? "Gemini-Flash" : model
                             };
+
+                            _logger.LogInformation(
+                                "\n╔══════════════════════════════════════════════════════════════════════════════╗\n" +
+                                "║ ✨ [GEMINI AI SUCCESS] Summary & Enrichment Generated ({ElapsedMs} ms)       ║\n" +
+                                "║ Article : '{Title}'\n" +
+                                "║ Engine  : {Engine} | Takeaways: {TakeawaysCount} | FAQs: {FaqsCount}         ║\n" +
+                                "╚══════════════════════════════════════════════════════════════════════════════╝",
+                                sw.ElapsedMilliseconds, title, engineName, parsed.KeyTakeaways.Count, parsed.Faqs.Count);
+
+                            if (_auditLogger != null)
+                            {
+                                await _auditLogger.LogGeminiSuccessAsync(
+                                    articleId,
+                                    title,
+                                    engineName,
+                                    sw.ElapsedMilliseconds,
+                                    parsed.KeyTakeaways.Count,
+                                    parsed.TimelineFacts.Count,
+                                    parsed.Faqs.Count,
+                                    fullSummary.ReadingTimeSeconds,
+                                    fullSummary.ExecutiveOverview,
+                                    cts.Token);
+                            }
 
                             return new ArticleEnrichmentResult(
                                 parsed.KeyTakeaways,
@@ -769,11 +972,42 @@ public partial class ArticleEnrichmentService(
                         }
                     }
                 }
+
+                // HTTP 200, but empty candidates or insufficient takeaways
+                if (_auditLogger != null)
+                {
+                    await _auditLogger.LogGeminiErrorAsync(
+                        articleId,
+                        title,
+                        model,
+                        sw.ElapsedMilliseconds,
+                        (int)response.StatusCode,
+                        "Incomplete or malformed response (missing candidates or insufficient takeaways)",
+                        responseBody,
+                        null,
+                        cts.Token);
+                }
             }
             else
             {
-                _logger.LogWarning("Gemini enrichment returned non-success HTTP {StatusCode} ({Reason})",
-                    (int)response.StatusCode, response.ReasonPhrase);
+                var errorBody = await response.Content.ReadAsStringAsync(cts.Token);
+                _logger.LogWarning(
+                    "❌ [GEMINI AI FAILED] Returned non-success HTTP {StatusCode} ({Reason}) for article '{Title}' ({ElapsedMs} ms)\nBody: {Body}",
+                    (int)response.StatusCode, response.ReasonPhrase, title, sw.ElapsedMilliseconds, errorBody);
+
+                if (_auditLogger != null)
+                {
+                    await _auditLogger.LogGeminiErrorAsync(
+                        articleId,
+                        title,
+                        model,
+                        sw.ElapsedMilliseconds,
+                        (int)response.StatusCode,
+                        response.ReasonPhrase,
+                        errorBody,
+                        null,
+                        cts.Token);
+                }
             }
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -782,7 +1016,21 @@ public partial class ArticleEnrichmentService(
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Gemini enrichment failed or timed out: {Message}. Falling back to local TextRank.", ex.Message);
+            _logger.LogWarning(ex, "❌ [GEMINI AI ERROR] Failed or timed out for article '{Title}': {Message}. Falling back to local TextRank.", title, ex.Message);
+
+            if (_auditLogger != null)
+            {
+                await _auditLogger.LogGeminiErrorAsync(
+                    articleId,
+                    title,
+                    model,
+                    sw.ElapsedMilliseconds,
+                    null,
+                    null,
+                    null,
+                    ex,
+                    CancellationToken.None);
+            }
         }
 
         return null;

@@ -65,7 +65,7 @@ public class ArticleContentExtractor
     /// <summary>
     /// Extracts structured article data from raw HTML content.
     /// </summary>
-    public ArticleModel ExtractFromHtml(string html, string url, string sourceName)
+    public ArticleModel? ExtractFromHtml(string html, string url, string sourceName)
     {
         var model = new ArticleModel
         {

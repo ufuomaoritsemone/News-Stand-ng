@@ -23,6 +23,165 @@ Projects:
 
 ## Updates
 
+### October 24, 2026 — Category Pill Real-Time Filtering & Route State Synchronization Fix
+Resolved an issue on the web frontend where clicking Category pills did not immediately filter stories or sync cleanly with route props:
+- **[Immediate Client-Side Category Filtering (`App.jsx`)]**:
+  - Replaced unmemoized `displayedArticles` with a reactive `useMemo([articles, activeCategory, selectedSource, bookmarks])` hook that immediately filters in-memory stories by `activeCategory` case-insensitively upon click, eliminating the delay where stale mixed-category stories remained visible while background API fetches were in flight.
+  - Aligned `allStories` to reference `displayedArticles` when a specific category is active, ensuring the Hero Carousel and breaking news tickers reflect the selected category without mismatched content.
+- **[Route Props & Remounting Synchronization (`App.jsx`, `category.$category.jsx`)]**:
+  - Added a `useEffect` hook in [`App.jsx`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NigerianNewsGrid.Web/src/App.jsx) watching `[initialCategory, initialData]` so `App` seamlessly updates state when navigating between React Router category routes.
+  - Added `key={data.category}` to `<App />` in [`category.$category.jsx`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NigerianNewsGrid.Web/app/routes/category.$category.jsx) to ensure clean per-route component mounting.
+- **[Dependency Integrity]**:
+  - All React Hook dependency arrays (`useMemo`, `useCallback`, `useEffect`) strictly satisfied and acyclic. Requires 0 external npm dependencies.
+  - Production web client and SSR builds completed cleanly with 0 errors (`npm run build`).
+
+### October 24, 2026 — EF Core Migration Baselining Fix for Duplicate 'Slug' Column
+Resolved `SQLite Error 1: 'duplicate column name: Slug'` during `NewsApi` startup:
+- **[Root Cause Resolution (`DbInitializer.cs`)]**:
+  - Identified that EF Core's `MigrateAsync` was attempting to execute migration `20261003204804_AddSeoSlugsAndTopics` (`ALTER TABLE "Sources" ADD "Slug" TEXT NULL;`) against databases where `Sources.Slug` and `Topics` already existed via previous schema updates or initial creation.
+  - SQLite does not support `ADD COLUMN IF NOT EXISTS`, causing `MigrateAsync` to fail with SQLite Error 1 and fall back to `EnsureCreatedAsync` with warnings on every boot.
+  - Enhanced `BaselineLegacyDatabaseIfNeededAsync` to inspect `Sources.Slug` via `pragma_table_info('Sources')` (and `information_schema` on PostgreSQL) and `Topics` table existence.
+  - Automatically records `20261003204804_AddSeoSlugsAndTopics` in `__EFMigrationsHistory` if already present, ensuring clean EF Core migration startup with zero errors or fallback warnings.
+- **[Verification]**:
+  - Verified `__EFMigrationsHistory` state and confirmed 0 compilation errors across `NewsApi`.
+  - All 93 unit and integration tests passing in `NewsApi.Tests`.
+
+### October 23, 2026 — CI/CD, Docker, and Docker Compose Hardening
+Thorough architectural analysis and hardening across GitHub Actions workflows, multi-stage Dockerfiles, and Docker Compose topology.
+- **[Dockerfile Dependency Fixes (`AdminDashboard/Dockerfile`, `NewsScraperService/Dockerfile`)]**: Added missing `COPY ["src/NigerianNewsGrid.Client/NigerianNewsGrid.Client.csproj", "NigerianNewsGrid.Client/"]` prior to `dotnet restore`, resolving missing project reference failures during container compilation.
+- **[Web Container & Context Optimization (`NigerianNewsGrid.Web/Dockerfile`, `.dockerignore`)]**: Added `RUN npm prune --omit=dev` to remove devDependencies from the production image, and created [`src/NigerianNewsGrid.Web/.dockerignore`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NigerianNewsGrid.Web/.dockerignore) to prevent copying local Windows `node_modules/` and `build/` artifacts into the container build context.
+- **[Docker Compose Configuration (`docker-compose.yml`)]**: Added standardized container names (`nigeriannewsgrid-*`) across all 5 application services, propagated `Gemini__Model` and `Gemini__ApiKey` to `news-scraper-service` for Named Entity Recognition, and mapped GCP credentials and secrets volume into `tts-worker`.
+- **[CI Workflow Optimization (`ci.yml`)]**: Migrated workflow runner from `windows-latest` to `ubuntu-latest` for 50% faster build times and native Linux container parity. Added automated `docker compose build` verification step in CI to continuously validate Dockerfile integrity on pull requests.
+- **[Lighthouse CI Fix (`lighthouse.yml`, `lighthouserc.json`)]**: Fixed `startServerCommand` in [`lighthouserc.json`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/lighthouserc.json) to use `npm --prefix src/NigerianNewsGrid.Web start` (invoking `react-router-serve`), fixing previous timeout failures caused by invoking handler module directly with `node`. Standardized workflow to Node 22, `npm ci`, and `package-lock.json` caching.
+- **[Root Dockerignore Hardening (`.dockerignore`)]**: Added exclusions for SQLite database files (`*.db*`), runtime logs, `scratch/`, and `node_modules/` to ensure zero host state leakage into container contexts.
+
+
+### October 23, 2026 — Comprehensive Codebase Review & Multi-Tier Cleanup
+Comprehensive audit across the entire repository to resolve build warnings, solution schema issues, frontend re-render dependencies, and API consistency.
+- **[Solution Schema Fix (`NigerianNewGrid.slnx`)]**: Removed legacy ASP.NET 4.8 `Type="Website"` declaration pointing to `NigerianNewsGrid.Web`, resolving MSBuild `MSB4249` failure and allowing clean `dotnet build` and `dotnet test` execution on the root solution.
+- **[Scraper Null Safety (`ArticleContentExtractor.cs`)]**: Fixed compiler warning `CS8603` (possible null reference return) by adding nullable annotation `ArticleModel?` to `ExtractFromHtml` when encountering consent-walled or invalid HTML pages.
+- **[API Schema Normalization (`LlmEntityExtractor.cs`, `ArticleEnrichmentService.cs`)]**: Standardized Gemini REST generation config parameters to camelCase `responseMimeType` across all LLM consumers, preventing deserialization errors with Gemini v1beta schema.
+- **[Dynamic Telemetry & Engine Mapping (`SystemHealth.cshtml`, `ArticleEnrichmentService.cs`)]**: Replaced hardcoded model badge text with dynamic model resolution (`report?.AiEnrichment?.Model`) and expanded engine switcher cases to include `2.0`, `1.5`, and custom models cleanly.
+- **[Diagnostic Tool Portability (`scratch/GeminiProbe/Program.cs`)]**: Replaced hardcoded local file paths with dynamic upward directory traversal to find repo root and `.env` credentials dynamically on any workstation.
+- **[Frontend Performance (`App.jsx`)]**: Memoized `allStories` using `useMemo([articles, activeCategory])` to avoid creating a new array reference on every render, stabilizing dependencies for `carouselStories`, `effectiveTrendingStories`, and `breakingNewsItems`.
+- **[Verification & Build Status]**: All 404 tests passing cleanly across the test suite (93 in `NewsApi.Tests`, 311 in `NewsApiClient.Tests`). Web bundle built cleanly in production mode with zero errors. All .NET projects compile with 0 errors and 0 warnings.
+
+
+### October 23, 2026 — Dynamic Gemini Model Management via Admin Dashboard
+- **[Dynamic Model Setting (`SystemSettingsService.cs`, `SettingsController.cs`, `Settings.cshtml`)]**:
+  - Registered `Gemini:Model` in [`SystemSettingsService.cs`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NewsApi/Services/SystemSettingsService.cs) as a recognized dynamic setting with automatic database persistence and `IMemoryCache` hot-reloading.
+  - Added a dedicated **Gemini Generative Model** selector in [`Settings.cshtml`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/AdminDashboard/Pages/Settings.cshtml) with pre-configured options (`gemini-3.1-flash-lite`, `gemini-2.5-flash`, `gemini-3.8-flash`) plus seamless custom model ID input.
+  - Enhanced `POST /api/v1/settings/test-gemini` in [`SettingsController.cs`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NewsApi/Controllers/SettingsController.cs) to verify both 768-dim embeddings and active generative model responsiveness upon connection test.
+- **[Dynamic Service Consumption]**:
+  - Updated [`ArticleEnrichmentService.cs`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NewsApi/Services/ArticleEnrichmentService.cs): `ResolveGeminiModelAsync` queries `_systemSettings.GetSettingAsync("Gemini:Model")` first, allowing on-the-fly model switches without app restarts.
+  - Updated [`SeoFeedbackLoopService.cs`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NewsApi/Services/SeoFeedbackLoopService.cs): Injected `ISystemSettingsService` to resolve both `Gemini:ApiKey` and `Gemini:Model` dynamically.
+  - Updated [`HealthController.cs`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NewsApi/Controllers/HealthController.cs): Dynamic model resolution reflected in health telemetry.
+  - All 93 unit and integration tests passing in `NewsApi.Tests`. Build succeeded for `AdminDashboard`.
+
+### October 23, 2026 — Gemini 3.1 Flash-Lite Adoption for All AI Interactions
+- **[Model Migration to `gemini-3.1-flash-lite` (`appsettings.json`, `.env`, `EnvLoader.cs`)]**:
+  - Configured `gemini-3.1-flash-lite` as the primary model across all AI generation pipelines (`NewsApi`, `NewsScraperService`, `AdminDashboard`, and Web frontend).
+  - Added process-level alias mapping in [`EnvLoader.cs`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NigerianNewsGrid.Client/EnvLoader.cs) for `GEMINI_MODEL`, propagating configuration to both `Gemini__Model` and `Gemini:Model`.
+  - Updated `appsettings.json` and `appsettings.Development.json` to default to `gemini-3.1-flash-lite`.
+- **[Services & Endpoints Updated]**:
+  - [`ArticleEnrichmentService.cs`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NewsApi/Services/ArticleEnrichmentService.cs): Updated `GetGeminiModel()` default and engine name mapping (`Gemini-3.1-Flash-Lite`).
+  - [`SeoFeedbackLoopService.cs`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NewsApi/Services/SeoFeedbackLoopService.cs): Updated generative headline and FAQ suggestion endpoint to default to `gemini-3.1-flash-lite`.
+  - [`LlmEntityExtractor.cs`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NewsScraperService/Services/LlmEntityExtractor.cs): Updated Tier 2 Named Entity Recognition extraction to default to `gemini-3.1-flash-lite`.
+  - [`HealthController.cs`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NewsApi/Controllers/HealthController.cs) & [`SystemHealth.cshtml`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/AdminDashboard/Pages/SystemHealth.cshtml): Configured primary model reporting to reflect `gemini-3.1-flash-lite`.
+  - [`Index.cshtml`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/AdminDashboard/Pages/Index.cshtml) & [`Index.cshtml.cs`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/AdminDashboard/Pages/Index.cshtml.cs): Enhanced engine badge rendering and dynamic `X-AI-Engine` header consumption.
+  - [`news.$slug.jsx`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NigerianNewsGrid.Web/app/routes/news.$slug.jsx) & [`ReaderDrawer.jsx`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/src/NigerianNewsGrid.Web/src/components/ReaderDrawer.jsx): Updated UI briefing labels and fallback engine identifiers.
+- **[Live Validation & Probe Verification]**:
+  - Verified live connectivity via [`scratch/GeminiProbe`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/scratch/GeminiProbe/Program.cs): `gemini-3.1-flash-lite` responded with instant latency (< 1.5s) using `thinkingBudget: 0`.
+  - All 93 unit and integration tests passing in `NewsApi.Tests`.
+
+### October 23, 2026 — Gemini Summarization Latency & Resilience Optimization
+- **[Timeout & Thinking Overhead Fix (`ArticleEnrichmentService.cs`, `LlmEntityExtractor.cs`, `SeoFeedbackLoopService.cs`)]**:
+  - Identified root cause of summarization failures in audit logs: `gemini-3.8-flash` reasoning models default to internal chain-of-thought thinking (~6–7s), pushing total JSON generation time to ~12.3s, which breached the hardcoded 12.0s cancellation token and caused `TaskCanceledException`.
+  - Added `thinkingConfig: { thinkingBudget: 0 }` across `ArticleEnrichmentService`, `LlmEntityExtractor`, and `SeoFeedbackLoopService`, slashing model generation latency from ~12.3s down to 5.6–7.1s.
+  - Expanded request cancellation timeout from a brittle 12s to a resilient 35s in `ArticleEnrichmentService` (and from 6s to 25s in `LlmEntityExtractor`), providing 5x safety headroom for WAN latency variations.
+- **[Circuit Breaker Resilience & Consecutive Failure Threshold]**:
+  - Implemented consecutive failure tracking (`FailureThreshold = 2`) with `RecordSuccess()` / `RecordFailure()` so single transient network timeouts don't prematurely lockout Cloud AI.
+  - Shortened circuit breaker bypass cooldown from 10 minutes to 3 minutes for faster auto-recovery.
+  - In `ArticleEnrichmentService.IsGeminiEnabledAsync`, prioritized `_config` declarations before process environment variables, allowing test and configuration overrides without environment bleed.
+  - Verified 100% test pass rate across all 93 unit and integration tests in `NewsApi.Tests`.
+
+### October 23, 2026 — Google AI Studio Gemini API Key Integration & Vertex AI Route Isolation
+- **[Google AI Studio API Key Configuration (`.env`, Windows Environment)]**:
+  - Replaced `GEMINI_API_KEY` across `.env` and Windows User registry environment variables with the active Google AI Studio platform key.
+  - Disabled `GOOGLE_GENAI_USE_VERTEXAI` in `.env` and removed it from Windows User-level environment variables to prevent Google GenAI SDK from incorrectly routing Developer API calls to `aiplatform.googleapis.com` (which rejects API keys with `API_KEY_SERVICE_BLOCKED`).
+- **[Defensive Client Routing (`GeminiEmbeddingProvider.cs`, `GeminiProbe`)]**:
+  - Enhanced `GeminiEmbeddingProvider.GetClient()` to explicitly clear process-level `GOOGLE_GENAI_USE_VERTEXAI` whenever a non-empty `apiKey` is provided, guaranteeing requests target Google AI Studio (`generativelanguage.googleapis.com`).
+  - Verified live connectivity with `scratch/GeminiProbe`, achieving successful 3072-dim embeddings via `gemini-embedding-001` and content generation with `gemini-3.8-flash`. All 93 unit and integration tests passing.
+
+### October 22, 2026 — AI Audit Logging: Gemini Requests, Errors, Successes & ML Summarizer Telemetry
+- **[Dedicated Audit Logging Service (`IAiAuditLogger.cs`, `AiAuditLogger.cs`)]**:
+  - Implemented thread-safe `AiAuditLogger` capturing every outbound Gemini AI request, successful enrichment response, HTTP non-200 / exception / timeout failure, and circuit breaker trip event.
+  - Automatically records when the zero-API-key local ML Summarizer (`TextRank-Extractive` with MMR Centroid graph scoring) takes effect, including the exact engagement reason (e.g., Cloud AI disabled, API key unconfigured, circuit breaker cooldown active, or Gemini HTTP failure).
+  - Produces dual-destination audit outputs:
+    - **Formatted Audit Log (`logs/gemini_ai_audit.log`)**: Human-readable entries with timestamps, request previews, model parameters, latency metrics, and error bodies.
+    - **Machine-Parseable Log (`logs/gemini_ai_audit.jsonl`)**: One JSON object per line for automated analysis, log parsers, and data visualization.
+- **[Pipeline Integration & Health Endpoint (`ArticleEnrichmentService.cs`, `HealthController.cs`)]**:
+  - Integrated `IAiAuditLogger` into `ArticleEnrichmentService.GenerateEnrichmentAsync`, `TryEnrichWithGeminiAsync`, and `EnrichWithLocalTextRankAsync`, tracing article IDs across single-article and batch pipelines.
+  - Exposed audit log file path and existence status in `GET /health/details` under `aiEnrichment.auditLog`.
+- **[Test Coverage (`AiAuditLoggerTests.cs`)]**:
+  - Added unit test suite covering full lifecycle logging of Gemini requests, successes, HTTP 429 quota errors, circuit breaker trips, and local ML summarizer execution.
+
+### October 22, 2026 — Google Cloud Application Default Credentials (ADC) Switch to User Profile
+- **[ADC Resolution & Environment Configuration (`.env`, `GeminiEmbeddingProvider.cs`)]**:
+  - Unset conflicting `billing/quota_project` from gcloud CLI config that previously caused `USER_PROJECT_DENIED`.
+  - Switched primary `GOOGLE_APPLICATION_CREDENTIALS` to standard user ADC location (`C:\Users\ufuom\AppData\Roaming\gcloud\application_default_credentials.json`) across `.env` and Windows User-level environment variables.
+  - Enhanced `GeminiEmbeddingProvider.GetClient()` to inspect and prioritize user ADC (`%APPDATA%\gcloud\application_default_credentials.json`) before falling back to local workspace service account keys.
+  - Updated `scratch/GeminiProbe/Program.cs` to test user ADC directly, successfully verifying Vertex AI generative text (`gemini-2.5-flash`) and vector embeddings (`text-embedding-004`).
+
+### October 22, 2026 — Web App Vite Proxy Dynamic Target & Port Conflict Fix
+- **[Vite Proxy Dynamic Configuration (`vite.config.js`, `api.js`)]**:
+  - Enhanced Vite proxy in `src/NigerianNewsGrid.Web/vite.config.js` to dynamically read `API_BASE_URL` and `VITE_API_URL` from the environment instead of hardcoding `http://127.0.0.1:56193`.
+  - Added `VITE_API_URL` fallback resolution in SSR fetch wrapper `api.js`.
+- **[Port Conflict & Reconnection Resilience (`run-services.ps1`)]**:
+  - Filtered `Get-NetTCPConnection` in `Test-IsPortBusy` to `-State Listen` and enabled `ReuseAddress` on socket probes, preventing transient client `TIME_WAIT` sockets immediately after `./run-services.ps1 -stop` from falsely flagging NewsApi's default port `56193` as unavailable.
+  - Injected `$env:API_BASE_URL` and `$env:VITE_API_URL` into Vite web server startup script blocks so Vite automatically proxies to whichever port NewsApi is launched on.
+  - Added port `5173` and alternate ports (`56194`) to `-Stop` teardown routine to ensure clean shutdown across all web and API instances.
+
+### October 22, 2026 — YouTube Data API v3 Key Configuration
+- **[YouTube Integration Key Configured]**:
+  - Configured live YouTube Data API v3 key (`AIzaSyCzTs_yP...`) in `.env`, Windows User environment variable (`YOUTUBE_API_KEY`), and `appsettings.Development.json`.
+  - Verified live endpoint connectivity against YouTube Data API v3 (`regionCode=NG`, `videoCategoryId=25`) successfully pulling trending Nigerian video broadcasts (Arise News, Channels TV).
+
+### October 22, 2026 — Google Cloud Service Account Credentials Configuration
+Reconfigured the development environment to use the dedicated Google Cloud Service Account JSON key (`newsstand-ai-service`):
+- **[Key Management & Git Hygiene (`secrets/gcp-service-account.json`, `.gitignore`)]**:
+  - Saved the service account key to `secrets/gcp-service-account.json`.
+  - Added `secrets/` and `*gserviceaccount*.json` to `.gitignore` to prevent secret leaks.
+- **[Configuration & Docker Integration (`.env`, `docker-compose.yml`)]**:
+  - Pointed `GOOGLE_APPLICATION_CREDENTIALS` in `.env` to `c:\Users\ufuom\source\repos\NigerianNewGrid\secrets\gcp-service-account.json`.
+  - Updated Windows User-level environment variables to point directly to `secrets/gcp-service-account.json`.
+  - Mounted `./secrets:/app/secrets:ro` in `docker-compose.yml` and set container path `GOOGLE_APPLICATION_CREDENTIALS=/app/secrets/gcp-service-account.json`.
+- **[Auto-Discovery Fallback (`GeminiEmbeddingProvider.cs`)]**:
+  - Added relative workspace path resolution (`secrets/gcp-service-account.json`) in `GeminiEmbeddingProvider.GetClient()` so local `dotnet run` commands discover the credentials automatically.
+Enhanced observability across the AI summarization pipeline, giving operators visual confirmation whenever Google Gemini is engaged or falls back:
+- **[Highlighted Unicode Box Log Banners (`ArticleEnrichmentService.cs`)]**:
+  - Implemented high-visibility double-line Unicode box banners with emoji tags in the terminal/console logs:
+    - `🤖 [GEMINI AI ENGAGED]` before summarization & enrichment HTTP dispatch.
+    - `✨ [GEMINI AI SUCCESS]` upon receiving and parsing Gemini responses, recording elapsed milliseconds, model name, takeaway count, and FAQ count.
+    - `⚡ [GEMINI CIRCUIT BREAKER TRIPPED]` with cooldown expiration UTC timestamp upon encountering rate limits, payment depletion (HTTP 402 `RESOURCE_EXHAUSTED`), or network timeouts.
+    - `📌 [LOCAL ML ENGAGED]` whenever synthesizing extractive summaries via TextRank centroid MMR graph analysis.
+    - `✅ [ENRICHMENT PERSISTED]` upon database commit.
+- **[Background Batch Worker Banners (`ArticleEnrichmentBackgroundService.cs`)]**:
+  - Added visual engagement banners `🚀 [ENRICHMENT BATCH ENGAGED]` and `🏁 [ENRICHMENT BATCH COMPLETED]` with duration and article count metrics.
+- **[Diagnostic HTTP Response Headers (`ArticlesController.cs`)]**:
+  - Added diagnostic HTTP response headers to `GetOrGenerateAiSummary` and `EnrichArticle`:
+    - `X-AI-Engine`: Engine name (`Gemini-3.8-Flash`, `TextRank-Extractive`, `Cached`).
+    - `X-AI-Gemini-Engaged`: `true` or `false`.
+    - `X-AI-Circuit-Breaker`: `active` or `standby`.
+    - `X-AI-Duration-Ms`: Server execution time in milliseconds.
+- **[Telemetry & Admin Dashboard Visualization (`HealthController.cs`, `SystemHealth.cshtml`)]**:
+  - Exposed `aiEnrichment` telemetry node in `/Health/details` detailing `cloudAiAvailable`, `circuitBreakerActive`, `circuitBreakerUntilUtc`, `model`, and `fallbackEngine`.
+  - Added a dedicated SaaS-styled **AI Summarization & Gemini Pipeline Telemetry Card** in `SystemHealth.cshtml` with live status badges and circuit breaker cooldown tracking.
+- **[Companion Highlighted Observability (`GeminiEmbeddingProvider.cs`, `LlmEntityExtractor.cs`)]**:
+  - Added `🧠 [GEMINI EMBEDDING ENGAGED]` and `🏷️ [GEMINI NER ENGAGED]` banners across vector embedding generation and scraper entity extraction pipelines.
+- **[Automated Verification]**:
+  - 100% pass rate: 91/91 passing in `NewsApi.Tests` and 311/311 passing in `NewsApiClient.Tests` (402 total passing tests).
+
 ### October 21, 2026 — Decoupled API Keys from appsettings; Single Source of Truth via .env
 Decoupled backend services from hardcoded API keys in configuration files, establishing root `.env` as the sole source of truth for runtime secrets:
 - **[Zero-Dependency .env Auto-Loader (`EnvLoader.cs`)]**:

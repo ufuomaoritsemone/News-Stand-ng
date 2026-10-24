@@ -124,7 +124,7 @@ export default function CategoryPage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(categoryJsonLd) }}
       />
-      <App initialData={data} initialCategory={data.category} />
+      <App key={data.category} initialData={data} initialCategory={data.category} />
     </>
   );
 }

@@ -35,7 +35,7 @@ public class ArticleEnrichment
     public string? FullSummaryJson { get; set; }
 
     /// <summary>
-    /// The engine that generated this enrichment ("TextRank-Extractive" or "Gemini-1.5-Flash").
+    /// The engine that generated this enrichment ("TextRank-Extractive" or "Gemini-3.1-Flash-Lite").
     /// </summary>
     [MaxLength(50)]
     public string Engine { get; set; } = "TextRank-Extractive";

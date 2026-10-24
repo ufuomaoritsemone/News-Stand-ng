@@ -194,8 +194,8 @@
                                     <span class="source-badge">@article.Source</span>
                                     @if (article.HasAiSummary)
                                     {
-                                        var engineLabel = article.AiSummaryEngine == "Gemini-1.5-Flash" ? "Gemini 1.5" : "AI Briefing";
-                                        <span class="ai-summary-badge" title="AI Executive Briefing Available (@(article.AiSummaryEngine ?? "Gemini-1.5-Flash"))">
+                                        var engineLabel = article.AiSummaryEngine?.Contains("Gemini", StringComparison.OrdinalIgnoreCase) == true ? "Gemini Flash" : "AI Briefing";
+                                        <span class="ai-summary-badge" title="AI Executive Briefing Available (@(article.AiSummaryEngine ?? "Gemini-3.1-Flash-Lite"))">
                                             <i class="bi bi-stars"></i> @engineLabel
                                         </span>
                                     }
@@ -224,7 +224,7 @@
                                         <div class="d-flex align-items-center gap-1.5 ms-auto flex-wrap justify-content-end">
                                             @if (article.HasAiSummary)
                                             {
-                                                <button type="button" class="btn-ai-summary" onclick="viewAiSummary('@article.Id', '@JavaScriptEncoder.Default.Encode(cleanTitle)', '@(article.AiSummaryEngine ?? "Gemini-1.5-Flash")')" title="View AI Executive Summary & Takeaways">
+                                                <button type="button" class="btn-ai-summary" onclick="viewAiSummary('@article.Id', '@JavaScriptEncoder.Default.Encode(cleanTitle)', '@(article.AiSummaryEngine ?? "Gemini-3.1-Flash-Lite")')" title="View AI Executive Summary & Takeaways">
                                                     <i class="bi bi-stars"></i> AI Summary
                                                 </button>
                                             }
@@ -534,7 +534,7 @@
                 if (data.success && data.enrichment) {
                     renderEnrichmentModal(data.enrichment);
                 } else if (data.success && data.summary) {
-                    renderEnrichmentModal({ fullSummary: data.summary, engine: engine || 'Gemini-1.5-Flash' });
+                    renderEnrichmentModal({ fullSummary: data.summary, engine: engine || 'Gemini-3.1-Flash-Lite' });
                 } else {
                     document.getElementById('aiModalLoading').innerHTML = '<div class="text-warning p-3"><i class="bi bi-exclamation-circle me-1"></i> ' + (data.message || 'No AI summary available.') + '</div>';
                 }
@@ -667,7 +667,7 @@
                     btnElement.innerHTML = '<i class="bi bi-stars"></i> AI Summary';
                     btnElement.disabled = false;
                     btnElement.onclick = function() {
-                        viewAiSummary(articleId, title, data.engine || 'Gemini-1.5-Flash');
+                        viewAiSummary(articleId, title, data.engine || 'Gemini-3.1-Flash-Lite');
                     };
 
                     var card = document.getElementById('article-card-' + articleId);
@@ -676,14 +676,14 @@
                         if (imgWrap && !imgWrap.querySelector('.ai-summary-badge')) {
                             var badge = document.createElement('span');
                             badge.className = 'ai-summary-badge';
-                            badge.title = 'AI Executive Briefing Available (Gemini 1.5 Flash)';
-                            badge.innerHTML = '<i class="bi bi-stars"></i> Gemini 1.5';
+                            badge.title = 'AI Executive Briefing Available (Gemini 3.1 Flash-Lite)';
+                            badge.innerHTML = '<i class="bi bi-stars"></i> Gemini Flash';
                             imgWrap.appendChild(badge);
                         }
                     }
 
                     // Open the modal right away to preview
-                    viewAiSummary(articleId, title, data.engine || 'Gemini-1.5-Flash');
+                    viewAiSummary(articleId, title, data.engine || 'Gemini-3.1-Flash-Lite');
                 } else {
                     btnElement.innerHTML = origHtml;
                     btnElement.disabled = false;

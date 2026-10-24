@@ -20,6 +20,7 @@ services:
 
   news-api:
     image: nigeriannewsgrid-newsapi:latest
+    container_name: nigeriannewsgrid-newsapi
     build:
       context: .
       dockerfile: src/NewsApi/Dockerfile
@@ -32,12 +33,13 @@ services:
       - ApiKey=${API_KEY:?Set API_KEY in .env}
       - YouTube__ApiKey=${YOUTUBE_API_KEY:-}
       - Gemini__ApiKey=${GEMINI_API_KEY:-}
+      - Gemini__Model=${GEMINI_MODEL:-gemini-3.1-flash-lite}
       - AiEnrichment__GeminiEnabled=${AiEnrichment__GeminiEnabled:-true}
-      - GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS:-}
-      - GCP_PROJECT_ID=${GCP_PROJECT_ID:-}
-      - GOOGLE_CLOUD_PROJECT=${GOOGLE_CLOUD_PROJECT:-}
+      - GOOGLE_APPLICATION_CREDENTIALS=/app/secrets/gcp-service-account.json
+      - GCP_PROJECT_ID=${GCP_PROJECT_ID:-project-00ae160d-e8ea-44ec-9ff}
+      - GOOGLE_CLOUD_PROJECT=${GOOGLE_CLOUD_PROJECT:-project-00ae160d-e8ea-44ec-9ff}
       - GCP_LOCATION=${GCP_LOCATION:-us-central1}
-      - GOOGLE_GENAI_USE_VERTEXAI=${GOOGLE_GENAI_USE_VERTEXAI:-false}
+      - GOOGLE_GENAI_USE_VERTEXAI=${GOOGLE_GENAI_USE_VERTEXAI:-true}
       - GoogleCloud__ApiKey=${GCP_TTS_API_KEY:-}
       - IndexNow__Key=${INDEXNOW_KEY:-3a7b9c1d2e4f5a6b7c8d9e0f1a2b3c4d}
       - AllowedOrigins__0=${AllowedOrigins__0:-https://newsstand.ng}
@@ -45,6 +47,7 @@ services:
       - AllowedOrigins__2=${AllowedOrigins__2:-http://localhost:3000}
     volumes:
       - audio-data:/app/data/audio
+      - ./secrets:/app/secrets:ro
     depends_on:
       postgres:
         condition: service_healthy
@@ -58,6 +61,7 @@ services:
 
   admin-dashboard:
     image: nigeriannewsgrid-admindashboard:latest
+    container_name: nigeriannewsgrid-admindashboard
     build:
       context: .
       dockerfile: src/AdminDashboard/Dockerfile
@@ -75,6 +79,7 @@ services:
 
   news-web:
     image: nigeriannewsgrid-web:latest
+    container_name: nigeriannewsgrid-web
     build:
       context: src/NigerianNewsGrid.Web
       dockerfile: Dockerfile
@@ -94,6 +99,7 @@ services:
 
   news-scraper-service:
     image: nigeriannewsgrid-newsscraperservice:latest
+    container_name: nigeriannewsgrid-scraperservice
     build:
       context: .
       dockerfile: src/NewsScraperService/Dockerfile
@@ -104,6 +110,8 @@ services:
       - Scraper__IntervalMinutes=15
       - Scraper__MaxConcurrency=${SCRAPER_MAX_CONCURRENCY:-4}
       - ApiKey=${API_KEY:?Set API_KEY in .env}
+      - Gemini__ApiKey=${GEMINI_API_KEY:-}
+      - Gemini__Model=${GEMINI_MODEL:-gemini-3.1-flash-lite}
     depends_on:
       news-api:
         condition: service_healthy
@@ -111,6 +119,7 @@ services:
 
   tts-worker:
     image: nigeriannewsgrid-ttsworker:latest
+    container_name: nigeriannewsgrid-ttsworker
     build:
       context: .
       dockerfile: src/TtsWorker/Dockerfile
@@ -120,9 +129,12 @@ services:
       - NewsApi__BaseUrl=http://news-api:8080
       - Tts__AudioStoragePath=/app/data/audio
       - GoogleCloud__ApiKey=${GCP_TTS_API_KEY:-}
+      - GOOGLE_APPLICATION_CREDENTIALS=/app/secrets/gcp-service-account.json
+      - GCP_PROJECT_ID=${GCP_PROJECT_ID:-project-00ae160d-e8ea-44ec-9ff}
       - ApiKey=${API_KEY:?Set API_KEY in .env}
     volumes:
       - audio-data:/app/data/audio
+      - ./secrets:/app/secrets:ro
     depends_on:
       news-api:
         condition: service_healthy

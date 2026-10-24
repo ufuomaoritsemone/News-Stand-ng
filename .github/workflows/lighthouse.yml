@@ -18,13 +18,13 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: 'npm'
-          cache-dependency-path: src/NigerianNewsGrid.Web/package.json
+          cache-dependency-path: src/NigerianNewsGrid.Web/package-lock.json
 
       - name: Install Web Dependencies
         working-directory: src/NigerianNewsGrid.Web
-        run: npm install
+        run: npm ci
 
       - name: Build React Router SSR Web Application
         working-directory: src/NigerianNewsGrid.Web

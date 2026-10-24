@@ -64,9 +64,9 @@ if ($Stop) {
     } catch { }
 
     # C. Free ports if still occupied
-    foreach ($p in @($NewsApiPort, $AdminPort)) {
+    foreach ($p in @($NewsApiPort, $AdminPort, 56194, 5173)) {
         try {
-            $tcp = Get-NetTCPConnection -LocalPort $p -ErrorAction SilentlyContinue
+            $tcp = Get-NetTCPConnection -LocalPort $p -State Listen -ErrorAction SilentlyContinue
             if ($tcp -and $tcp[0].OwningProcess) {
                 $ownerPid = $tcp[0].OwningProcess
                 Write-Host "  Stopping lingering process on port $p (PID $ownerPid)..." -ForegroundColor Gray
@@ -143,14 +143,15 @@ function Test-IsPortExcluded($port, $excludedRanges) {
 
 function Test-IsPortBusy($port) {
     try {
-        $tcpConn = Get-NetTCPConnection -LocalPort $port -ErrorAction SilentlyContinue
-        if ($tcpConn) {
+        $tcpConn = Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue
+        if ($tcpConn -and $tcpConn[0].OwningProcess) {
             return $tcpConn[0].OwningProcess
         }
     } catch { }
 
     try {
         $listener = [System.Net.Sockets.TcpListener]::new([System.Net.IPAddress]::Loopback, $port)
+        $listener.Server.SetSocketOption([System.Net.Sockets.SocketOptionLevel]::Socket, [System.Net.Sockets.SocketOptionName]::ReuseAddress, $true)
         $listener.Start()
         $listener.Stop()
         return $null
@@ -158,6 +159,7 @@ function Test-IsPortBusy($port) {
         return -1
     }
 }
+
 
 function Resolve-ServicePort($serviceName, [int]$preferredPort, $excludedRanges) {
     if ($NoPortCheck) {
@@ -319,10 +321,13 @@ if ($Background) {
     if ($Web) {
         Write-Host "Starting Web Application (Vite on http://localhost:5173)..." -ForegroundColor Yellow
         $webJob = Start-Job -Name "Web" -ScriptBlock {
-            param($dir) 
+            param($dir, $apiUrl) 
             Set-Location (Join-Path $dir "src/NigerianNewsGrid.Web")
+            $env:ApiBaseUrl = $apiUrl
+            $env:API_BASE_URL = $apiUrl
+            $env:VITE_API_URL = $apiUrl
             npm run dev
-        } -ArgumentList $rootDir
+        } -ArgumentList $rootDir, $apiBaseUrl
     }
 
     Write-Host "`n==================================================" -ForegroundColor Green
@@ -412,8 +417,12 @@ dotnet run --no-build --project src/TtsWorker/TtsWorker.csproj --ApiBaseUrl '$ap
 `$Host.UI.RawUI.WindowTitle = 'NigerianNewsGrid Web (http://localhost:5173)'
 [Console]::Title = 'NigerianNewsGrid Web (http://localhost:5173)'
 Set-Location '$rootDir\src\NigerianNewsGrid.Web'
+`$env:ApiBaseUrl = '$apiBaseUrl'
+`$env:API_BASE_URL = '$apiBaseUrl'
+`$env:VITE_API_URL = '$apiBaseUrl'
 Write-Host '==================================================' -ForegroundColor Cyan
 Write-Host '    Nigerian News Grid Web (http://localhost:5173)' -ForegroundColor Green
+Write-Host '    Proxy Target: $apiBaseUrl' -ForegroundColor Gray
 Write-Host '==================================================' -ForegroundColor Cyan
 npm run dev
 "@

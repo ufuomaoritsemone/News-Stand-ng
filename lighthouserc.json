@@ -1,7 +1,7 @@
 {
   "ci": {
     "collect": {
-      "startServerCommand": "node ./src/NigerianNewsGrid.Web/build/server/index.js",
+      "startServerCommand": "npm --prefix src/NigerianNewsGrid.Web start",
       "startServerReadyPattern": "server|listening|localhost",
       "url": [
         "http://localhost:3000/"

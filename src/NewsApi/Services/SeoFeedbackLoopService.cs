@@ -16,7 +16,8 @@ public class SeoFeedbackLoopService(
     IHttpClientFactory httpClientFactory,
     IArticleEnrichmentService? enrichmentService,
     IIndexNowService? indexNowService,
-    ILogger<SeoFeedbackLoopService> logger) : ISeoFeedbackLoopService
+    ILogger<SeoFeedbackLoopService> logger,
+    ISystemSettingsService? systemSettings = null) : ISeoFeedbackLoopService
 {
     private readonly NewsDbContext _db = db;
     private readonly IConfiguration _config = config;
@@ -24,6 +25,7 @@ public class SeoFeedbackLoopService(
     private readonly IArticleEnrichmentService? _enrichmentService = enrichmentService;
     private readonly IIndexNowService? _indexNowService = indexNowService;
     private readonly ILogger<SeoFeedbackLoopService> _logger = logger;
+    private readonly ISystemSettingsService? _systemSettings = systemSettings;
 
     public async Task<(List<string> Titles, List<FaqItemDto> Faqs)> GenerateOptimizationsAsync(
         string query,
@@ -33,7 +35,17 @@ public class SeoFeedbackLoopService(
         CancellationToken ct = default)
     {
         // Try Gemini generative AI if API key is provided
-        var apiKey = Environment.GetEnvironmentVariable("GEMINI_API_KEY")
+        string? apiKey = null;
+        if (_systemSettings != null)
+        {
+            try
+            {
+                apiKey = await _systemSettings.GetSettingAsync("Gemini:ApiKey", null, ct);
+            }
+            catch { }
+        }
+
+        apiKey ??= Environment.GetEnvironmentVariable("GEMINI_API_KEY")
             ?? _config["Gemini:ApiKey"]
             ?? _config["Gemini__ApiKey"]
             ?? _config["Google:ApiKey"]
@@ -284,11 +296,28 @@ public class SeoFeedbackLoopService(
             {
                 temperature = 0.2,
                 maxOutputTokens = 500,
-                responseMimeType = "application/json"
+                responseMimeType = "application/json",
+                thinkingConfig = new
+                {
+                    thinkingBudget = 0
+                }
             }
         };
 
-        var model = _config["Gemini:Model"] ?? "gemini-3.8-flash";
+        string? model = null;
+        if (_systemSettings != null)
+        {
+            try
+            {
+                model = await _systemSettings.GetSettingAsync("Gemini:Model", null, ct);
+            }
+            catch { }
+        }
+
+        model ??= Environment.GetEnvironmentVariable("GEMINI_MODEL")
+            ?? _config["Gemini:Model"]
+            ?? _config["Gemini__Model"]
+            ?? "gemini-3.1-flash-lite";
         var url = $"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={apiKey}";
         var response = await client.PostAsJsonAsync(url, requestBody, ct);
         if (response.IsSuccessStatusCode)

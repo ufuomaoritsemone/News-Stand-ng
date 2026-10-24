@@ -14,7 +14,9 @@ public class HealthController(
     IWebHostEnvironment env,
     IConfiguration config,
     ISystemSettingsService settingsService,
-    ILogger<HealthController> logger) : ControllerBase
+    ILogger<HealthController> logger,
+    IArticleEnrichmentService? enrichmentService = null,
+    IAiAuditLogger? auditLogger = null) : ControllerBase
 {
     [HttpGet]
     public IActionResult Get() => Ok(new { status = "ok" });
@@ -141,6 +143,16 @@ public class HealthController(
             ? "Healthy"
             : (!dbConnected ? "Unhealthy" : "Degraded");
 
+        bool cloudAiAvailable = false;
+        bool circuitBreakerActive = false;
+        DateTime? circuitBreakerUntilUtc = null;
+        if (enrichmentService != null)
+        {
+            cloudAiAvailable = await enrichmentService.IsCloudAiAvailableAsync(ct);
+            circuitBreakerActive = enrichmentService.IsCircuitBreakerActive;
+            circuitBreakerUntilUtc = enrichmentService.CircuitBreakerUntilUtc;
+        }
+
         var response = new
         {
             status = overallStatus,
@@ -168,6 +180,26 @@ public class HealthController(
                 totalSources,
                 totalComments,
                 totalFeedbacks
+            },
+            aiEnrichment = new
+            {
+                configured = cloudAiAvailable || circuitBreakerActive,
+                cloudAiAvailable,
+                circuitBreakerActive,
+                circuitBreakerUntilUtc,
+                model = await settingsService.GetSettingAsync("Gemini:Model",
+                    Environment.GetEnvironmentVariable("GEMINI_MODEL")
+                    ?? config["Gemini:Model"]
+                    ?? config["Gemini__Model"]
+                    ?? "gemini-3.1-flash-lite", ct),
+                fallbackEngine = "TextRank-Extractive",
+                auditLog = auditLogger != null ? new
+                {
+                    logPath = auditLogger.LogFilePath,
+                    jsonlPath = auditLogger.JsonlFilePath,
+                    logExists = System.IO.File.Exists(auditLogger.LogFilePath),
+                    jsonlExists = System.IO.File.Exists(auditLogger.JsonlFilePath)
+                } : null
             },
             workers = new
             {

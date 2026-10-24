@@ -20,6 +20,7 @@ public class SystemSettingsService(
     {
         // AI & Machine Learning
         ["Gemini:ApiKey"] = ("AI", "Google Gemini API Key for semantic story clustering and automated SEO", true, null),
+        ["Gemini:Model"] = ("AI", "Google Gemini generative model identifier (e.g. gemini-3.1-flash-lite)", false, "gemini-3.1-flash-lite"),
         ["AiEnrichment:GeminiEnabled"] = ("AI", "Enable automated generative AI summary and entity enrichment", false, "true"),
         ["LlmEntityExtraction:Enabled"] = ("AI", "Enable Tier-2 LLM named-entity extraction during RSS scraping", false, "false"),
 
@@ -91,6 +92,10 @@ public class SystemSettingsService(
                 if (string.IsNullOrWhiteSpace(resolvedValue) && key.Equals("Gemini:ApiKey", StringComparison.OrdinalIgnoreCase))
                 {
                     resolvedValue = Environment.GetEnvironmentVariable("GEMINI_API_KEY");
+                }
+                else if (string.IsNullOrWhiteSpace(resolvedValue) && key.Equals("Gemini:Model", StringComparison.OrdinalIgnoreCase))
+                {
+                    resolvedValue = Environment.GetEnvironmentVariable("GEMINI_MODEL");
                 }
                 else if (string.IsNullOrWhiteSpace(resolvedValue) && key.Equals("YouTube:ApiKey", StringComparison.OrdinalIgnoreCase))
                 {

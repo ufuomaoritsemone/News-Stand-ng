@@ -190,7 +190,7 @@ export default function ReaderDrawer({
         setEnrichment(fullEnr || {
           fullSummary: res,
           keyTakeaways: [],
-          engine: 'Gemini-1.5-Flash',
+          engine: res?.engine || 'Gemini-3.1-Flash-Lite',
         });
       }
     } catch (err) {

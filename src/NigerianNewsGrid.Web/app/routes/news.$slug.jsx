@@ -126,7 +126,7 @@ export default function ArticleLandingPage() {
           enrichment: {
             ...(prev.enrichment || {}),
             fullSummary: summaryResult,
-            engine: "Gemini-1.5-Flash"
+            engine: summaryResult?.engine || "Gemini-3.1-Flash-Lite"
           }
         }));
       }
@@ -430,7 +430,7 @@ export default function ArticleLandingPage() {
             )}
           </div>
 
-          {/* AI Executive Briefing (Full-Body Synthesis with Gemini 1.5 Flash) */}
+          {/* AI Executive Briefing (Full-Body Synthesis with Gemini 3.1 Flash-Lite) */}
           {article.enrichment?.fullSummary ? (
             <div className="ai-executive-briefing-box" aria-label="AI Executive Briefing">
               <div className="briefing-header">
@@ -543,7 +543,7 @@ export default function ArticleLandingPage() {
                   <span>AI Executive Briefing</span>
                 </div>
                 <div className="briefing-generate-desc">
-                  Generate a deep executive synthesis of the full article with Gemini 1.5 Flash in ~3 seconds.
+                  Generate a deep executive synthesis of the full article with Gemini 3.1 Flash-Lite in ~2 seconds.
                 </div>
                 {summaryError && (
                   <div style={{ color: "#ef4444", fontSize: "0.78rem", marginTop: "4px" }}>

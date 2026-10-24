@@ -23,7 +23,12 @@ public class ArticleEnrichmentTests
         IConfiguration? config = null,
         IHttpClientFactory? httpClientFactory = null)
     {
-        config ??= new ConfigurationBuilder().Build();
+        config ??= new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["AiEnrichment:GeminiEnabled"] = "false"
+            })
+            .Build();
         if (httpClientFactory == null)
         {
             var clientFactoryMock = new Mock<IHttpClientFactory>();

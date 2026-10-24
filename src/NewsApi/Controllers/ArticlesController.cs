@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
@@ -451,12 +452,27 @@ public class ArticlesController : ControllerBase
 
         if (article.Enrichment?.FullSummary != null)
         {
+            var engine = article.Enrichment.Engine ?? "Cached";
+            Response.Headers["X-AI-Engine"] = engine;
+            Response.Headers["X-AI-Gemini-Engaged"] = engine.StartsWith("Gemini", StringComparison.OrdinalIgnoreCase) ? "true" : "false";
+            Response.Headers["X-AI-Circuit-Breaker"] = _enrichmentService.IsCircuitBreakerActive ? "active" : "standby";
+            Response.Headers["X-AI-Duration-Ms"] = "0";
+
             return Ok(ArticleIngestionService.MapToFullSummaryDto(article.Enrichment.FullSummary));
         }
 
+        var sw = Stopwatch.StartNew();
         var enriched = await _enrichmentService.EnrichArticleAsync(article.Id, cancellationToken);
+        sw.Stop();
+
         if (enriched?.FullSummary != null)
         {
+            var engine = enriched.Engine ?? "Unknown";
+            Response.Headers["X-AI-Engine"] = engine;
+            Response.Headers["X-AI-Gemini-Engaged"] = engine.StartsWith("Gemini", StringComparison.OrdinalIgnoreCase) ? "true" : "false";
+            Response.Headers["X-AI-Circuit-Breaker"] = _enrichmentService.IsCircuitBreakerActive ? "active" : "standby";
+            Response.Headers["X-AI-Duration-Ms"] = sw.ElapsedMilliseconds.ToString();
+
             return Ok(ArticleIngestionService.MapToFullSummaryDto(enriched.FullSummary));
         }
 
@@ -479,7 +495,10 @@ public class ArticlesController : ControllerBase
             });
         }
 
+        var sw = Stopwatch.StartNew();
         var result = await _enrichmentService.EnrichArticleAsync(id, cancellationToken);
+        sw.Stop();
+
         if (result == null)
         {
             return NotFound(new ErrorResponseDto
@@ -487,6 +506,12 @@ public class ArticlesController : ControllerBase
                 Error = new ErrorPayload { Code = "NOT_FOUND", Message = $"Article with id '{id}' was not found.", TraceId = HttpContext.TraceIdentifier }
             });
         }
+
+        var engine = result.Engine ?? "Unknown";
+        Response.Headers["X-AI-Engine"] = engine;
+        Response.Headers["X-AI-Gemini-Engaged"] = engine.StartsWith("Gemini", StringComparison.OrdinalIgnoreCase) ? "true" : "false";
+        Response.Headers["X-AI-Circuit-Breaker"] = _enrichmentService.IsCircuitBreakerActive ? "active" : "standby";
+        Response.Headers["X-AI-Duration-Ms"] = sw.ElapsedMilliseconds.ToString();
 
         return Ok(ArticleIngestionService.MapToEnrichmentDto(result));
     }

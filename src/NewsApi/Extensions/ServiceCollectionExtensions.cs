@@ -80,7 +80,8 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IEmbeddingProvider, GeminiEmbeddingProvider>();
         services.AddScoped<IStoryClusteringService, StoryClusteringService>();
 
-        // AI / ML Article Enrichment (Phase 7)
+        // AI / ML Article Enrichment & Audit Logging (Phase 7)
+        services.AddSingleton<IAiAuditLogger, AiAuditLogger>();
         services.AddScoped<IArticleEnrichmentService, ArticleEnrichmentService>();
 
         // Search Console API & Crawl Diagnostics (Phase 9)

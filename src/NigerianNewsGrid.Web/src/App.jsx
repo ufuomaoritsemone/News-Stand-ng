@@ -378,6 +378,16 @@ export default function App({ initialData = null, initialCategory = 'All' }) {
     }
   }, []);
 
+  // Synchronize state when route props change (e.g. Navigating between /category/politics and /category/business)
+  useEffect(() => {
+    if (initialCategory && initialCategory !== activeCategory) {
+      setActiveCategory(initialCategory);
+    }
+    if (initialData?.initialArticles?.length) {
+      setArticles(initialData.initialArticles);
+    }
+  }, [initialCategory, initialData]);
+
   // Fetch Initial Categories, Sources, Videos, and Sponsored Campaigns
   useEffect(() => {
     api.getCategories()
@@ -550,29 +560,52 @@ export default function App({ initialData = null, initialCategory = 'All' }) {
     return bookmarks.some((item) => item.id === id);
   };
 
-  // Determine what list to display
-  let displayedArticles = [];
-  if (activeCategory === 'Saved') {
-    displayedArticles = bookmarks;
-  } else {
-    // If backend returns articles, use them; if entirely empty and on home with no articles, use authentic fallback
-    if (articles.length > 0) {
-      displayedArticles = articles;
-    } else if (activeCategory === 'All' && selectedSource === 'All') {
-      displayedArticles = AUTHENTIC_NIGERIAN_FALLBACKS;
-    } else {
-      displayedArticles = [];
+  // Determine what list to display with immediate client-side category filtering
+  const displayedArticles = useMemo(() => {
+    if (activeCategory === 'Saved') {
+      return bookmarks;
+    }
+
+    let list = articles;
+
+    // If on home with no articles loaded yet, use authentic fallbacks
+    if (list.length === 0 && activeCategory === 'All' && selectedSource === 'All') {
+      list = AUTHENTIC_NIGERIAN_FALLBACKS;
+    }
+
+    // If a specific category is selected, ensure displayed articles strictly match that category
+    if (activeCategory && activeCategory !== 'All' && list.length > 0) {
+      const normalizedCat = activeCategory.trim().toLowerCase();
+      const filtered = list.filter((a) => {
+        const itemCat = (a.category || '').trim().toLowerCase();
+        return (
+          itemCat === normalizedCat ||
+          (normalizedCat === 'sports' && itemCat === 'sport') ||
+          (normalizedCat === 'sport' && itemCat === 'sports')
+        );
+      });
+      // If we have matching articles in memory, use them immediately
+      if (filtered.length > 0) {
+        list = filtered;
+      }
     }
 
     // Filter by source if selected
-    if (selectedSource !== 'All' && displayedArticles.length > 0) {
-      displayedArticles = displayedArticles.filter(
+    if (selectedSource !== 'All' && list.length > 0) {
+      list = list.filter(
         (a) => (a.source || '').toLowerCase().includes(selectedSource.toLowerCase())
       );
     }
-  }
 
-  const allStories = articles.length > 0 ? articles : (activeCategory === 'All' ? AUTHENTIC_NIGERIAN_FALLBACKS : []);
+    return list;
+  }, [articles, activeCategory, selectedSource, bookmarks]);
+
+  const allStories = useMemo(() => {
+    if (activeCategory === 'All') {
+      return articles.length > 0 ? articles : AUTHENTIC_NIGERIAN_FALLBACKS;
+    }
+    return displayedArticles;
+  }, [articles, displayedArticles, activeCategory]);
 
   // Hero Carousel Stories: Curate up to 6 top verified, visually compelling, source-diverse stories
   const carouselStories = useMemo(() => {

@@ -81,12 +81,27 @@ public class DbInitializer(
             }
 
             bool hasLegacyTables = false;
+            bool hasSeoSlugsAndTopics = false;
+
             if (isSqlite)
             {
                 using var cmd = conn.CreateCommand();
                 cmd.CommandText = "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='Articles';";
                 var result = await cmd.ExecuteScalarAsync(ct);
                 hasLegacyTables = Convert.ToInt32(result) > 0;
+
+                if (hasLegacyTables)
+                {
+                    using var checkCmd = conn.CreateCommand();
+                    checkCmd.CommandText = """
+                        SELECT (
+                            (SELECT COUNT(*) FROM pragma_table_info('Sources') WHERE name='Slug') +
+                            (SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='Topics')
+                        );
+                        """;
+                    var checkRes = await checkCmd.ExecuteScalarAsync(ct);
+                    hasSeoSlugsAndTopics = Convert.ToInt32(checkRes) > 0;
+                }
             }
             else if (isPostgres)
             {
@@ -94,6 +109,19 @@ public class DbInitializer(
                 cmd.CommandText = "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'Articles';";
                 var result = await cmd.ExecuteScalarAsync(ct);
                 hasLegacyTables = Convert.ToInt32(result) > 0;
+
+                if (hasLegacyTables)
+                {
+                    using var checkCmd = conn.CreateCommand();
+                    checkCmd.CommandText = """
+                        SELECT (
+                            (SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = 'public' AND lower(table_name) = 'sources' AND lower(column_name) = 'slug') +
+                            (SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public' AND lower(table_name) = 'topics')
+                        );
+                        """;
+                    var checkRes = await checkCmd.ExecuteScalarAsync(ct);
+                    hasSeoSlugsAndTopics = Convert.ToInt32(checkRes) > 0;
+                }
             }
 
             if (hasLegacyTables)
@@ -111,6 +139,16 @@ public class DbInitializer(
                         INSERT OR IGNORE INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
                         VALUES ('20260913220753_AddAuthorAndContentType', '10.0.11');
                         """;
+
+                    if (hasSeoSlugsAndTopics)
+                    {
+                        histCmd.CommandText += """
+
+                            INSERT OR IGNORE INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+                            VALUES ('20261003204804_AddSeoSlugsAndTopics', '10.0.11');
+                            """;
+                    }
+
                     await histCmd.ExecuteNonQueryAsync(ct);
                 }
                 else if (isPostgres)
@@ -128,9 +166,20 @@ public class DbInitializer(
                         VALUES ('20260913220753_AddAuthorAndContentType', '10.0.11')
                         ON CONFLICT DO NOTHING;
                         """;
+
+                    if (hasSeoSlugsAndTopics)
+                    {
+                        histCmd.CommandText += """
+
+                            INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+                            VALUES ('20261003204804_AddSeoSlugsAndTopics', '10.0.11')
+                            ON CONFLICT DO NOTHING;
+                            """;
+                    }
+
                     await histCmd.ExecuteNonQueryAsync(ct);
                 }
-                logger.LogInformation("Legacy database schema baselined with InitialCreate and AddAuthorAndContentType migrations.");
+                logger.LogInformation("Legacy database schema baselined (hasSeoSlugsAndTopics: {HasSeoSlugsAndTopics}).", hasSeoSlugsAndTopics);
             }
         }
         catch (Exception ex)

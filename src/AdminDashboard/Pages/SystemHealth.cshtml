@@ -295,7 +295,80 @@
 
     </div>
 
-    <!-- Architectural Deep-Dive & Container Restarts Explanation -->
+    <!-- 5. AI Summarization & Gemini Intelligence Pipeline Telemetry -->
+    <div class="card glass-card border-0 mb-4 shadow-sm">
+        <div class="card-header bg-transparent border-secondary border-opacity-25 d-flex align-items-center justify-content-between py-3">
+            <div class="d-flex align-items-center gap-2">
+                <i class="bi bi-robot text-primary fs-5"></i>
+                <h5 class="mb-0 text-white fw-bold">AI Summarization &amp; Gemini Pipeline Telemetry</h5>
+            </div>
+            @if (report?.AiEnrichment?.CloudAiAvailable == true)
+            {
+                <span class="badge bg-success rounded-pill px-3 py-1">
+                    <i class="bi bi-stars me-1"></i> @(report?.AiEnrichment?.Model ?? "Gemini AI") Engaged
+                </span>
+            }
+            else if (report?.AiEnrichment?.CircuitBreakerActive == true)
+            {
+                <span class="badge bg-warning text-dark rounded-pill px-3 py-1">
+                    <i class="bi bi-lightning-charge-fill me-1"></i> Circuit Breaker Cooling Down
+                </span>
+            }
+            else
+            {
+                <span class="badge bg-info text-dark rounded-pill px-3 py-1">
+                    <i class="bi bi-cpu-fill me-1"></i> Local TextRank Active
+                </span>
+            }
+        </div>
+        <div class="card-body p-4">
+            <div class="row g-4 align-items-center">
+                <div class="col-md-3">
+                    <div class="p-3 rounded bg-secondary bg-opacity-10 border border-secondary border-opacity-25">
+                        <div class="text-muted small mb-1"><i class="bi bi-cpu me-1"></i> Primary Model</div>
+                        <h6 class="text-white fw-bold mb-0">@(report?.AiEnrichment?.Model ?? "gemini-3.1-flash-lite")</h6>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="p-3 rounded bg-secondary bg-opacity-10 border border-secondary border-opacity-25">
+                        <div class="text-muted small mb-1"><i class="bi bi-shield-check me-1"></i> Automatic Fallback</div>
+                        <h6 class="text-white fw-bold mb-0">@(report?.AiEnrichment?.FallbackEngine ?? "TextRank-Extractive (MMR)")</h6>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="p-3 rounded bg-secondary bg-opacity-10 border border-secondary border-opacity-25">
+                        <div class="text-muted small mb-1"><i class="bi bi-broadcast me-1"></i> Gemini Live Status</div>
+                        @if (report?.AiEnrichment?.CloudAiAvailable == true)
+                        {
+                            <span class="text-success fw-bold"><i class="bi bi-check-circle-fill me-1"></i> Standby &amp; Healthy</span>
+                        }
+                        else if (report?.AiEnrichment?.CircuitBreakerActive == true)
+                        {
+                            <span class="text-warning fw-bold">
+                                <i class="bi bi-exclamation-triangle-fill me-1"></i> Cooldown until @(report?.AiEnrichment?.CircuitBreakerUntilUtc?.ToString("HH:mm:ss") ?? "soon") UTC
+                            </span>
+                        }
+                        else
+                        {
+                            <span class="text-white-50"><i class="bi bi-info-circle me-1"></i> Local TextRank Engine</span>
+                        }
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="p-3 rounded bg-secondary bg-opacity-10 border border-secondary border-opacity-25">
+                        <div class="text-muted small mb-1"><i class="bi bi-terminal me-1"></i> Pipeline Observability</div>
+                        <span class="text-info small fw-bold">Highlighted Unicode Box Logs Active</span>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-3 pt-3 border-top border-secondary border-opacity-25 text-muted small d-flex align-items-center justify-content-between flex-wrap gap-2">
+                <span>
+                    <i class="bi bi-info-circle me-1"></i> When Gemini quota is exhausted or unconfigured, the system automatically bypasses remote calls and synthesizes summaries via local TextRank centroid MMR graph analysis.
+                </span>
+                <span class="badge bg-dark border border-secondary text-secondary">Zero Downtime Fallback</span>
+            </div>
+        </div>
+    </div>
     <div class="card glass-card border-0 mb-4 shadow-sm">
         <div class="card-header bg-transparent border-secondary border-opacity-25 d-flex align-items-center justify-content-between py-3">
             <div class="d-flex align-items-center gap-2">

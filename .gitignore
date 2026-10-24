@@ -9,6 +9,8 @@ out/
 **/secrets.json
 **/.env
 **/.env.local
+secrets/
+*gserviceaccount*.json
 *.pfx
 *.p12
 

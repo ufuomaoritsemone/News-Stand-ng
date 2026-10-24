@@ -4,7 +4,7 @@ export function getApiBaseUrl() {
   if (typeof window !== 'undefined') {
     return import.meta.env?.VITE_API_BASE || '/api/v1';
   }
-  const serverBackend = (typeof process !== 'undefined' && (process.env?.API_BASE_URL || process.env?.NEWS_API_URL)) || 'http://127.0.0.1:56193';
+  const serverBackend = (typeof process !== 'undefined' && (process.env?.API_BASE_URL || process.env?.NEWS_API_URL || process.env?.VITE_API_URL)) || 'http://127.0.0.1:56193';
   return `${serverBackend.replace(/\/$/, '')}/api/v1`;
 }
 
@@ -16,7 +16,7 @@ const API_BASE = '/api/v1';
 async function fetchJson(url, options = {}) {
   let targetUrl = url;
   if (typeof window === 'undefined' && targetUrl.startsWith('/')) {
-    const serverBackend = (typeof process !== 'undefined' && (process.env?.API_BASE_URL || process.env?.NEWS_API_URL)) || 'http://127.0.0.1:56193';
+    const serverBackend = (typeof process !== 'undefined' && (process.env?.API_BASE_URL || process.env?.NEWS_API_URL || process.env?.VITE_API_URL)) || 'http://127.0.0.1:56193';
     targetUrl = `${serverBackend.replace(/\/$/, '')}${targetUrl}`;
   }
 
