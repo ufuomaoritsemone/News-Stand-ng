@@ -23,6 +23,26 @@ Projects:
 
 ## Updates
 
+### October 24, 2026 — GitHub Actions Runner Node 24 Runtime Upgrade
+Updated all official GitHub Actions across workflow pipelines to version `v5` to natively support the Node 24 action runner environment and eliminate deprecation warnings:
+- **[CI Workflow (`.github/workflows/ci.yml`)]**:
+  - Upgraded `actions/checkout@v4` to `actions/checkout@v5`.
+  - Upgraded `actions/setup-dotnet@v4` to `actions/setup-dotnet@v5`.
+  - Upgraded `actions/setup-node@v4` to `actions/setup-node@v5`.
+- **[Lighthouse CI Workflow (`.github/workflows/lighthouse.yml`)]**:
+  - Upgraded `actions/checkout@v4` to `actions/checkout@v5`.
+  - Upgraded `actions/setup-node@v4` to `actions/setup-node@v5`.
+- **[Verification]**:
+  - Eliminated the `Node.js 20 is deprecated` runner warning emitted when `v4` actions were forced to execute under the Node 24 runner environment. Both workflow YAML files pass schema validation with zero deprecation warnings.
+
+### October 24, 2026 — Lighthouse CI Preset Configuration Fix
+Fixed an argument validation failure in the Lighthouse CI workflow (`.github/workflows/lighthouse.yml`) caused by an unsupported preset configuration:
+- **[Lighthouse CI Configuration (`lighthouserc.json`)]**:
+  - Removed `"preset": "mobile"` from `ci.collect.settings`. `@lhci/cli` rejects `"mobile"` as an invalid preset option (`Argument: preset, Given: "mobile", Choices: "perf", "experimental", "desktop"`).
+  - Because mobile emulation (Moto G4 viewport and mobile throttling) is Lighthouse's default operational mode, omitting `preset` allows LHCI to audit under standard mobile emulation without configuration errors.
+- **[Verification]**:
+  - Verified syntax of [`lighthouserc.json`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/lighthouserc.json) and alignment with [`.github/workflows/lighthouse.yml`](file:///c:/Users/ufuom/source/repos/NigerianNewGrid/.github/workflows/lighthouse.yml).
+
 ### October 24, 2026 — Category Pill Real-Time Filtering & Route State Synchronization Fix
 Resolved an issue on the web frontend where clicking Category pills did not immediately filter stories or sync cleanly with route props:
 - **[Immediate Client-Side Category Filtering (`App.jsx`)]**:
