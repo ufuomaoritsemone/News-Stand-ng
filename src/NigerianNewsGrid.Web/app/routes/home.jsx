@@ -1,14 +1,19 @@
 import React from "react";
 import { useLoaderData } from "react-router";
 import App from "../../src/App";
-import { api } from "../../src/services/api";
+import { api, getOptimizedImageUrl } from "../../src/services/api";
 import { buildArticleItemList } from "../utils/seo";
 
-export function meta() {
+export function meta({ data }) {
   const title = "News Stand NG | Live Breaking News, Top Stories & In-Depth Journalism";
   const description =
     "Real-time Nigerian news aggregation, breaking alerts, politics, business, tech, opinion, and video coverage curated across top national publications.";
   const canonicalUrl = "https://newsstand.ng/";
+
+  const leadImage = data?.initialArticles?.[0]?.imageUrl;
+  const leadPreload = leadImage
+    ? [{ tagName: "link", rel: "preload", as: "image", href: getOptimizedImageUrl(leadImage, 800), fetchpriority: "high" }]
+    : [];
 
   return [
     { title },
@@ -25,6 +30,7 @@ export function meta() {
     { name: "twitter:title", content: "News Stand NG | Live Breaking News" },
     { name: "twitter:description", content: description },
     { name: "twitter:image", content: "https://newsstand.ng/newsstand-masthead.png" },
+    ...leadPreload,
   ];
 }
 

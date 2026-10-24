@@ -125,8 +125,8 @@ export default function HeroStory({ article, onSelectStory, isBookmarked, onTogg
                   }}
                   aria-label={
                     article.commentCount > 0
-                      ? `${article.commentCount} comments. Join discussion`
-                      : 'Start discussion on this story'
+                      ? `${article.commentCount} Discuss: Reader comments`
+                      : 'Discuss: Join reader debate'
                   }
                 >
                   <MessageSquare size={13} className="btn-action-icon" />
@@ -153,7 +153,7 @@ export default function HeroStory({ article, onSelectStory, isBookmarked, onTogg
                     onClick={(e) => {
                       e.stopPropagation();
                     }}
-                    aria-label={`Read full story on ${article.source || 'Publisher'}`}
+                    aria-label={`Full read: Open story on ${article.source || 'Publisher'}`}
                   >
                     <Newspaper size={13} className="btn-action-icon" />
                     <span>Full read</span>
@@ -166,7 +166,7 @@ export default function HeroStory({ article, onSelectStory, isBookmarked, onTogg
                       e.stopPropagation();
                       if (onSelectStory) onSelectStory(article);
                     }}
-                    aria-label="Read full story"
+                    aria-label="Full read: Open full story"
                   >
                     <Newspaper size={13} className="btn-action-icon" />
                     <span>Full read</span>

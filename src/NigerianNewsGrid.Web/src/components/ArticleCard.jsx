@@ -218,8 +218,8 @@ export default function ArticleCard({
                 }}
                 aria-label={
                   article.commentCount > 0
-                    ? `${article.commentCount} comments. Join discussion`
-                    : 'Start discussion on this story'
+                    ? `${article.commentCount} Discuss: Reader comments`
+                    : 'Discuss: Join reader debate'
                 }
               >
                 <MessageSquare size={13} className="btn-action-icon" />
@@ -249,7 +249,7 @@ export default function ArticleCard({
                       api.trackSponsoredClick(article.id);
                     }
                   }}
-                  aria-label={`Read full story on ${isSponsored ? (article.sponsorName || 'Partner') : (article.source || 'Publisher')}`}
+                  aria-label={`Full read: Open story on ${isSponsored ? (article.sponsorName || 'Partner') : (article.source || 'Publisher')}`}
                 >
                   <Newspaper size={13} className="btn-action-icon" />
                   <span>Full read</span>
@@ -262,7 +262,7 @@ export default function ArticleCard({
                     e.stopPropagation();
                     if (onSelectStory) onSelectStory(article);
                   }}
-                  aria-label="Read full story"
+                  aria-label="Full read: Open full story"
                 >
                   <Newspaper size={13} className="btn-action-icon" />
                   <span>Full read</span>

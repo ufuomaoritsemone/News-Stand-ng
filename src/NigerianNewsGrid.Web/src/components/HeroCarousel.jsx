@@ -90,7 +90,7 @@ export default function HeroCarousel({
       tabIndex={0}
     >
       <div className="hero-carousel-wrapper">
-        <article
+        <div
           className="hero-split-card"
           onClick={() => onSelectStory && onSelectStory(current)}
           role="button"
@@ -235,8 +235,8 @@ export default function HeroCarousel({
                     }}
                     aria-label={
                       current.commentCount > 0
-                        ? `${current.commentCount} comments. Join discussion`
-                        : 'Start discussion on this story'
+                        ? `${current.commentCount} Discuss: Reader comments`
+                        : 'Discuss: Join reader debate'
                     }
                   >
                     <MessageSquare size={13} className="btn-action-icon" />
@@ -263,7 +263,7 @@ export default function HeroCarousel({
                       onClick={(e) => {
                         e.stopPropagation();
                       }}
-                      aria-label={`Read full story on ${current.source || 'Publisher'}`}
+                      aria-label={`Full read: Open story on ${current.source || 'Publisher'}`}
                     >
                       <Newspaper size={13} className="btn-action-icon" />
                       <span>Full read</span>
@@ -276,7 +276,7 @@ export default function HeroCarousel({
                         e.stopPropagation();
                         if (onSelectStory) onSelectStory(current);
                       }}
-                      aria-label="Read full story"
+                      aria-label="Full read: Open full story"
                     >
                       <Newspaper size={13} className="btn-action-icon" />
                       <span>Full read</span>
@@ -359,7 +359,7 @@ export default function HeroCarousel({
               </div>
             </div>
           </div>
-        </article>
+        </div>
 
         {/* Carousel Navigation Controls (Arrows & Indicators) */}
         {total > 1 && (

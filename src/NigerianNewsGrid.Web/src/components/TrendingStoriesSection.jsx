@@ -110,11 +110,11 @@ export default function TrendingStoriesSection({ stories = [], onSelectStory }) 
                   </div>
                 </div>
 
-                <h4 className="trending-rail-title">
+                <h3 className="trending-rail-title">
                   <Link to={`/story/${story.slug}`} onClick={handleStoryClick}>
                     {story.title}
                   </Link>
-                </h4>
+                </h3>
 
                 <div className="trending-rail-card-footer">
                   {story.sources && story.sources.length > 0 && (

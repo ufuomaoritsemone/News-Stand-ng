@@ -97,7 +97,7 @@ export default function MobileBottomNav({ onOpenSearch }) {
         <a
           href="/?tab=forum"
           className={`mobile-bottom-tab ${isForumTab && !showTrackersSheet ? 'active' : ''}`}
-          aria-label="Town Hall & Debates"
+          aria-label="Forum: Town Hall & Debates"
         >
           <MessageSquare size={20} />
           <span className="mobile-tab-label">Forum</span>
