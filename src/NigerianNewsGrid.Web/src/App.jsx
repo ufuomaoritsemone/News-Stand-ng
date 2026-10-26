@@ -811,13 +811,12 @@ export default function App({ initialData = null, initialCategory = 'All' }) {
         </div>
       )}
 
-      {/* 2. Compact Editorial Masthead, Date Strip & Inline Audio Briefing */}
+      {/* 2. Compact Editorial Masthead & Date Strip */}
       {activeCategory !== 'Saved' && !isForum && (
         <WelcomeBanner
           brandName="NEWS STAND NG"
           storyCount={articles.length}
           activeCategory={activeCategory}
-          showAudioBriefing={activeCategory === 'All' && !isForum}
         />
       )}
 

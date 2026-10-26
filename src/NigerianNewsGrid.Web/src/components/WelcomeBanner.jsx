@@ -1,13 +1,11 @@
 import React from 'react';
 import { getNigerianDateBanner } from '../services/timeUtils';
 import { Radio, ShieldCheck } from 'lucide-react';
-import AudioBriefingBar from './AudioBriefingBar';
 
 export default function WelcomeBanner({
   brandName = 'NEWS STAND NG',
   storyCount = null,
   activeCategory = 'All',
-  showAudioBriefing = false,
 }) {
   const dateStr = getNigerianDateBanner();
 
@@ -44,8 +42,6 @@ export default function WelcomeBanner({
             )}
           </h1>
         </div>
-
-        {showAudioBriefing && <AudioBriefingBar compact />}
       </div>
     </section>
   );

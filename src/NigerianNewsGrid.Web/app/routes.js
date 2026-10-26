@@ -52,4 +52,7 @@ export default [
 
   // IndexNow Protocol Domain Key Verification
   route(":key.txt", "routes/indexnow-key[.]txt.jsx"),
+
+  // API Proxy Route for Docker and production environments
+  route("api/*", "routes/api.$.jsx"),
 ];
